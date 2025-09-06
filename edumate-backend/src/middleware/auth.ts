@@ -11,7 +11,8 @@ export function auth(req: Request, res: Response, next: NextFunction) {
     const payload = verifyJwt(token);
     (req as any).user = payload;
     return next();
-  } catch {
+  } 
+  catch {
     return res.status(401).json({ error: "Invalid token" });
   }
 }

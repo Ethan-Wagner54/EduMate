@@ -10,7 +10,8 @@ export async function logAudit(
     await prisma.auditLog.create({
       data: { userId: userId ?? undefined, entityType, entityId: entityId ?? undefined, action },
     });
-  } catch (err) {
+  } 
+  catch (err) {
     // Avoid crashing the request if audit fails; just log.
     console.error("Audit log failed:", err);
   }

@@ -10,7 +10,10 @@ export async function listUsers(req: Request, res: Response) {
 export async function setUserRole(req: Request, res: Response) {
   const admin = (req as any).user as { id:number };
   const { userId, role } = req.body as { userId:number; role: "student"|"tutor"|"admin" };
-  if (!userId || !role) return res.status(400).json({ error: "userId and role required" });
+
+  if (!userId || !role) 
+    return res.status(400).json({ error: "userId and role required" });
+  
   const user = await prisma.user.update({
     where: { id: Number(userId) },
     data: { role }

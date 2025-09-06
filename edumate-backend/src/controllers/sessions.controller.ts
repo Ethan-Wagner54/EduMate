@@ -10,15 +10,18 @@ export async function listSessions(req: Request, res: Response) {
   try {
     const { module, tutorId } = req.query as { module?: string; tutorId?: string };
     const where: any = {};
+
     if (module) where.module = { code: module };
     if (tutorId) where.tutorId = Number(tutorId);
+
     const sessions = await prisma.session.findMany({
       where,
       include: { module: true, tutor: { select: { id: true, name: true } }, _count: { select: { enrollments: true } } },
       orderBy: { startTime: "asc" }
     });
     return res.json(sessions);
-  } catch (e) {
+  } 
+  catch (e) {
     console.error(e);
     return res.status(500).json({ error: "Failed to list sessions" });
   }
@@ -28,10 +31,12 @@ export async function createSession(req: Request, res: Response) {
   try {
     const user = (req as any).user as { id:number; role:"tutor"|"admin"|"student" };
     const { moduleId, startTime, endTime, location, capacity, status } = req.body;
+
     if (!moduleId || !startTime || !endTime) return res.status(400).json({ error: "Missing required fields" });
     // Prevent overlapping sessions for the same tutor
     const existing = await prisma.session.findMany({ where: { tutorId: user.id } });
     const s = new Date(startTime); const e = new Date(endTime);
+
     if (existing.some(x => overlaps(s, e, x.startTime, x.endTime))) {
       return res.status(409).json({ error: "Overlapping session exists for this tutor" });
     }
@@ -40,7 +45,8 @@ export async function createSession(req: Request, res: Response) {
     });
     await logAudit(user.id, "Session", session.id, "CREATE");
     return res.status(201).json(session);
-  } catch (e) {
+  } 
+  catch (e) {
     console.error(e);
     return res.status(500).json({ error: "Failed to create session" });
   }
@@ -51,6 +57,7 @@ export async function joinSession(req: Request, res: Response) {
     const user = (req as any).user as { id:number; role:"student"|"tutor"|"admin" };
     const sessionId = Number(req.params.id);
     const target = await prisma.session.findUnique({ where: { id: sessionId } });
+
     if (!target) return res.status(404).json({ error: "Session not found" });
 
     // Prevent student from joining overlapping sessions
@@ -74,7 +81,8 @@ export async function joinSession(req: Request, res: Response) {
     });
     await logAudit(user.id, "Enrollment", enrollment.id, "JOIN");
     return res.json({ ok: true });
-  } catch (e) {
+  } 
+  catch (e) {
     console.error(e);
     return res.status(500).json({ error: "Failed to join session" });
   }
@@ -90,7 +98,8 @@ export async function leaveSession(req: Request, res: Response) {
     });
     await logAudit(user.id, "Enrollment", sessionId, "LEAVE");
     return res.json({ ok: true });
-  } catch (e) {
+  } 
+  catch (e) {
     console.error(e);
     return res.status(500).json({ error: "Failed to leave session" });
   }

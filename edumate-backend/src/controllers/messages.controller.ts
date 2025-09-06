@@ -11,10 +11,14 @@ export async function sendMessage(req: Request, res: Response) {
   try {
     const user = (req as any).user as { id:number; role:"student"|"tutor"|"admin" };
     const { recipientId, sessionId, content } = req.body as { recipientId:number; sessionId?:number; content:string; };
-    if (!recipientId || !content) return res.status(400).json({ error: "recipientId and content required" });
+
+    if (!recipientId || !content) 
+      return res.status(400).json({ error: "recipientId and content required" });
 
     const recipient = await prisma.user.findUnique({ where: { id: Number(recipientId) } });
-    if (!recipient) return res.status(404).json({ error: "Recipient not found" });
+
+    if (!recipient) 
+      return res.status(404).json({ error: "Recipient not found" });
 
     if (!isTutorStudentPair(user.role, recipient.role)) {
       return res.status(403).json({ error: "Only tutor↔student messages are allowed" });
@@ -30,7 +34,8 @@ export async function sendMessage(req: Request, res: Response) {
     });
     await logAudit(user.id, "Message", msg.id, "SEND");
     return res.status(201).json(msg);
-  } catch (e) {
+  } 
+  catch (e) {
     console.error(e);
     return res.status(500).json({ error: "Failed to send message" });
   }
@@ -44,7 +49,8 @@ export async function listMyMessages(req: Request, res: Response) {
       orderBy: { sentAt: "desc" },
     });
     return res.json(messages);
-  } catch (e) {
+  } 
+  catch (e) {
     console.error(e);
     return res.status(500).json({ error: "Failed to list messages" });
   }
