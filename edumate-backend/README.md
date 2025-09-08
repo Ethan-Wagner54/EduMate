@@ -208,3 +208,5 @@ npx prisma migrate dev # Create and apply a new migration during development
 
 ```
 
+## Guides and Documentation
+[End-to-End Testing Guide](./docs/API_Testing_Guide.md)
