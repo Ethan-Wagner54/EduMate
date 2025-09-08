@@ -1,106 +1,144 @@
-import { Request, Response } from "express";
-import { prisma } from "../db";
-import { logAudit } from "../utils/audit";
+import { Request, Response } from 'express';
+import { PrismaClient, SessionStatus } from '@prisma/client';
+import { logAudit } from '../utils/audit';
 
-function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) {
+const prisma = new PrismaClient();
+
+// A helper function to check for date overlaps
+function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
   return aStart < bEnd && aEnd > bStart;
 }
 
-export async function listSessions(req: Request, res: Response) {
+export const listSessions = async (req: Request, res: Response) => {
   try {
-    const { module, tutorId } = req.query as { module?: string; tutorId?: string };
-    const where: any = {};
+    const { module: moduleCode, tutorId } = req.query as { module?: string; tutorId?: string };
+    // Corrected to lowercase 'published'
+    const where: any = { status: SessionStatus.published }; 
 
-    if (module) where.module = { code: module };
-    if (tutorId) where.tutorId = Number(tutorId);
+    if (moduleCode) {
+      where.module = { code: moduleCode };
+    }
+    if (tutorId) {
+      where.tutorId = Number(tutorId);
+    }
 
     const sessions = await prisma.session.findMany({
       where,
-      include: { module: true, tutor: { select: { id: true, name: true } }, _count: { select: { enrollments: true } } },
-      orderBy: { startTime: "asc" }
+      include: {
+        module: { select: { code: true, name: true } },
+        tutor: { select: { id: true, name: true } },
+        _count: { select: { enrollments: true } },
+      },
+      orderBy: { startTime: 'asc' },
     });
     return res.json(sessions);
-  } 
-  catch (e) {
+  } catch (e) {
     console.error(e);
-    return res.status(500).json({ error: "Failed to list sessions" });
+    return res.status(500).json({ error: 'Failed to list sessions' });
   }
-}
+};
 
-export async function createSession(req: Request, res: Response) {
+export const createSession = async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user as { id:number; role:"tutor"|"admin"|"student" };
-    const { moduleId, startTime, endTime, location, capacity, status } = req.body;
+    const user = req.user!;
+    const { moduleId, startTime, endTime, location, capacity } = req.body;
 
-    if (!moduleId || !startTime || !endTime) return res.status(400).json({ error: "Missing required fields" });
-    // Prevent overlapping sessions for the same tutor
-    const existing = await prisma.session.findMany({ where: { tutorId: user.id } });
-    const s = new Date(startTime); const e = new Date(endTime);
-
-    if (existing.some(x => overlaps(s, e, x.startTime, x.endTime))) {
-      return res.status(409).json({ error: "Overlapping session exists for this tutor" });
+    if (!moduleId || !startTime || !endTime) {
+      return res.status(400).json({ error: 'Missing required fields' });
     }
+
+    const sTime = new Date(startTime);
+    const eTime = new Date(endTime);
+
+    const existingSession = await prisma.session.findFirst({
+        where: {
+            tutorId: user.userId,
+            startTime: { lt: eTime },
+            endTime: { gt: sTime },
+        }
+    });
+
+    if (existingSession) {
+      return res.status(409).json({ error: 'Overlapping session exists for this tutor' });
+    }
+
     const session = await prisma.session.create({
-      data: { tutorId: user.id, moduleId: Number(moduleId), startTime: s, endTime: e, location, capacity, status }
+      data: {
+        tutorId: user.userId,
+        moduleId: Number(moduleId),
+        startTime: sTime,
+        endTime: eTime,
+        location,
+        capacity: capacity ? Number(capacity) : null,
+        // Corrected to lowercase 'published'
+        status: SessionStatus.published,
+      },
     });
-    await logAudit(user.id, "Session", session.id, "CREATE");
-    return res.status(201).json(session);
-  } 
-  catch (e) {
+
+    res.status(201).json(session);
+    await logAudit(user.userId, 'Session', session.id, 'CREATE');
+  } catch (e) {
     console.error(e);
-    return res.status(500).json({ error: "Failed to create session" });
+    return res.status(500).json({ error: 'Failed to create session' });
   }
-}
+};
 
-export async function joinSession(req: Request, res: Response) {
+export const joinSession = async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user as { id:number; role:"student"|"tutor"|"admin" };
+    const user = req.user!;
     const sessionId = Number(req.params.id);
-    const target = await prisma.session.findUnique({ where: { id: sessionId } });
+    const targetSession = await prisma.session.findUnique({ where: { id: sessionId } });
 
-    if (!target) return res.status(404).json({ error: "Session not found" });
-
-    // Prevent student from joining overlapping sessions
-    const mySessions = await prisma.session.findMany({
-      where: { enrollments: { some: { studentId: user.id, status: "joined" } } }
-    });
-    if (mySessions.some(s => s.id !== sessionId && (target.startTime < s.endTime && target.endTime > s.startTime))) {
-      return res.status(409).json({ error: "You are already in a session at that time" });
+    if (!targetSession) {
+      return res.status(404).json({ error: 'Session not found' });
     }
 
-    // Optional capacity check
-    const count = await prisma.enrollment.count({ where: { sessionId, status: "joined" } });
-    if (target.capacity != null && count >= target.capacity) {
-      return res.status(409).json({ error: "Session is full" });
+    const studentEnrollments = await prisma.enrollment.findMany({
+        where: { studentId: user.userId, status: "joined" },
+        include: { session: true }
+    });
+
+    const hasConflict = studentEnrollments.some(enrollment =>
+        enrollment.sessionId !== sessionId && overlaps(targetSession.startTime, targetSession.endTime, enrollment.session.startTime, enrollment.session.endTime)
+    );
+
+    if (hasConflict) {
+        return res.status(409).json({ error: 'You are already enrolled in a session at that time' });
+    }
+
+    const enrollmentCount = await prisma.enrollment.count({ where: { sessionId, status: 'joined' } });
+    if (targetSession.capacity != null && enrollmentCount >= targetSession.capacity) {
+      return res.status(409).json({ error: 'Session is full' });
     }
 
     const enrollment = await prisma.enrollment.upsert({
-      where: { sessionId_studentId: { sessionId, studentId: user.id } },
-      update: { status: "joined" },
-      create: { sessionId, studentId: user.id, status: "joined" }
+      where: { sessionId_studentId: { sessionId, studentId: user.userId } },
+      update: { status: 'joined' },
+      create: { sessionId, studentId: user.userId, status: 'joined' },
     });
-    await logAudit(user.id, "Enrollment", enrollment.id, "JOIN");
-    return res.json({ ok: true });
-  } 
-  catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: "Failed to join session" });
-  }
-}
 
-export async function leaveSession(req: Request, res: Response) {
-  try {
-    const user = (req as any).user as { id:number };
-    const sessionId = Number(req.params.id);
-    await prisma.enrollment.update({
-      where: { sessionId_studentId: { sessionId, studentId: user.id } },
-      data: { status: "cancelled" }
-    });
-    await logAudit(user.id, "Enrollment", sessionId, "LEAVE");
-    return res.json({ ok: true });
-  } 
-  catch (e) {
+    res.json({ ok: true });
+    await logAudit(user.userId, 'Enrollment', enrollment.id, 'JOIN');
+  } catch (e) {
     console.error(e);
-    return res.status(500).json({ error: "Failed to leave session" });
+    return res.status(500).json({ error: 'Failed to join session' });
   }
-}
+};
+
+export const leaveSession = async (req: Request, res: Response) => {
+  try {
+    const user = req.user!;
+    const sessionId = Number(req.params.id);
+
+    const enrollment = await prisma.enrollment.update({
+      where: { sessionId_studentId: { sessionId, studentId: user.userId } },
+      data: { status: 'cancelled' },
+    });
+
+    res.json({ ok: true });
+    await logAudit(user.userId, 'Enrollment', enrollment.id, 'LEAVE');
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to leave session' });
+  }
+};
