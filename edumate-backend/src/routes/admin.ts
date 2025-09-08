@@ -1,11 +1,14 @@
-import { Router } from "express";
-import { auth } from "../middleware/auth";
-import { requireRole } from "../middleware/requireRole";
-import { listUsers, setUserRole } from "../controllers/admin.controller";
+import { Router } from 'express';
+import { protect } from '../middleware/auth';
+import { requireRole } from '../middleware/requireRole';
+import { listUsers, updateUserRole } from '../controllers/admin.controller';
 
 const router = Router();
 
-router.get("/users", auth, requireRole("admin"), listUsers);
-router.post("/users/role", auth, requireRole("admin"), setUserRole);
+// All admin routes must be protected and require the 'admin' role
+router.use(protect, requireRole('admin'));
+
+router.get('/users', listUsers);
+router.post('/users/role', updateUserRole);
 
 export default router;

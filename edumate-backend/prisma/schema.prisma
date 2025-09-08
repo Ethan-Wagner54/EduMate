@@ -1,35 +1,51 @@
-generator client { provider = "prisma-client-js" }
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-enum Role { student tutor admin }
-enum SessionStatus { draft published cancelled }
-enum EnrollmentStatus { joined cancelled waitlisted }
+enum Role {
+  student
+  tutor
+  admin
+}
+
+enum SessionStatus {
+  draft
+  published
+  cancelled
+}
+
+enum EnrollmentStatus {
+  joined
+  cancelled
+  waitlisted
+}
 
 model User {
-  id            Int           @id @default(autoincrement())
-  name          String
-  email         String        @unique
-  phone         String?
-  role          Role          @default(student)
-  passwordHash  String
-  createdAt     DateTime      @default(now())
+  id              Int           @id @default(autoincrement())
+  name            String
+  email           String        @unique
+  phone           String?
+  role            Role          @default(student)
+  passwordHash    String
+  createdAt       DateTime      @default(now())
 
-  tutorModules  TutorModule[]
-  sessions      Session[]     @relation("TutorSessions")
-  messagesSent  Message[]     @relation("messagesSent")
-  messagesReceived Message[]  @relation("messagesReceived")
-  enrollments   Enrollment[]
-  attendances   Attendance[]
-  auditLogs     AuditLog[]
+  tutorModules    TutorModule[]
+  sessions        Session[]     @relation("TutorSessions")
+  messagesSent    Message[]     @relation("messagesSent")
+  messagesReceived Message[]    @relation("messagesReceived")
+  enrollments     Enrollment[]
+  attendances     Attendance[]
+  auditLogs       AuditLog[]
 }
 
 model Module {
-  id           Int            @id @default(autoincrement())
-  code         String         @unique
+  id           Int           @id @default(autoincrement())
+  code         String        @unique
   name         String
   faculty      String?
   sessions     Session[]
@@ -37,10 +53,10 @@ model Module {
 }
 
 model TutorModule {
-  id              Int     @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   tutorId         Int
   moduleId        Int
-  approvedByAdmin Boolean @default(false)
+  approvedByAdmin Boolean  @default(false)
   createdAt       DateTime @default(now())
 
   tutor  User   @relation(fields: [tutorId], references: [id])
@@ -50,45 +66,45 @@ model TutorModule {
 }
 
 model Session {
-  id         Int            @id @default(autoincrement())
-  tutorId    Int
-  moduleId   Int
-  startTime  DateTime
-  endTime    DateTime
-  location   String?
-  capacity   Int?
-  status     SessionStatus  @default(draft)
-  createdAt  DateTime       @default(now())
+  id          Int            @id @default(autoincrement())
+  tutorId     Int
+  moduleId    Int
+  startTime   DateTime
+  endTime     DateTime
+  location    String?
+  capacity    Int?
+  status      SessionStatus  @default(draft)
+  createdAt   DateTime       @default(now())
 
-  tutor      User    @relation("TutorSessions", fields: [tutorId], references: [id])
-  module     Module  @relation(fields: [moduleId], references: [id])
+  tutor       User        @relation("TutorSessions", fields: [tutorId], references: [id])
+  module      Module      @relation(fields: [moduleId], references: [id])
   enrollments Enrollment[]
   attendances Attendance[]
   messages    Message[]
 }
 
 model Enrollment {
-  id         Int               @id @default(autoincrement())
-  sessionId  Int
-  studentId  Int
-  status     EnrollmentStatus  @default(joined)
-  joinedAt   DateTime          @default(now())
+  id        Int              @id @default(autoincrement())
+  sessionId Int
+  studentId Int
+  status    EnrollmentStatus @default(joined)
+  joinedAt  DateTime         @default(now())
 
-  session    Session @relation(fields: [sessionId], references: [id])
-  student    User    @relation(fields: [studentId], references: [id])
+  session   Session @relation(fields: [sessionId], references: [id])
+  student   User    @relation(fields: [studentId], references: [id])
 
   @@unique([sessionId, studentId])
 }
 
 model Attendance {
-  id         Int       @id @default(autoincrement())
-  sessionId  Int
-  studentId  Int
-  attended   Boolean
-  timestamp  DateTime  @default(now())
+  id        Int      @id @default(autoincrement())
+  sessionId Int
+  studentId Int
+  attended  Boolean
+  timestamp DateTime @default(now())
 
-  session    Session @relation(fields: [sessionId], references: [id])
-  student    User    @relation(fields: [studentId], references: [id])
+  session   Session @relation(fields: [sessionId], references: [id])
+  student   User    @relation(fields: [studentId], references: [id])
 
   @@unique([sessionId, studentId])
 }
@@ -107,12 +123,12 @@ model Message {
 }
 
 model AuditLog {
-  id         Int       @id @default(autoincrement())
-  userId     Int?
+  id        Int      @id @default(autoincrement())
+  userId    Int?
   entityType String
   entityId   Int?
   action     String
-  createdAt  DateTime  @default(now())
+  createdAt  DateTime @default(now())
 
-  user       User?     @relation(fields: [userId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
 }
