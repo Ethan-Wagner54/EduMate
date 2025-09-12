@@ -4,10 +4,12 @@ import authRoutes from "./routes/auth";
 import sessionRoutes from "./routes/sessions";
 import messageRoutes from "./routes/messages";
 import adminRoutes from "./routes/admin";
+import { requestLogger } from "./middleware/requestLogger";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(requestLogger);
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 

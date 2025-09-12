@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient, Role } from '@prisma/client';
 import { logAudit } from '../utils/audit';
+import { logger } from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -47,7 +48,7 @@ export async function sendMessage(req: Request, res: Response) {
     await logAudit(user.userId, 'Message', msg.id, 'SEND');
 
   } catch (e) {
-    console.error(e);
+    logger.error('message_send_failed', { error: (e as any)?.message || String(e) });
     return res.status(500).json({ error: 'Failed to send message' });
   }
 }
@@ -69,7 +70,7 @@ export async function listMessages(req: Request, res: Response) {
 
     return res.json(messages);
   } catch (e) {
-    console.error(e);
+    logger.error('message_list_failed', { error: (e as any)?.message || String(e) });
     return res.status(500).json({ error: 'Failed to list messages' });
   }
 }
