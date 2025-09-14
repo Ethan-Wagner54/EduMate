@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 
 export const listUsers = async (req: Request, res: Response) => {
   try {
+    console.log('List Users Req',req)
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -15,6 +16,7 @@ export const listUsers = async (req: Request, res: Response) => {
         createdAt: true,
       },
     });
+    console.log('Total Users',users.length)
     res.status(200).json(users);
   } catch (error) {
     console.error(error);
@@ -24,8 +26,10 @@ export const listUsers = async (req: Request, res: Response) => {
 
 // Renamed from setUserRole to updateUserRole
 export const updateUserRole = async (req: Request, res: Response) => {
+
   try {
     const adminUser = req.user!;
+    console.log('Update User Information',adminUser)
     const { userId, role } = req.body as { userId: number; role: Role };
 
     if (!userId || !role) {
