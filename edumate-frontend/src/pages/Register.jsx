@@ -51,15 +51,16 @@ export default function Registration() //main registration component
     //layout for the page
     return (
          <div className="min-h-screen bg-gradient-to-br from-purple-900 to-purple-800 py-8 px-4 flex items-center justify-center">
-            <Card className="w-full max-w-3xl bg-card dark:bg-card-dark border border-border dark:border-border-dark backdrop-blur-sm">
+            <Card style={{ backgroundColor: '#4B2A64' }} className="w-full max-w-4xl text-white border border-purple-700">
                 {/* Logo and header */}
                 <CardHeader className="text-center space-y-4">
                     <div className="flex justify-center">
                         <img src={logoImage} alt="EduMate Logo" className="w-20 h-20" />
                     </div>
-                    <CardTitle className="text-3xl text-foreground dark:text-foreground-dark">
-                        Create Your EduMate Account
+                    <CardTitle className="text-3xl text-foreground dark:text-white font-bold">
+                        Welcome to EduMate
                      </CardTitle>
+                     <p>Join our community of learners and educators. Connect with peers, share knowledge, and grow together through collaborative learning.</p>
                 </CardHeader>
                 {/* Registration form */}
                 <CardContent>
@@ -67,7 +68,7 @@ export default function Registration() //main registration component
                         {/* Full Name */}
                         <div className="space-y-2">
                             <Label htmlFor="name">Full Name</Label>
-                            <Input
+                            <Input style={{ backgroundColor: '#3C1A4F' }} className="bg-edumatePurpleLight text-white placeholder:text-purple-200 border border-grey"
                                 id="name"
                                 name="name"
                                 type="text"
@@ -80,7 +81,7 @@ export default function Registration() //main registration component
                          {/* Email */}
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
-                            <Input
+                            <Input style={{ backgroundColor: '#3C1A4F' }} className="bg-edumatePurpleLight text-white placeholder:text-purple-200 border border-grey"
                                 id="email"
                                 name="email"
                                 type="email"
@@ -93,7 +94,7 @@ export default function Registration() //main registration component
                         {/* Password */}
                         <div className="space-y-2">
                             <Label htmlFor="password">Password</Label>
-                            <Input
+                            <Input style={{ backgroundColor: '#3C1A4F' }} className="bg-edumatePurpleLight text-white placeholder:text-purple-200 border border-grey"
                                 id="password"
                                 name="password"
                                 type="password"
@@ -106,7 +107,7 @@ export default function Registration() //main registration component
                         {/* Confirm Password */}
                         <div className="space-y-2">
                             <Label htmlFor="confirmPassword">Confirm Password</Label>
-                            <Input
+                            <Input style={{ backgroundColor: '#3C1A4F' }} className="bg-edumatePurpleLight text-white placeholder:text-purple-200 border border-grey"
                                 id="confirmPassword"
                                 name="confirmPassword"
                                 type="password"
@@ -126,16 +127,16 @@ export default function Registration() //main registration component
                                         className={`flex items-center gap-2 px-3 py-2 rounded-full border-2 ${
                                             formData.role == role
                                                 ? "bg-primary border-primary text-white" //ADD OR REMOVE TABBING
-                                                : "border-white text-white"
+                                                : "border to-white text-white"
                                         } cursor-pointer`}
                                     >
-                                    <input
+                                    <input style={{ backgroundColor: '#3C1A4F' }} className="bg-edumatePurpleLight text-white placeholder:text-purple-200 border border-grey"
                                         type="radio"
                                         name="role"
                                         value={role}
                                         checked={formData.role === role}
                                         onChange={handleChange}
-                                        className="hidden"
+                                        //className was hidden
                                     />
                                     {role}
                                     </label>
@@ -145,13 +146,14 @@ export default function Registration() //main registration component
                         {/*Academic Level Dropdown */}
                         <div className="space-y-2">
                             <Label htmlFor="academicLevel">Current Academic Level</Label>
-                            <select
+                            <select 
                                 id="academicLevel"
                                 name="academicLevel"
                                 value={formData.academicLevel}
                                 onChange={handleChange}
                                 required
-                                className="w-full p-2 rounded bg-input dark:bg-input-dark border border-border dark:border-border-dark text-foreground dark:text-foreground-dark"
+                                style={{ backgroundColor: '#3C1A4F' }} className="w-full p-2 rounded bg-input bg-edumatePurpleLight text-white placeholder:text-purple-200 border border-grey"
+                                //className="w-full p-2 rounded bg-input dark:bg-input-dark border border-border dark:border-border-dark text-foreground dark:text-foreground-dark"
                             >
                                 <option value="">Select your level</option>
                                 {academicLevels.map(level => (
@@ -169,7 +171,7 @@ export default function Registration() //main registration component
                                         className={`flex items-center gap-2 px-3 py-2 rounded border ${
                                             formData.modules.includes(module)
                                                 ? "bg-primary text-white border-primary" //ADD OR REMOVE TABBING
-                                                : "bg-input dark:bg-input-dark text-foreground dark:text-foreground-dark border-border dark:border-border-dark"
+                                                : "border to-white text-white"
                                         } cursor-pointer`}
                                     >
                                         <input 
@@ -196,15 +198,15 @@ export default function Registration() //main registration component
                 <div className="text-center mt-6 text-sm text-muted-foreground dark:text-muted-foreground-dark">
                     <p>
                         Already have an Account?{" "}
-                        <button className="text-secondary dark:text-secondary-dark hover:underline">
+                        <button className="text-secondary dark:text-secondary-dark hover:underline font-bold">
                             Sign In
                         </button>
                     </p>
                     <p className="mt-2">
                         By registering, you agree to our{" "}
-                        <button className="text-primary hover:underline">Terms of Service</button>{" "}
+                        <button className="text-primary hover:underline font-bold">Terms of Service</button>{" "}
                         and{" "}
-                        <button className="text-primary hover:underline">Privacy Policy</button>.
+                        <button className="text-primary hover:underline font-bold">Privacy Policy</button>.
                     </p>
                 </div>
                 </CardContent>
