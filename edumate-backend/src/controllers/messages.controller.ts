@@ -13,6 +13,7 @@ export async function sendMessage(req: Request, res: Response) {
   try {
     // Get the logged-in user's info from the protect middleware
     const user = req.user!; 
+    console.log('Send Message Request',req)
     const { recipientId, sessionId, content } = req.body as {
       recipientId: number;
       sessionId?: number;
@@ -31,9 +32,11 @@ export async function sendMessage(req: Request, res: Response) {
 
     // Check that one user is a tutor and the other is a student
     if (!isTutorStudentPair(user.role as Role, recipient.role)) {
+      console.error('Only tutor-student messages are allowed')
       return res.status(403).json({ error: 'Only tutor-student messages are allowed' });
     }
 
+    
     const msg = await prisma.message.create({
       data: {
         senderId: user.userId, // Use userId from the token payload
@@ -42,6 +45,7 @@ export async function sendMessage(req: Request, res: Response) {
         content,
       },
     });
+    console.log('Message Saved',msg)
 
     res.status(201).json(msg);
     await logAudit(user.userId, 'Message', msg.id, 'SEND');
@@ -55,6 +59,7 @@ export async function sendMessage(req: Request, res: Response) {
 // Renamed from listMyMessages to listMessages
 export async function listMessages(req: Request, res: Response) {
   try {
+    console.log('List Messages Request',req)
     const user = req.user!;
     const messages = await prisma.message.findMany({
       where: {
@@ -66,7 +71,7 @@ export async function listMessages(req: Request, res: Response) {
         recipient: { select: { name: true } },
       }
     });
-
+    console.log('List Messages Length',messages.length)
     return res.json(messages);
   } catch (e) {
     console.error(e);
