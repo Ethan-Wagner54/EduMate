@@ -16,9 +16,33 @@ export default function App() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleLogin = (e) => {
+  //function for connecting to the log in API
+  const handleLogin  = async (e) => {
     e.preventDefault();
-    console.log('Login attempt with:', formData);
+
+    try{
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(formData)
+    });
+      const data = await response.json();
+    if (response.ok) {
+      console.log("Login successful:", data); //Successful login
+      localStorage.setItem("token", data.token); // Store token if needed
+      // TODO: Redirect or update UI???
+    } else { 
+        alert(data.message || "Login failed"); //Login failed
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("Network error. Please try again.");
+    }
+    
+    //e.preventDefault();
+    //console.log('Login attempt with:', formData);
   };
 
   return (

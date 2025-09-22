@@ -15,8 +15,11 @@ module.exports = {
         accent: 'var(--accent)',
         destructive: 'var(--destructive)',
         border: 'var(--border)',
+        //EduMate color for filling in fields
+        edumatePurpleLight: '#6B3F8C',
       },
     },
   },
   plugins: [],
+
 }
