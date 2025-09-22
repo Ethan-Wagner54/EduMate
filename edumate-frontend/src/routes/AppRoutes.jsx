@@ -4,6 +4,7 @@ import Register from "../pages/Register";
 // import StudentDashboard from "../pages/StudentDashboard";
 // import TutorDashboard from "../pages/TutorDashboard";
 // import AdminDashboard from "../pages/AdminDashboard";
+// import CreateSession from "../pages/CreateSession";
 
 export default function AppRoutes() {
   return (
@@ -13,6 +14,7 @@ export default function AppRoutes() {
       {/* <Route path="/student" element={<StudentDashboard />} /> */}
       {/* <Route path="/tutor" element={<TutorDashboard />} /> */}
       {/* <Route path="/admin" element={<AdminDashboard />} /> */}
+      {/* <Route path="/create" element={<CreateSession />} /> */}
     </Routes>
   );
 }
