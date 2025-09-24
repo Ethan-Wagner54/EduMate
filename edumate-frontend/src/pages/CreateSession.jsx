@@ -1,12 +1,13 @@
 import { useState } from "react";
 import {Calendar, Clock, MapPin, User, BookOpen, DollarSign, FileText} from "lucide-react"; // Icons for visual cues
-import { Button } from "./components/ui/button"; 
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "./components/ui/card";
-import { Input } from "./components/ui/input";
-import { Label } from "./components/ui/label";
-import { Textarea } from "./components/ui/textarea";
-import {Select, SelectContent, SelectItem, SelectTrigger,SelectValue} from "./components/ui/select";
-import { RadioGroup, RadioGroupItem } from "./components/ui/radio-group";
+import { Button } from "../components/ui/button"; 
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Textarea } from "../components/ui/textarea";
+import {Select, SelectContent, SelectItem, SelectTrigger,SelectValue} from "../components/ui/select";
+import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
+import { Link } from "react-router-dom";
 
 export default function CreateSession()
 {
@@ -69,7 +70,7 @@ export default function CreateSession()
                         <div>
                             <Label>Date</Label>
                             <Input
-                                type = "time"
+                                type = "date"
                                 value = {formData.time}
                                 onChange = {(e) => handleInputChange("time", e.target.value)}
                             />
@@ -100,14 +101,19 @@ export default function CreateSession()
                     {/*Session Type*/}
                     <div>
                         <Label>Session Type</Label>
-                        <RadioGroup
-                            value = {formData.sessionType}
-                            onValueChange = {(value) => handleInputChange("sessionType", value)}
-                        >
-                            <div className="flex gap-4">
-                                <RadioGroupItem value="online" label="Online" />
-                                <RadioGroupItem value="in-person" label="In-Person" />
-                            </div>
+                        <RadioGroup className="flex gap-4">
+                            <RadioGroupItem
+                                value="online"
+                                checked={formData.sessionType === "online"}
+                                onChange={() => handleInputChange("sessionType", "online")}
+                                label="Online"
+                            />
+                            <RadioGroupItem
+                                value="in-person"
+                                checked={formData.sessionType === "in-person"}
+                                onChange={() => handleInputChange("sessionType", "in-person")}
+                                label="In-Person"
+                            />
                         </RadioGroup>
                     </div>
 
@@ -117,7 +123,7 @@ export default function CreateSession()
                         <Input
                             placeholder = "e.g Library Room 4"
                             value = {formData.location}
-                            onChange = {(e) => handleInputChange("rate", e.target.value)}
+                            onChange = {(e) => handleInputChange("location", e.target.value)}
                         />
                     </div>
 
@@ -128,7 +134,7 @@ export default function CreateSession()
                             type = "number"
                             placeholder = "e.g 250"
                             value = {formData.rate}
-                            onChange = {(e) => handleInputChange("description", e.target.value)}
+                            onChange = {(e) => handleInputChange("rate", e.target.value)}
                         />
                     </div>
 
@@ -137,7 +143,7 @@ export default function CreateSession()
                         <Label>Session Description</Label>
                         <Textarea
                             placeholder = "Add any notes or expectations for the session"
-                            value = {formData.desciption}
+                            value = {formData.descrcdiption}
                             onChange = {(e) => handleInputChange("description", e.target.value)}
                         />
                     </div>

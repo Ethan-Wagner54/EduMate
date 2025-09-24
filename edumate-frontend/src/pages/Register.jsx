@@ -5,6 +5,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function Registration() //main registration component
 {
@@ -50,7 +51,7 @@ export default function Registration() //main registration component
 
     //layout for the page
     return (
-         <div className="min-h-screen bg-gradient-to-br from-purple-900 to-purple-800 py-8 px-4 flex items-center justify-center">
+        <div className="min-h-screen bg-gradient-to-br from-purple-900 to-purple-800 py-8 px-4 flex items-center justify-center">
             <Card style={{ backgroundColor: '#4B2A64' }} className="w-full max-w-4xl text-white border border-purple-700">
                 {/* Logo and header */}
                 <CardHeader className="text-center space-y-4">
@@ -59,8 +60,8 @@ export default function Registration() //main registration component
                     </div>
                     <CardTitle className="text-3xl text-foreground dark:text-white font-bold">
                         Welcome to EduMate
-                     </CardTitle>
-                     <p>Join our community of learners and educators. Connect with peers, share knowledge, and grow together through collaborative learning.</p>
+                    </CardTitle>
+                    <p>Join our community of learners and educators. Connect with peers, share knowledge, and grow together through collaborative learning.</p>
                 </CardHeader>
                 {/* Registration form */}
                 <CardContent>
@@ -186,14 +187,15 @@ export default function Registration() //main registration component
                             </div>
                         </div>
                         {/*Submit Button*/}
-                        <Button
-                            type="submit"
-                            className="w-full bg-primary dark:bg-primary-dark hover:bg-primary-dark text-primary-foreground dark:text-primary-foreground-dark transition-colors"
-                        >
-                            Register
-                        </Button>
+                        <Link to="/HomePage">
+                                <Button
+                                    type="submit"
+                                    className="w-full bg-primary dark:bg-primary-dark hover:bg-primary-dark text-primary-foreground dark:text-primary-foreground-dark transition-colors"
+                                >
+                                    Register
+                                </Button>
+                        </Link>
                     </form>
-                 
                 {/*Footer*/}
                 <div className="text-center mt-6 text-sm text-muted-foreground dark:text-muted-foreground-dark">
                     <p>
