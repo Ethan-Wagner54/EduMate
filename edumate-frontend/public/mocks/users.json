@@ -1,0 +1,10 @@
+{
+  "students": [
+    { "id": 11, "email": "student1@example.com", "password": "password123" },
+    { "id": 22, "email": "student2@example.com", "password": "password123" }
+  ],
+  "tutors": [
+    { "id": 1, "email": "jane.doe@nwu.ac.za", "password": "password123" },
+    { "id": 2, "email": "tutor2@example.com", "password": "password123" }
+  ]
+}

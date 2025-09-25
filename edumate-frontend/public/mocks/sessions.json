@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "title": "Calculus I",
+    "description": "Introduction to limits and derivatives",
+    "date": "2025-10-01",
+    "capacity": 20,
+    "enrolled": 15,
+    "status": "active"
+  }
+]

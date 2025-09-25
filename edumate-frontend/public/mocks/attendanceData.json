@@ -1,0 +1,6 @@
+[
+  { "week": "Week 1", "attended": 85, "enrolled": 90 },
+  { "week": "Week 2", "attended": 88, "enrolled": 95 },
+  { "week": "Week 3", "attended": 92, "enrolled": 98 },
+  { "week": "Week 4", "attended": 87, "enrolled": 94 }
+]
