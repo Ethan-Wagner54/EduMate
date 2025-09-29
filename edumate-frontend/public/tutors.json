@@ -38,7 +38,7 @@
   {
     "id": 2,
     "name": "John Smith",
-    "email": "tutor2@example.com",
+    "email": "john.smith@nwu.ac.za",
     "phone": "+27 84 111 2222",
     "location": "Pretoria Campus",
     "bio": "Computer Science tutor specializing in programming.",
@@ -47,6 +47,5 @@
     "preferences": {},
     "qualifications": [],
     "achievements": []
-    }
-
+  }
 ]

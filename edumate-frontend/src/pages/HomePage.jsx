@@ -2,12 +2,14 @@ import { useState } from "react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Users, Calendar, TrendingUp, Star, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import logoImage from '../assets/edumateLogo.jpg';
 
 export default function HomePage()
 {
     const [currentPage, setCurrentPage] = useState("home");
+    const navigate = useNavigate();
 
     // Conditional rendering for registration page
     if (currentPage === "registration") {
@@ -28,12 +30,12 @@ export default function HomePage()
                         <span className = "text-2xl font-semibold text-white">EduMate</span>
                     </nav>
                     <nav className = "flex items-center space-x-4">
-                        <Button variant = "ghost" className = "text-white hover:bg-purple-600">
+                        <Button variant = "ghost" className = "text-white hover:bg-purple-600" onClick={() => navigate("/login")}>
                             Sign In
                         </Button>
                         <Button
                             className = "bg-purple-600 text-white hover:bg-purple-700"
-                            onClick = {() => setCurrentPage("registration")}
+                           onClick={() => navigate("/register")}
                         >
                             Get Started
                         </Button>

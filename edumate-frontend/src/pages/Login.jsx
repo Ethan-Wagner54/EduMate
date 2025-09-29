@@ -12,7 +12,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [userType, setUserType] = useState("student"); // student or tutor
   const [formData, setFormData] = useState({ email: '', password: '' });
-  const [users, setUsers] = useState({ students: [], tutors: [] });
+  const [users, setUsers] = useState({ students: [], tutors: [], admins: [] });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,6 +29,12 @@ export default function Login() {
 
   const handleLogin = (e) => {
     e.preventDefault();
+
+    const matchedAdmin = users.admins.find(u => u.email === formData.email && u.password === formData.password);
+    if (matchedAdmin) {
+      navigate("/admin", { state: { userId: matchedAdmin.id, email: matchedAdmin.email } });
+      return;
+    }
 
     const selectedUsers = userType === "student" ? users.students : users.tutors;
     const matchedUser = selectedUsers.find(u => u.email === formData.email && u.password === formData.password);

@@ -143,7 +143,7 @@ export default function CreateSession()
                         <Label>Session Description</Label>
                         <Textarea
                             placeholder = "Add any notes or expectations for the session"
-                            value = {formData.descrcdiption}
+                            value = {formData.description}
                             onChange = {(e) => handleInputChange("description", e.target.value)}
                         />
                     </div>
