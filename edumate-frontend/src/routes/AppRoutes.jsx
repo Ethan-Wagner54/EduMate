@@ -7,8 +7,7 @@ import TutorDashboard from "../pages/TutorDashboard";
 import { TutorProfile } from "../components/tutor/TutorProfile";
 import TutorLayout from "../components/tutor/TutorLayout"; 
 import AdminDashboard from "../pages/AdminDashboard";
-
-
+import StudentDashboard from "../pages/StudentDashboard"; // ⬅️ add this
 
 export default function AppRoutes() {
   return (
@@ -30,6 +29,9 @@ export default function AppRoutes() {
 
       {/* Admin route */}
       <Route path="/admin" element={<AdminDashboard />} />
+
+      {/* Student route */}
+      <Route path="/student" element={<StudentDashboard />} />  {/* ⬅️ new route */}
 
       {/* Catch-all fallback */}
       <Route path="*" element={<Login />} />
