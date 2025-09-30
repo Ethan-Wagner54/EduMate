@@ -1,10 +1,34 @@
 // Dashboard.jsx
+import { useState, useEffect } from "react";
+import sessionService from "../services/sessions/session";
 import React from "react";
 import { GaugeCircle, Book, Calendar, Users, Star, MessageSquare, Settings, AlertTriangle, CircleCheck, PlayCircle } from "lucide-react"; // ICONS
 
 export default function Dashboard() {
+  const [sessions, setSessions] = useState([]);
+  
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const response = await sessionService.getSessions();
+        
+        if (response.success && response.data) {
+          setSessions(response.data);
+        }
+      } catch (err) {
+        console.error("Error fetching sessions:", err);
+        setSessions([]);
+      }
+    };
+
+    fetchSessions();
+    console.log(sessions);
+  }, []);
+
+
   return (
     <div className="flex h-screen bg-[#F0F2F5] text-gray-900">
+     
       {/* Sidebar */}
       <aside className="w-64 bg-[#6A0DAD] text-white flex flex-col p-4 shadow-lg">
         <div className="flex items-center justify-between p-2">
@@ -115,40 +139,31 @@ export default function Dashboard() {
           {/* Upcoming Sessions */}
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Upcoming Sessions</h2>
-            <div className="border border-gray-200 rounded-xl p-4 mb-4 flex items-center justify-between">
-              <div className="flex items-start">
-                <div className="bg-[#6A0DAD] rounded-full w-10 h-10 flex items-center justify-center font-bold text-white text-lg mr-4 flex-shrink-0">
-                  SJ
-                </div>
-                <div>
-                  <p className="font-medium text-gray-800">Calculus I - Integration Techniques</p>
-                  <p className="text-sm text-gray-500">with Sarah Johnson</p>
-                  <div className="flex items-center text-xs text-gray-500 mt-2">
-                    <Calendar size={12} className="mr-1"/>
-                    <span className="mr-2 font-medium">2:00 PM</span>
-                    <span className="bg-purple-100 text-[#6A0DAD] px-2 py-1 rounded-full text-xs font-medium">MATH 101</span>
+            {sessions.length > 0 && (
+                  <div className="sessions-list">
+                    {sessions.map(session => (
+                      <div key={session.id} >
+                        <div className="border border-gray-200 rounded-xl p-4 mb-4 flex items-center justify-between">
+                            <div className="flex items-start">
+                              <div className="bg-[#6A0DAD] rounded-full w-10 h-10 flex items-center justify-center font-bold text-white text-lg mr-4 flex-shrink-0">
+                                {session.tutor.name.split(' ').map((word) => word.charAt(0)).join('')}
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-800">{session.module.name}</p>
+                                <p className="text-sm text-gray-500">with {session.tutor.name}</p>
+                                <div className="flex items-center text-xs text-gray-500 mt-2">
+                                  <Calendar size={12} className="mr-1"/>
+                                  <span className="mr-2 font-medium">{session.startTime}</span>
+                                  <span className="bg-purple-100 text-[#6A0DAD] px-2 py-1 rounded-full text-xs font-medium">{session.module.code}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <button className="px-4 py-2 bg-[#6A0DAD] text-white rounded-lg hover:bg-purple-800 transition-colors">Join</button>
+                          </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              </div>
-              <button className="px-4 py-2 bg-[#6A0DAD] text-white rounded-lg hover:bg-purple-800 transition-colors">Join</button>
-            </div>
-            <div className="border border-gray-200 rounded-xl p-4 flex items-center justify-between">
-              <div className="flex items-start">
-                <div className="bg-[#6A0DAD] rounded-full w-10 h-10 flex items-center justify-center font-bold text-white text-lg mr-4 flex-shrink-0">
-                  MC
-                </div>
-                <div>
-                  <p className="font-medium text-gray-800">Data Structures - Trees and Graphs</p>
-                  <p className="text-sm text-gray-500">with Michael Chen</p>
-                  <div className="flex items-center text-xs text-gray-500 mt-2">
-                    <Calendar size={12} className="mr-1"/>
-                    <span className="mr-2 font-medium">10:00 AM</span>
-                    <span className="bg-purple-100 text-[#6A0DAD] px-2 py-1 rounded-full text-xs font-medium">CS 201</span>
-                  </div>
-                </div>
-              </div>
-              <button className="px-4 py-2 bg-[#6A0DAD] text-white rounded-lg hover:bg-purple-800 transition-colors">Join</button>
-            </div>
+                )}
           </div>
 
           {/* Progress with Tutors */}
