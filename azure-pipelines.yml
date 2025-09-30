@@ -1,0 +1,41 @@
+# azure-pipelines-api.yml (free Microsoft-hosted)
+trigger:
+- azure-pipelining
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  nodeVersion: '18.x'
+
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: $(nodeVersion)
+  displayName: 'Install Node'
+
+- script: |
+    npm ci
+    npm run build --if-present
+    npm prune --production
+  displayName: 'Build & prune'
+
+- task: ArchiveFiles@2
+  inputs:
+    rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+    includeRootFolder: false
+    archiveType: zip
+    archiveFile: $(Build.ArtifactStagingDirectory)/api.zip
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: $(Build.ArtifactStagingDirectory)
+    ArtifactName: 'drop'
+
+- task: AzureWebApp@1
+  inputs:
+    azureSubscription: 'Azure-Student-Connection'   # create this Service Connection once
+    appType: 'webAppLinux'
+    appName: 'edu-api-[yourname]'
+    package: '$(Build.ArtifactStagingDirectory)/api.zip'
+    runtimeStack: 'NODE|18-lts'
