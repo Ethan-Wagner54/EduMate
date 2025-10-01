@@ -9,6 +9,7 @@ import Register from './Register';
 export default function HomePage()
 {
     const [currentPage, setCurrentPage] = useState("home");
+    const navigate = useNavigate();
 
     // Conditional rendering for registration page
     if (currentPage === "register") {
@@ -29,7 +30,7 @@ export default function HomePage()
                         <span className = "text-2xl font-semibold text-white">EduMate</span>
                     </nav>
                     <nav className = "flex items-center space-x-4">
-                        <Button variant = "ghost" className = "text-white hover:bg-purple-600">
+                        <Button variant = "ghost" className = "text-white hover:bg-purple-600" onClick={() => navigate("/login")}>
                             Sign In
                         </Button>
                         <Button

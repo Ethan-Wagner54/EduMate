@@ -1,32 +1,37 @@
 import { Routes, Route } from "react-router-dom";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
-import CreateSession from "../pages/CreateSession";
+import SessionManagement from "../components/tutor/SessionManagement";
 import HomePage from "../pages/HomePage";
 import TutorDashboard from "../pages/TutorDashboard"; 
-// import StudentDashboard from "../pages/StudentDashboard";
-// import AdminDashboard from "../pages/AdminDashboard";
-
-// import SessionsList from "../pages/SessionsList";
+import { TutorProfile } from "../components/tutor/TutorProfile";
+import TutorLayout from "../components/tutor/TutorLayout"; 
+import AdminDashboard from "../pages/AdminDashboard";
+import StudentDashboard from "../pages/StudentDashboard"; // ⬅️ add this
 
 export default function AppRoutes() {
   return (
     <Routes>
       {/* Auth pages */}
-      <Route path="/" element={<Login />} />
+      <Route path="/" element={<HomePage />} />
+      <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
       {/* Main app pages */}
       <Route path="/home" element={<HomePage />} />
-      <Route path="/create-session" element={<CreateSession />} />
 
-      {/* Dashboards */}
-      <Route path="/tutor" element={<TutorDashboard />} />
-      {/* <Route path="/student" element={<StudentDashboard />} /> */}
-      {/* <Route path="/admin" element={<AdminDashboard />} /> */}
+      {/* Tutor routes with shared layout */}
+      <Route path="/tutor" element={<TutorLayout />}>
+        <Route index element={<TutorDashboard />} />
+        <Route path="create-session" element={<SessionManagement />} />
+        <Route path="profile" element={<TutorProfile />} />
+      </Route>
 
-      {/* Session management */}
-      {/* <Route path="/sessions" element={<SessionsList />} /> */}
+      {/* Admin route */}
+      <Route path="/admin" element={<AdminDashboard />} />
+
+      {/* Student route */}
+      <Route path="/student" element={<StudentDashboard />} />  {/* ⬅️ new route */}
 
       {/* Catch-all fallback */}
       <Route path="*" element={<Login />} />

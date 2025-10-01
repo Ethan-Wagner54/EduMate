@@ -7,12 +7,13 @@ import { Label } from "../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
+import authService from '../services/auth/auth'; // Import our new auth service
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [userType, setUserType] = useState("student"); // student or tutor
   const [formData, setFormData] = useState({ email: '', password: '' });
-  const [users, setUsers] = useState({ students: [], tutors: [] });
+  const [users, setUsers] = useState({ students: [], tutors: [], admins: [] });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,26 +23,36 @@ export default function Login() {
       .catch(err => console.error("Failed to load users.json", err));
   }, []);
 
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-
-    const selectedUsers = userType === "student" ? users.students : users.tutors;
-    const matchedUser = selectedUsers.find(u => u.email === formData.email && u.password === formData.password);
-
-    if (matchedUser) {
-      // Successful login
-      if (userType === "student") {
-        navigate("/student", { state: { userId: matchedUser.id, email: matchedUser.email } });
+    debugger;
+    try {
+      const loginData = { ...formData, userType };
+      
+      const response = await authService.login(loginData);
+      
+      if (response.success) {
+        const userTypeFromResponse = authService.getUserRole();
+        
+        if (userTypeFromResponse === "admin") {
+          navigate("/admin");
+        } else if (userTypeFromResponse === "tutor") {
+          navigate("/tutor");
+        } else {
+          navigate("/student");
+        }
+        return;
       } else {
-        navigate("/tutor", { state: { userId: matchedUser.id, email: matchedUser.email } });
+        alert("Invalid credentials");
       }
-    } else {
-      alert("Invalid credentials");
+    } catch (error) {
+      alert("Service unavailable. Please try again later.");
     }
   };
 
@@ -111,7 +122,7 @@ export default function Login() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" onClick={handleLogin}>
               Sign In
             </Button>
           </form>

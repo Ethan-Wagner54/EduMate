@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import { SessionManagement } from "../components/tutor/SessionManagement";
+import SessionManagement from "../components/tutor/SessionManagement";
 import { TutorProfile } from "../components/tutor/TutorProfile";
 import { Button } from "../components/ui/button";
 import { LuMessageSquareText } from "react-icons/lu"; //for the message icon
@@ -8,8 +7,7 @@ import { useNavigate } from "react-router-dom";
 
 
 export default function TutorDashboard() {
-  const location = useLocation();
-  const userId = location.state?.userId;
+  const userId = 1; // Or get from context/state/router
 
   const [tutor, setTutor] = useState(null);
 
@@ -23,13 +21,12 @@ export default function TutorDashboard() {
       .then((res) => res.json())
       .then((data) => {
         const matchedTutor = data.find((t) => t.id === userId);
-        console.log("Matched tutor:", matchedTutor); // debug
         setTutor(matchedTutor || null);
       })
       .catch((err) => console.error("Failed to load tutor data:", err));
   }, [userId]);
 
-  if (!tutor) return <p>Loading...</p>;
+  if (!tutor) return <p className="text-foreground">Loading...</p>;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 space-y-6">
@@ -54,9 +51,11 @@ export default function TutorDashboard() {
           </Button>
         </div>
       </header>
-
-      <TutorProfile tutorData={tutor} />
-      <SessionManagement />
+        <section className="space-y-6">
+          <TutorProfile tutorData={tutor} />
+          <SessionManagement />
+        </section>
+      </main>
     </div>
   );
 }
