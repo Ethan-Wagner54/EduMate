@@ -1,4 +1,5 @@
 import { prisma } from "../db";
+import { logger } from "./logger";
 
 export async function logAudit(
   userId: number | null,
@@ -10,9 +11,10 @@ export async function logAudit(
     await prisma.auditLog.create({
       data: { userId: userId ?? undefined, entityType, entityId: entityId ?? undefined, action },
     });
+    logger.info("audit_log", { userId, entityType, entityId, action });
   } 
   catch (err) {
     // Avoid crashing the request if audit fails; just log.
-    console.error("Audit log failed:", err);
+    logger.error("audit_log_failed", { error: (err as any)?.message || String(err) });
   }
 }
