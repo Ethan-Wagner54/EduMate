@@ -5,7 +5,7 @@ import { TutorProfile } from "../components/tutor/TutorProfile";
 import { Button } from "../components/ui/button";
 import { LuMessageSquareText } from "react-icons/lu"; //for the message icon
 import { useNavigate } from "react-router-dom";
-import { LuCalendarClock } from "react-icons/lu";
+
 
 export default function TutorDashboard() {
   const location = useLocation();
@@ -40,11 +40,6 @@ export default function TutorDashboard() {
 
            {/*Message icon and logout button */}
         <div className="flex gap-4 items-center">
-          <Button variant="ghost" onClick={() => navigate("/create-session")} className="flex items-center gap-2  text-gray-800 dark:text-gray-100">
-            <LuCalendarClock size={20} color = "white" />
-            Sessions
-          </Button>
-
           <Button
             variant="ghost"
             onClick={() => navigate("/messages")} //Navigate to messages page
@@ -58,10 +53,6 @@ export default function TutorDashboard() {
             Logout
           </Button>
         </div>
-
-        {/*<Button variant="secondary" onClick={() => console.log("Logout logic here")}>
-          Logout
-        </Button>*/}
       </header>
 
       <TutorProfile tutorData={tutor} />
