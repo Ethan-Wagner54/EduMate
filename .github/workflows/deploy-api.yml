@@ -1,0 +1,26 @@
+name: Build & Deploy API to Azure
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - run: npm ci
+    - run: npm run build --if-present   # optional TS build
+
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'edu-api-${{ vars.AZURE_PREFIX }}'   # optional variable
+        publish-profile: ${{ secrets.AZURE_APISITE_PROFILE }}
+        package: .
