@@ -1,0 +1,26 @@
+name: Build & Deploy React to Azure
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - run: npm ci
+    - run: npm run build             # creates /build folder
+
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'edu-fe-${{ vars.AZURE_PREFIX }}'
+        publish-profile: ${{ secrets.AZURE_FESITE_PROFILE }}
+        package: build                # upload only the static files
