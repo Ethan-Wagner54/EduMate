@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient, SessionStatus } from '@prisma/client';
 import { logAudit } from '../utils/audit';
+import { logger } from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -33,7 +34,7 @@ export const listSessions = async (req: Request, res: Response) => {
     });
     return res.json(sessions);
   } catch (e) {
-    console.error(e);
+    logger.error('sessions_list_failed', { error: (e as any)?.message || String(e) });
     return res.status(500).json({ error: 'Failed to list sessions' });
   }
 };
@@ -78,7 +79,7 @@ export const createSession = async (req: Request, res: Response) => {
     res.status(201).json(session);
     await logAudit(user.userId, 'Session', session.id, 'CREATE');
   } catch (e) {
-    console.error(e);
+    logger.error('sessions_create_failed', { error: (e as any)?.message || String(e) });
     return res.status(500).json({ error: 'Failed to create session' });
   }
 };
@@ -120,7 +121,7 @@ export const joinSession = async (req: Request, res: Response) => {
     res.json({ ok: true });
     await logAudit(user.userId, 'Enrollment', enrollment.id, 'JOIN');
   } catch (e) {
-    console.error(e);
+    logger.error('sessions_join_failed', { error: (e as any)?.message || String(e) });
     return res.status(500).json({ error: 'Failed to join session' });
   }
 };
@@ -138,7 +139,7 @@ export const leaveSession = async (req: Request, res: Response) => {
     res.json({ ok: true });
     await logAudit(user.userId, 'Enrollment', enrollment.id, 'LEAVE');
   } catch (e) {
-    console.error(e);
+    logger.error('sessions_leave_failed', { error: (e as any)?.message || String(e) });
     res.status(500).json({ error: 'Failed to leave session' });
   }
 };

@@ -3,6 +3,7 @@ import { PrismaClient, Role } from "@prisma/client";
 import { hashPassword, comparePassword } from "../utils/password";
 import { generateToken } from "../utils/jwt";
 import { logAudit } from "../utils/audit";
+import { logger } from "../utils/logger";
 
 const prisma = new PrismaClient();
 
@@ -37,7 +38,7 @@ export async function register(req: Request, res: Response) {
     await logAudit(user.id, "User", user.id, "REGISTER");
 
   } catch (e) {
-    console.error(e);
+    logger.error("auth_register_failed", { error: (e as any)?.message || String(e) });
     return res.status(500).json({ error: "Registration failed" });
   }
 }
@@ -64,7 +65,7 @@ export async function login(req: Request, res: Response) {
     await logAudit(user.id, "User", user.id, "LOGIN");
     
   } catch (e) {
-    console.error(e);
+    logger.error("auth_login_failed", { error: (e as any)?.message || String(e) });
     return res.status(500).json({ error: "Login failed" });
   }
 }
