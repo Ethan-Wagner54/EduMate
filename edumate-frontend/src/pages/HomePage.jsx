@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Users, Calendar, TrendingUp, Star, ArrowRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-
+import homepagePicture from '../assets/homepagePicture1.png';
 import logoImage from '../assets/edumateLogo.jpg';
+import Register from './Register';
 
 export default function HomePage()
 {
@@ -12,8 +12,8 @@ export default function HomePage()
     const navigate = useNavigate();
 
     // Conditional rendering for registration page
-    if (currentPage === "registration") {
-        return <RegistrationPage onBack={() => setCurrentPage("home")} />;
+    if (currentPage === "register") {
+        return <Register onBack={() => setCurrentPage("home")} />;
     }
 
     return (
@@ -35,7 +35,7 @@ export default function HomePage()
                         </Button>
                         <Button
                             className = "bg-purple-600 text-white hover:bg-purple-700"
-                           onClick={() => navigate("/register")}
+                            onClick = {() => setCurrentPage("register")}
                         >
                             Get Started
                         </Button>
@@ -47,7 +47,7 @@ export default function HomePage()
             <section className = "container mx-auto px-4 py-20">
                 <div className = "text-center max-w-4xl mx-auto">
                     <h1 className = "text-5xl font-bold text-white mb-6">
-                        Connect, Learn, and Grow with
+                        Connect, Learn and Grow with
                         <span className = "block text-purple-200">Expert Tutoring</span>
                     </h1>
                     <p className = "text-xl text-purple-100 mb-8 leading-relaxed">
@@ -59,7 +59,7 @@ export default function HomePage()
                         <Button
                             size = "lg"
                             className = "bg-purple-600 text-white hover:bg-purple-700 px-8 py-6"
-                            onClick = {() => setCurrentPage("registration")}
+                            onClick = {() => setCurrentPage("register")}
                         >
                             Join EduMate
                             <ArrowRight className="ml-2 h-5 w-5" />
@@ -70,7 +70,7 @@ export default function HomePage()
                     <div className = "flex justify-center">
                         <div className = "relative">
                             <img
-                                src="null"
+                                src = {homepagePicture}
                                 alt ="TutoringImage"
                                 className="rounded-2xl shadow-2xl max-w-2xl w-full opacity-90 border border-white/10"
                             /> 
@@ -137,7 +137,7 @@ export default function HomePage()
                         <Button
                             size="lg"
                             className="bg-purple-600 text-white hover:bg-purple-700 px-8 py-6"
-                            onClick={() => setCurrentPage("registration")}
+                            onClick={() => setCurrentPage("Register")}
                         >
                             Create Account
                             <ArrowRight className="ml-2 h-5 w-5" />
