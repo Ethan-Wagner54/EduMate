@@ -28,6 +28,6 @@ export interface AuthResponse {
  * JWT Token Payload interface
  */
 export interface JwtPayload {
-  id?: number;
+  userId?: number;
   role?: string;
 }

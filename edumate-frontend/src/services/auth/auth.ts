@@ -113,7 +113,7 @@ export const getCurrentUser = (): { userId?: string; userType?: string; role?: s
   
   // Return relevant user information from the token
   return {
-    userId: decoded.id?.toString(), // sub is the standard JWT claim for subject (usually userId)
+    userId: decoded.userId?.toString(), // sub is the standard JWT claim for subject (usually userId)
     role: decoded.role
   };
 };
@@ -129,6 +129,19 @@ export const getUserRole = (): string | null => {
   const decoded = decodeToken(token);
   return decoded?.role || null;
 };
+
+/**
+ * Get user id from JWT token
+ */
+export const getUserId = (): number | null => {
+  // Always decode from token to prevent tampering
+  const token = getToken();
+  if (!token) return null;
+  
+  const decoded = decodeToken(token);
+  return decoded?.userId || null;
+};
+
 
 /**
  * Check if user has a specific role
@@ -180,6 +193,7 @@ const authService = {
   isAuthenticated,
   getCurrentUser,
   getUserRole,
+  getUserId,
   hasRole,
   decodeToken,
   setAuthHeader
