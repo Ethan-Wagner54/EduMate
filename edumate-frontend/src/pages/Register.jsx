@@ -121,23 +121,24 @@ export default function Registration() //main registration component
                         {/* Role Selection */}
                         <div className="space-y-2">
                             <Label>I want to...</Label>
-                            <div className="flex gap-4">
-                                {["Student", "Tutor", "Both"].map(role => (
+                            <div className="flex flex-col gap-4">
+                                {["Learn", "Tutor", "Both"].map(role => (
                                     <label
-                                        key={role}
-                                        className={`flex items-center gap-2 px-3 py-2 rounded-full border-2 ${
-                                            formData.role == role
-                                                ? "bg-primary border-primary text-white" //ADD OR REMOVE TABBING
-                                                : "border to-white text-white"
-                                        } cursor-pointer`}
+                                    key={role}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-full ${
+                                        formData.role === role
+                                        ? "bg-primary text-white"
+                                        : "text-white"
+                                    } cursor-pointer`}
                                     >
-                                    <input style={{ backgroundColor: '#3C1A4F' }} className="bg-edumatePurpleLight text-white placeholder:text-purple-200 border border-grey"
+                                    <input
+                                        style={{ backgroundColor: '#3C1A4F' }}
+                                        className="bg-edumatePurpleLight text-white placeholder:text-purple-200 border border-grey"
                                         type="radio"
                                         name="role"
                                         value={role}
                                         checked={formData.role === role}
                                         onChange={handleChange}
-                                        //className was hidden
                                     />
                                     {role}
                                     </label>
@@ -186,8 +187,9 @@ export default function Registration() //main registration component
                                 ))}
                             </div>
                         </div>
+                        
                         {/*Submit Button*/}
-                        <Link to="/HomePage">
+                        <Link to="/home">
                                 <Button
                                     type="submit"
                                     className="w-full bg-primary dark:bg-primary-dark hover:bg-primary-dark text-primary-foreground dark:text-primary-foreground-dark transition-colors"
