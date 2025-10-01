@@ -1,10 +1,13 @@
 // Dashboard.jsx
 import { useState, useEffect } from "react";
 import sessionService from "../services/sessions/session";
+import userService from "../services/user/user";
 import React from "react";
 import { GaugeCircle, Book, Calendar, Users, Star, MessageSquare, Settings, AlertTriangle, CircleCheck, PlayCircle } from "lucide-react"; // ICONS
+import authService from "../services/auth/auth";
 
 export default function Dashboard() {
+  const [user, setUser] = useState(null);
   const [sessions, setSessions] = useState([]);
   
   useEffect(() => {
@@ -22,9 +25,24 @@ export default function Dashboard() {
     };
 
     fetchSessions();
-    console.log(sessions);
   }, []);
 
+  const fetchUser = async () => {
+    try {
+      const response = await userService.getUser({ id: authService.getUserId() });
+
+      if (response.success && response.data) {
+        setUser(response.data);
+      }
+    } catch (err) {
+      console.error("Error fetching user:", err);
+      setUser(null);
+    }
+  };
+
+  if (user == null) {
+    fetchUser();
+  }
 
   return (
     <div className="flex h-screen bg-[#F0F2F5] text-gray-900">
@@ -40,7 +58,7 @@ export default function Dashboard() {
           <div className="bg-[#8A2BE2] rounded-full w-10 h-10 flex items-center justify-center font-bold text-white text-lg mr-3">
           </div>
           <div>
-            <div className="text-sm font-semibold">Student</div>
+            <div className="text-sm font-semibold">{user?.name}</div>
             <div className="text-xs text-gray-300">42351673</div>
           </div>
         </div>
@@ -86,7 +104,7 @@ export default function Dashboard() {
         {/* Greeting */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-800">
-            Welcome back, <span className="text-purple-600">Student!</span>
+            Welcome back, <span className="text-purple-600">{user?.name}!</span>
           </h1>
           <p className="text-gray-600">Here's what's happening with your tutoring sessions today.</p>
         </div>
