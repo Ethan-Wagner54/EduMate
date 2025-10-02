@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Progress } from '../ui/progress';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, TrendingDown, Users, Clock, Star, Target, Download, Calendar } from 'lucide-react';
-import { fetchJSON } from '../services/api';
+// import { fetchJSON } from '../services/api';
 
 export function PerformanceAnalytics() {
   const [overviewStats, setOverviewStats] = useState([]);
@@ -18,12 +18,14 @@ export function PerformanceAnalytics() {
   const [studentFeedback, setStudentFeedback] = useState([]);
 
   useEffect(() => {
-    fetchJSON('overviewStats.json').then(setOverviewStats);
-    fetchJSON('sessionData.json').then(setSessionData);
-    fetchJSON('modulePerformance.json').then(setModulePerformance);
-    fetchJSON('timeDistribution.json').then(setTimeDistribution);
-    fetchJSON('attendanceData.json').then(setAttendanceData);
-    fetchJSON('studentFeedback.json').then(setStudentFeedback);
+    // TODO: Replace with real API calls when analytics endpoints are implemented
+    // For now, set empty arrays to prevent errors
+    setOverviewStats([]);
+    setSessionData([]);
+    setModulePerformance([]);
+    setTimeDistribution([]);
+    setAttendanceData([]);
+    setStudentFeedback([]);
   }, []);
 
   return (

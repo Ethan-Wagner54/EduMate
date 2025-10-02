@@ -13,15 +13,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [userType, setUserType] = useState("student"); // student or tutor
   const [formData, setFormData] = useState({ email: '', password: '' });
-  const [users, setUsers] = useState({ students: [], tutors: [], admins: [] });
   const navigate = useNavigate();
-
-  useEffect(() => {
-    fetch("/mocks/users.json")
-      .then(res => res.json())
-      .then(setUsers)
-      .catch(err => console.error("Failed to load users.json", err));
-  }, []);
 
 
   const handleInputChange = (e) => {
@@ -31,15 +23,27 @@ export default function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    debugger;
     try {
-      const loginData = { ...formData, userType };
+      const loginData = { email: formData.email, password: formData.password };
       
       const response = await authService.login(loginData);
       
       if (response.success) {
         const userTypeFromResponse = authService.getUserRole();
         
+        // Check if the user type matches the selected tab
+        if (userType === "student" && userTypeFromResponse !== "student") {
+          alert("This account is not a student account. Please select the correct user type.");
+          localStorage.removeItem('token'); // Clear the token
+          return;
+        }
+        if (userType === "tutor" && userTypeFromResponse !== "tutor") {
+          alert("This account is not a tutor account. Please select the correct user type.");
+          localStorage.removeItem('token'); // Clear the token
+          return;
+        }
+        
+        // Navigate based on actual user role
         if (userTypeFromResponse === "admin") {
           navigate("/admin");
         } else if (userTypeFromResponse === "tutor") {
@@ -57,16 +61,16 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-background dark:bg-background-dark flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-card dark:bg-card-dark border-border dark:border-border-dark backdrop-blur-sm">
+    <div className="min-h-screen w-full bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md bg-card border-border backdrop-blur-sm">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
             <img src={logoImage} alt="EduMate Logo" className="w-16 h-16" />
           </div>
-          <CardTitle className="text-2xl text-foreground dark:text-foreground-dark">
+          <CardTitle className="text-2xl text-foreground">
             Welcome back
           </CardTitle>
-          <CardDescription className="text-muted-foreground dark:text-muted-foreground-dark">
+          <CardDescription className="text-muted-foreground">
             Sign in to your EduMate account
           </CardDescription>
 
@@ -127,9 +131,17 @@ export default function Login() {
             </Button>
           </form>
 
-          <p className="text-center text-sm text-muted-foreground dark:text-muted-foreground-dark">
-            Don't have an account? <Link to="/register">Sign up</Link>
-          </p>
+          <div className="text-center text-sm space-y-2">
+            <Link 
+              to="/forgot-password" 
+              className="text-purple-600 hover:text-purple-800 hover:underline"
+            >
+              Forgot your password?
+            </Link>
+            <p className="text-muted-foreground">
+              Don't have an account? <Link to="/register" className="text-purple-600 hover:text-purple-800 hover:underline">Sign up</Link>
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

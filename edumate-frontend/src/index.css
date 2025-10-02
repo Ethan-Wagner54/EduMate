@@ -1,77 +1,186 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Theme Variables */
 :root {
   --font-size: 16px;
   --radius: 0.625rem;
-
-  /* Core Colors */
-  --background: #601597;        
-  --foreground: #030213;        
-  --card: #FAF4FE;              
-  --card-foreground: #030213;   
-
-  --primary: #8e53b5;           
-  --primary-foreground: #601597;
-
-  --secondary: #8c6ac4;         
-  --secondary-foreground: #030213;
-
-  --accent: #e9d9ff;            
-  --accent-foreground: #601597;
-
-  --destructive: #d4183d;       
-  --destructive-foreground: #ffffff;
-
-  --border: rgba(255, 255, 255, 0.2);  
-  --input-background: #7a4dbb;  
-  --switch-background: #8c6ac4;
-
+  
+  /* Light theme colors */
+  --background: 255 255 255; /* white */
+  --background-secondary: 248 250 252; /* slate-50 */
+  --foreground: 15 23 42; /* slate-900 */
+  --card: 255 255 255; /* white */
+  --card-foreground: 15 23 42; /* slate-900 */
+  --popover: 255 255 255; /* white */
+  --popover-foreground: 15 23 42; /* slate-900 */
+  --primary: 106 13 173; /* EduMate purple */
+  --primary-foreground: 255 255 255; /* white */
+  --secondary: 241 245 249; /* slate-100 */
+  --secondary-foreground: 15 23 42; /* slate-900 */
+  --muted: 241 245 249; /* slate-100 */
+  --muted-foreground: 100 116 139; /* slate-500 */
+  --accent: 241 245 249; /* slate-100 */
+  --accent-foreground: 15 23 42; /* slate-900 */
+  --destructive: 239 68 68; /* red-500 */
+  --destructive-foreground: 255 255 255; /* white */
+  --border: 226 232 240; /* slate-200 */
+  --input: 226 232 240; /* slate-200 */
+  --ring: 106 13 173; /* EduMate purple */
+  --success: 34 197 94; /* green-500 */
+  --warning: 245 158 11; /* amber-500 */
+  --info: 59 130 246; /* blue-500 */
+  
   /* Font weights */
   --font-weight-normal: 400;
   --font-weight-medium: 500;
 }
 
 .dark {
-  --background: #30175f;        
-  --foreground: #030213;
-  --card: #4b2e8f;              
-  --card-foreground: #030213;
-
-  --primary: #c9b3ff;           
-  --primary-foreground: #30175f;
-
-  --secondary: #7a4dbb;
-  --secondary-foreground: #030213;
-
-  --accent: #8c6ac4;
-  --accent-foreground: #030213;
-
-  --destructive: #d4183d;
-  --destructive-foreground: #ffffff;
-
-  --border: #7a4dbb;
-  --input-background: #4b2e8f;
+  /* Dark theme colors */
+  --background: 15 23 42; /* slate-900 */
+  --background-secondary: 30 41 59; /* slate-800 */
+  --foreground: 248 250 252; /* slate-50 */
+  --card: 30 41 59; /* slate-800 */
+  --card-foreground: 248 250 252; /* slate-50 */
+  --popover: 30 41 59; /* slate-800 */
+  --popover-foreground: 248 250 252; /* slate-50 */
+  --primary: 139 92 246; /* violet-500 */
+  --primary-foreground: 255 255 255; /* white */
+  --secondary: 51 65 85; /* slate-700 */
+  --secondary-foreground: 248 250 252; /* slate-50 */
+  --muted: 51 65 85; /* slate-700 */
+  --muted-foreground: 148 163 184; /* slate-400 */
+  --accent: 51 65 85; /* slate-700 */
+  --accent-foreground: 248 250 252; /* slate-50 */
+  --destructive: 239 68 68; /* red-500 */
+  --destructive-foreground: 255 255 255; /* white */
+  --border: 51 65 85; /* slate-700 */
+  --input: 51 65 85; /* slate-700 */
+  --ring: 139 92 246; /* violet-500 */
+  --success: 34 197 94; /* green-500 */
+  --warning: 245 158 11; /* amber-500 */
+  --info: 59 130 246; /* blue-500 */
 }
 
 @layer base {
   *, *::before, *::after {
-    @apply border-border outline-none;
+    @apply border-border;
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-200;
     font-size: var(--font-size);
+    font-family: system-ui, sans-serif;
   }
 
-  h1 { font-weight: var(--font-weight-medium); font-size: 2xl; line-height: 1.5; }
-  h2 { font-weight: var(--font-weight-medium); font-size: xl; line-height: 1.5; }
-  h3 { font-weight: var(--font-weight-medium); font-size: lg; line-height: 1.5; }
-  h4 { font-weight: var(--font-weight-medium); font-size: base; line-height: 1.5; }
+  /* Ensure form elements inherit theme colors with high specificity */
+  input, select, textarea {
+    background-color: rgb(var(--background)) !important;
+    color: rgb(var(--foreground)) !important;
+    border-color: rgb(var(--border)) !important;
+  }
+
+  input:disabled, select:disabled, textarea:disabled {
+    background-color: rgb(var(--muted)) !important;
+    color: rgb(var(--muted-foreground)) !important;
+  }
+
+  /* Fix option styling for select elements */
+  select option {
+    background-color: rgb(var(--background)) !important;
+    color: rgb(var(--foreground)) !important;
+  }
+
+  /* Target specific form elements in Settings */
+  .settings-form input[type="text"],
+  .settings-form input[type="email"],
+  .settings-form input[type="tel"],
+  .settings-form input[type="password"],
+  .settings-form select {
+    background-color: rgb(var(--background)) !important;
+    color: rgb(var(--foreground)) !important;
+    border-color: rgb(var(--border)) !important;
+  }
+
+  .settings-form input:disabled {
+    background-color: rgb(var(--muted)) !important;
+    color: rgb(var(--muted-foreground)) !important;
+  }
+
+  /* Override browser defaults more aggressively */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  select {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-color: rgb(var(--background)) !important;
+    color: rgb(var(--foreground)) !important;
+    border: 1px solid rgb(var(--border)) !important;
+  }
+
+  .dark input[type="text"],
+  .dark input[type="email"],
+  .dark input[type="tel"],
+  .dark input[type="password"],
+  .dark select {
+    background-color: rgb(30 41 59) !important; /* slate-800 */
+    color: rgb(248 250 252) !important; /* slate-50 */
+    border-color: rgb(51 65 85) !important; /* slate-700 */
+  }
+
+  .dark input:disabled {
+    background-color: rgb(51 65 85) !important; /* slate-700 */
+    color: rgb(148 163 184) !important; /* slate-400 */
+  }
+
+  /* Handle autofill styles */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: rgb(var(--foreground)) !important;
+    background-color: rgb(var(--background)) !important;
+    box-shadow: 0 0 0 1000px rgb(var(--background)) inset !important;
+  }
+
+  .dark input:-webkit-autofill,
+  .dark input:-webkit-autofill:hover,
+  .dark input:-webkit-autofill:focus,
+  .dark input:-webkit-autofill:active {
+    -webkit-text-fill-color: rgb(248 250 252) !important;
+    box-shadow: 0 0 0 1000px rgb(30 41 59) inset !important;
+  }
+
+  h1 { 
+    font-weight: var(--font-weight-medium); 
+    @apply text-2xl;
+    line-height: 1.4; 
+  }
+  h2 { 
+    font-weight: var(--font-weight-medium); 
+    @apply text-xl;
+    line-height: 1.4; 
+  }
+  h3 { 
+    font-weight: var(--font-weight-medium); 
+    @apply text-lg;
+    line-height: 1.4; 
+  }
+  h4 { 
+    font-weight: var(--font-weight-medium); 
+    @apply text-base;
+    line-height: 1.4; 
+  }
 
   p, input, button, label {
     font-weight: var(--font-weight-normal);
-    font-size: base;
+    @apply text-base;
     line-height: 1.5;
   }
 }

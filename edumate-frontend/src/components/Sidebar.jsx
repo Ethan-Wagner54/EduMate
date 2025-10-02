@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Book, MessageSquare, Settings, LogOut } from 'lucide-react'; // Example icons
+import ThemeToggle from './ui/ThemeToggle';
 
 export default function Sidebar() {
   const location = useLocation();
@@ -65,7 +66,13 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer/Logout Section */}
-      <div className="pt-4 border-t border-gray-100">
+      <div className="pt-4 border-t border-gray-100 space-y-2">
+        {/* Theme Toggle */}
+        <div className="flex items-center justify-between p-2">
+          <span className="text-sm text-gray-600">Theme</span>
+          <ThemeToggle variant="dropdown" size="sm" />
+        </div>
+        
         <button 
           className={`flex items-center p-3 w-full rounded-xl text-red-500 hover:bg-red-50 focus:outline-none transition-colors duration-150`}
         >

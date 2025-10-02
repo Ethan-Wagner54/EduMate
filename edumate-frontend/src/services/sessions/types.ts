@@ -34,3 +34,24 @@ export interface SessionsResponse {
   error?: string;
   message?: string;
 }
+
+/**
+ * Parameters for creating a new session
+ */
+export interface CreateSessionParams {
+  moduleId: number;
+  startTime: string;
+  endTime: string;
+  location?: string;
+  capacity?: number;
+}
+
+/**
+ * Response from the create session API
+ */
+export interface CreateSessionResponse {
+  success: boolean;
+  data?: Session;
+  error?: string;
+  message?: string;
+}

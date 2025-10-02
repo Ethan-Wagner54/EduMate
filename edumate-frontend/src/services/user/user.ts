@@ -12,7 +12,7 @@ const API_URL = config.apiUrl;
 export const getUser = async (params?: GetUserQueryParams): Promise<GetUserResponse> => {
   try {
     // Ensure auth header is set
-    debugger;
+    // debugger;
     
     authService.setAuthHeader();
     

@@ -28,12 +28,12 @@ const TutorNavigation = () => {
       <div
         className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 transition-all duration-300
           ${collapsed ? 'w-20' : 'w-64'}
-          bg-edumatePurpleLight text-card-foreground border-r border-border
+          bg-primary text-primary-foreground border-r border-border
         `}
       >
         <div className="flex items-center justify-between h-16 px-4 bg-primary/90 border-b border-border">
           {!collapsed && (
-            <span className="text-xl font-bold text-card-foreground">
+          <span className="text-xl font-bold text-primary-foreground">
               EduMate Tutor
             </span>
           )}
@@ -53,8 +53,8 @@ const TutorNavigation = () => {
                 to={item.path}
                 className={`flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-colors
                   ${isActivePath(item.path)
-                    ? 'bg-primary text-primary-foreground border-l-4 border-primary/80'
-                    : 'text-card-foreground hover:bg-primary/70 hover:text-card-foreground'
+                    ? 'bg-secondary text-secondary-foreground border-l-4 border-secondary/80'
+                    : 'text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground'
                   }
                 `}
               >
@@ -69,7 +69,7 @@ const TutorNavigation = () => {
           <Button 
             variant="secondary" 
             onClick={handleLogout}
-            className="w-full justify-center bg-primary/80 hover:bg-primary/70 text-card-foreground"
+            className="w-full justify-center bg-destructive/80 hover:bg-destructive/70 text-destructive-foreground"
           >
             <LogOut size={18} className="mr-2" />
             {!collapsed && "Logout"}
@@ -78,13 +78,13 @@ const TutorNavigation = () => {
       </div>
 
       {/* Mobile Top Navigation */}
-      <nav className="md:hidden bg-edumatePurpleLight text-card-foreground shadow-sm border-b border-primary/50">
+      <nav className="md:hidden bg-primary text-primary-foreground shadow-sm border-b border-primary/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <Link 
                 to="/tutor" 
-                className="flex-shrink-0 flex items-center font-bold text-card-foreground"
+                className="flex-shrink-0 flex items-center font-bold text-primary-foreground"
               >
                 EduMate Tutor
               </Link>
@@ -106,7 +106,7 @@ const TutorNavigation = () => {
 
           {isMobileMenuOpen && (
             <div className="md:hidden">
-              <div className="px-2 pt-2 pb-3 space-y-1 bg-edumatePurpleLight border-t border-primary/50">
+              <div className="px-2 pt-2 pb-3 space-y-1 bg-primary border-t border-primary/50">
                 {navigationItems.map((item) => (
                   <Link
                     key={item.name}
@@ -114,8 +114,8 @@ const TutorNavigation = () => {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
                       isActivePath(item.path)
-                        ? 'bg-primary text-primary-foreground border-l-4 border-primary/80'
-                        : 'hover:bg-primary/70 text-card-foreground'
+                        ? 'bg-secondary text-secondary-foreground border-l-4 border-secondary/80'
+                        : 'hover:bg-primary/80 text-primary-foreground'
                     }`}
                   >
                     <span className="mr-3">{item.icon}</span>
@@ -126,7 +126,7 @@ const TutorNavigation = () => {
                   <Button 
                     variant="secondary" 
                     onClick={handleLogout}
-                    className="w-full justify-start bg-primary/80 hover:bg-primary/70 text-card-foreground"
+                    className="w-full justify-start bg-destructive/80 hover:bg-destructive/70 text-destructive-foreground"
                   >
                     <LogOut size={18} className="mr-2" />
                     Logout
