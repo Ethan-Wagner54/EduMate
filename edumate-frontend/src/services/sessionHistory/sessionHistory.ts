@@ -1,6 +1,7 @@
 import axios from 'axios';
 import config from '../../config/Config';
 import authService from '../auth/auth';
+import { exportToCSV, formatSessionHistoryForCSV } from '../../utils/csvExport';
 import {
   SessionHistoryItem,
   SessionHistoryResponse,
@@ -141,11 +142,53 @@ export const getTutorSessions = async (tutorId: number): Promise<TutorSessionsRe
   }
 };
 
+/**
+ * Export session history data to CSV file
+ */
+export const exportSessionHistoryToCSV = async (params?: SessionHistoryQueryParams): Promise<void> => {
+  try {
+    console.log('Fetching session history for CSV export...');
+    
+    const response = await getSessionHistory(params);
+    
+    if (!response.success || !response.data) {
+      throw new Error(response.error || 'Failed to fetch session history');
+    }
+    
+    const sessions = response.data;
+    
+    if (sessions.length === 0) {
+      alert('No session data to export!');
+      return;
+    }
+    
+    // Format the session data for CSV export
+    const formattedSessions = formatSessionHistoryForCSV(sessions);
+    
+    // Generate filename with current date and filter info
+    const currentDate = new Date().toISOString().split('T')[0];
+    const filterSuffix = params?.status && params.status !== 'all' ? `-${params.status}` : '';
+    const filename = `session-history${filterSuffix}-${currentDate}.csv`;
+    
+    // Export to CSV
+    exportToCSV(formattedSessions, { 
+      filename,
+      dateFormat: 'short'
+    });
+    
+    console.log(`Exported ${sessions.length} sessions to ${filename}`);
+  } catch (error: any) {
+    console.error('Error exporting session history:', error);
+    throw new Error(error.message || 'Failed to export session history');
+  }
+};
+
 // Export default for easier imports
 const sessionHistoryService = {
   getSessionHistory,
   submitSessionReview,
-  getTutorSessions
+  getTutorSessions,
+  exportSessionHistoryToCSV
 };
 
 export default sessionHistoryService;

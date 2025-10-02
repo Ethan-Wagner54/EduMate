@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Star, Calendar, MessageSquare, BookOpen, User } from 'lucide-react';
+import tutorService from '../services/tutor/tutor';
+import MessagingModal from '../components/student/MessagingModal';
 import { useNavigate } from 'react-router-dom';
-import userService from '../services/user/user';
-import authService from '../services/auth/auth';
+import { AvatarMedium } from '../components/ui/Avatar';
 import MessagingModal from '../components/student/MessagingModal';
 
 export default function MyTutors() {
@@ -111,9 +112,13 @@ export default function MyTutors() {
             {tutors.map((tutor) => (
               <div key={tutor.id} className="bg-card rounded-xl p-6 shadow-sm border border-border hover:shadow-md transition-all duration-200">
                 <div className="flex items-center mb-4">
-                  <div className="bg-primary rounded-full w-12 h-12 flex items-center justify-center font-bold text-primary-foreground text-lg mr-4">
-                    {getInitials(tutor.name)}
-                  </div>
+                  <AvatarMedium
+                    userId={tutor.id}
+                    userName={tutor.name}
+                    userType="tutor"
+                    size={48}
+                    className="mr-4"
+                  />
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-foreground">{tutor.name}</h3>
                     <div className="flex items-center text-sm text-muted-foreground">

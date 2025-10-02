@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Users, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import sessionService from '../services/sessions/session';
+import { Calendar, Clock, MapPin, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import sessionService from '../services/session/session';
+import { AvatarSmall } from '../components/ui/Avatar';
 import authService from '../services/auth/auth';
 
 export default function MySessions() {
@@ -117,9 +118,13 @@ export default function MySessions() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center mb-3">
-                        <div className="bg-primary rounded-full w-10 h-10 flex items-center justify-center font-bold text-primary-foreground text-lg mr-4">
-                          {session.tutor?.name?.split(' ').map(word => word.charAt(0)).join('') || 'T'}
-                        </div>
+                        <AvatarSmall
+                          userId={session.tutor?.id}
+                          userName={session.tutor?.name}
+                          userType="tutor"
+                          size={40}
+                          className="mr-4"
+                        />
                         <div>
                           <h3 className="text-lg font-semibold text-foreground">{session.module?.name || 'Session'}</h3>
                           <p className="text-sm text-muted-foreground">with {session.tutor?.name || 'Tutor'}</p>

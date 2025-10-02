@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, BookOpen, Calendar, Star, Edit3 } from 'lucide-react';
 import userService from '../services/user/user';
 import authService from '../services/auth/auth';
+import ImageUpload from '../components/ui/ImageUpload';
+import { loadProfilePicture, removeProfilePicture } from '../utils/imageUtils';
 
 export default function Profile() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({});
+  const [profilePicture, setProfilePicture] = useState(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -18,6 +21,10 @@ export default function Profile() {
         if (response.success && response.data) {
           setUser(response.data);
           setEditData(response.data);
+          
+          // Load existing profile picture
+          const savedImage = loadProfilePicture(userId || 1, 'student');
+          setProfilePicture(savedImage);
         } else {
           // Fallback to mock data
           const mockUser = {
@@ -38,6 +45,10 @@ export default function Profile() {
           };
           setUser(mockUser);
           setEditData(mockUser);
+          
+          // Load existing profile picture
+          const savedImage = loadProfilePicture(userId || 1, 'student');
+          setProfilePicture(savedImage);
         }
       } catch (error) {
         console.error('Error fetching user:', error);
@@ -75,6 +86,15 @@ export default function Profile() {
     setEditData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleProfilePictureChange = (imageUrl) => {
+    setProfilePicture(imageUrl);
+    if (!imageUrl) {
+      // Remove from storage
+      const userId = authService.getUserId();
+      removeProfilePicture(userId || 1, 'student');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -104,13 +124,39 @@ export default function Profile() {
         <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden transition-colors duration-200">
           {/* Header */}
           <div className="bg-gradient-to-r from-primary to-primary/80 px-8 py-12 text-primary-foreground">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="bg-primary-foreground bg-opacity-20 rounded-full w-20 h-20 flex items-center justify-center font-bold text-3xl mr-6">
-                  {user.name?.split(' ').map(word => word.charAt(0)).join('') || 'U'}
+            <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6">
+              <div className="flex flex-col lg:flex-row items-center lg:items-start gap-6">
+                {/* Profile Picture */}
+                <div className="flex-shrink-0">
+                  {isEditing ? (
+                    <ImageUpload
+                      currentImage={profilePicture}
+                      onImageChange={handleProfilePictureChange}
+                      userId={authService.getUserId() || 1}
+                      userType="student"
+                      userName={user.name}
+                      size={120}
+                    />
+                  ) : (
+                    <div className="relative">
+                      {profilePicture ? (
+                        <img
+                          src={profilePicture}
+                          alt={user.name}
+                          className="w-20 h-20 lg:w-24 lg:h-24 rounded-full object-cover border-4 border-primary-foreground/20"
+                        />
+                      ) : (
+                        <div className="bg-primary-foreground bg-opacity-20 rounded-full w-20 h-20 lg:w-24 lg:h-24 flex items-center justify-center font-bold text-2xl lg:text-3xl">
+                          {user.name?.split(' ').map(word => word.charAt(0)).join('') || 'U'}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <h1 className="text-3xl font-bold">{user.name}</h1>
+                
+                {/* Name and Info */}
+                <div className="text-center lg:text-left">
+                  <h1 className="text-2xl lg:text-3xl font-bold">{user.name}</h1>
                   <p className="text-primary-foreground/80 text-lg">{user.program} • {user.year}</p>
                   <p className="text-primary-foreground/60 text-sm">Student ID: {user.studentId}</p>
                 </div>

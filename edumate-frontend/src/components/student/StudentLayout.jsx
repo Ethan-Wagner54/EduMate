@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { GaugeCircle, Book, Calendar, Users, Star, MessageSquare, Settings, User, LogOut } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { GaugeCircle, Book, Calendar, Users, Star, MessageSquare, Settings, LogOut } from 'lucide-react';
 import authService from '../../services/auth/auth';
 import userService from '../../services/user/user';
+import { AvatarSmall } from '../ui/Avatar';
 
 export default function StudentLayout() {
   const [user, setUser] = useState(null);
@@ -162,9 +163,13 @@ export default function StudentLayout() {
           to="/student/profile"
           className="p-4 flex items-center mb-4 border-b border-primary-foreground/20 pb-6 hover:bg-primary/80 rounded-lg transition-colors"
         >
-          <div className="bg-secondary rounded-full w-10 h-10 flex items-center justify-center font-bold text-secondary-foreground text-lg mr-3">
-            {user?.name?.split(' ').map(word => word.charAt(0)).join('') || 'U'}
-          </div>
+          <AvatarSmall
+            userId={user?.id || authService.getUserId()}
+            userName={user?.name}
+            userType="student"
+            size={40}
+            className="mr-3"
+          />
           <div>
             <div className="text-sm font-semibold">{user?.name || 'Loading...'}</div>
             <div className="text-xs text-primary-foreground/70">{user?.studentId || ''}</div>

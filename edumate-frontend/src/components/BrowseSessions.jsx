@@ -1,7 +1,8 @@
 // src/components/BrowseSessions.jsx
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronDown, SlidersHorizontal, MapPin, Calendar, Users, Star, Hourglass, AlertTriangle } from 'lucide-react';
-import sessionService from '../services/sessions/session';
+import { Search, Calendar, MapPin, Star, Users, Filter, SlidersHorizontal, ChevronDown, Hourglass } from 'lucide-react';
+import sessionService from '../services/session/session';
+import { AvatarSmall } from './ui/Avatar';
 
 export default function BrowseSessions() {
   const [sessions, setSessions] = useState([]);
@@ -206,9 +207,13 @@ export default function BrowseSessions() {
                 <h3 className="text-lg font-bold text-foreground mb-3">{session.title}</h3>
 
                 <div className="flex items-center mb-4">
-                  <div className="bg-primary rounded-full w-8 h-8 flex items-center justify-center font-bold text-primary-foreground text-sm mr-3 flex-shrink-0">
-                    {session.tutorInitials}
-                  </div>
+                  <AvatarSmall
+                    userId={session.tutorId}
+                    userName={session.tutor}
+                    userType="tutor"
+                    size={32}
+                    className="mr-3 flex-shrink-0"
+                  />
                   <div>
                     <p className="font-medium text-foreground">{session.tutor}</p>
                     <p className="text-sm text-muted-foreground flex items-center">

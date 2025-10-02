@@ -6,7 +6,7 @@ import ResetPassword from "../pages/ResetPassword";
 import SessionManagement from "../components/tutor/SessionManagement";
 import HomePage from "../pages/HomePage";
 import TutorDashboard from "../pages/TutorDashboard"; 
-import { TutorProfile } from "../components/tutor/TutorProfile";
+import TutorProfilePage from "../pages/TutorProfilePage";
 import TutorLayout from "../components/tutor/TutorLayout"; 
 import AdminDashboard from "../pages/AdminDashboard";
 import StudentDashboard from "../pages/StudentDashboard";
@@ -37,7 +37,7 @@ export default function AppRoutes() {
       <Route path="/tutor" element={<TutorLayout />}>
         <Route index element={<TutorDashboard />} />
         <Route path="create-session" element={<SessionManagement />} />
-        <Route path="profile" element={<TutorProfile />} />
+        <Route path="profile" element={<TutorProfilePage />} />
       </Route>
 
       {/* Admin route */}
