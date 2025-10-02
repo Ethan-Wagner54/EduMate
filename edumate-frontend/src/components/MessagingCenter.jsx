@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Search, Send, Paperclip, MoreVertical, Phone, Video, UserCircle, AlertTriangle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
+import { AvatarMedium, AvatarSmall } from './ui/Avatar';
 import conversationsService from '../services/conversations/conversations';
 import exampleImage from 'figma:asset/3f73a89fe600cb19cfbcaaba7f20fc15f0f9368d.png';
 
@@ -191,13 +191,13 @@ export function MessagingCenter() {
                 >
                   <div className="flex items-start gap-3">
                     <div className="relative">
-                      <Avatar className="w-12 h-12">
-                        <AvatarFallback className={getUserTypeColor(conversation.userType)}>
-                          {conversation.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')}
-                        </AvatarFallback>
+                      <AvatarMedium
+                        userId={conversation.userId}
+                        userName={conversation.name}
+                        userType={conversation.userType}
+                        size={48}
+                        showOnlineStatus={true}
+                        isOnline={conversation.isOnline}
                       </Avatar>
                       {conversation.isOnline && (
                         <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white bg-green-500" />

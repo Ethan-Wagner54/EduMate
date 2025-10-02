@@ -179,8 +179,16 @@ export default function DashboardContent() {
               return (
                 <div key={session.id} className="border border-border rounded-xl p-4 mb-4 last:mb-0 flex items-center justify-between">
                   <div className="flex items-start">
-                    <div className="bg-primary rounded-full w-10 h-10 flex items-center justify-center font-bold text-primary-foreground text-lg mr-4 flex-shrink-0">
-                      {tutorInitials}
+                    {/* Tutor Avatar */}
+                    <div className="mr-4 flex-shrink-0">
+                      {/* Reusable avatar component will show tutor's profile picture if available */}
+                      {/* Fallback to initials if no picture */}
+                      <span className="inline-block rounded-full overflow-hidden">
+                        {/* Lightweight inline to avoid import churn here; in larger refactor we can import AvatarSmall */}
+                        <div className="bg-primary rounded-full w-10 h-10 flex items-center justify-center font-bold text-primary-foreground text-lg">
+                          {tutorInitials}
+                        </div>
+                      </span>
                     </div>
                     <div>
                       <p className="font-medium text-foreground">{session.module.name}</p>

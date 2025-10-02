@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Calendar, Star, BookOpen, Target, Award } from 'lucide-react';
+import PerformanceOverTime from '../components/progress/PerformanceOverTime';
 
 export default function Progress() {
   const [stats, setStats] = useState({
@@ -189,16 +190,9 @@ export default function Progress() {
           </div>
         </div>
 
-        {/* Performance Chart Placeholder */}
-        <div className="mt-8 bg-card border border-border rounded-xl p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-foreground mb-6">Performance Over Time</h2>
-          <div className="flex items-center justify-center h-64 bg-accent rounded-lg">
-            <div className="text-center">
-              <TrendingUp size={48} className="text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">Performance chart would be displayed here</p>
-              <p className="text-sm text-muted-foreground">Integration with charting library needed</p>
-            </div>
-          </div>
+        {/* Performance Over Time Component */}
+        <div className="mt-8">
+          <PerformanceOverTime />
         </div>
       </div>
     </div>

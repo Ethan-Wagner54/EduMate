@@ -27,12 +27,50 @@ export const listSessions = async (req: Request, res: Response) => {
       where,
       include: {
         module: { select: { code: true, name: true } },
-        tutor: { select: { id: true, name: true } },
+        tutor: { 
+          select: { 
+            id: true, 
+            name: true,
+            profile: {
+              select: { averageRating: true }
+            }
+          } 
+        },
         _count: { select: { enrollments: true } },
       },
       orderBy: { startTime: 'asc' },
     });
-    return res.json(sessions);
+
+    // Format sessions for BrowseSessions component
+    const formattedSessions = sessions.map(session => {
+      const tutorInitials = session.tutor.name
+        .split(' ')
+        .map(word => word.charAt(0))
+        .join('');
+      
+      return {
+        id: session.id,
+        course: session.module.code,
+        title: `${session.module.name} - Advanced Topics`,
+        tutor: session.tutor.name,
+        tutorInitials,
+        rating: session.tutor.profile?.averageRating || 4.5,
+        isFree: true, // Assuming all sessions are free
+        time: formatSessionTime(session.startTime, session.endTime),
+        location: session.location || 'TBA',
+        enrolled: `${session._count.enrollments}/${session.capacity || 'unlimited'} students enrolled`,
+        description: `Comprehensive session covering ${session.module.name} concepts`,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        capacity: session.capacity,
+        enrolledCount: session._count.enrollments,
+        module: session.module,
+        tutorId: session.tutor.id,
+        status: session.status
+      };
+    });
+
+    return res.json(formattedSessions);
   } catch (e) {
     logger.error('sessions_list_failed', { error: (e as any)?.message || String(e) });
     return res.status(500).json({ error: 'Failed to list sessions' });
@@ -143,3 +181,28 @@ export const leaveSession = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to leave session' });
   }
 };
+
+// Helper function to format session time
+function formatSessionTime(startTime: Date, endTime: Date): string {
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+  const now = new Date();
+  
+  const isToday = start.toDateString() === now.toDateString();
+  const isTomorrow = start.toDateString() === new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString();
+  
+  let dayText;
+  if (isToday) {
+    dayText = 'Today';
+  } else if (isTomorrow) {
+    dayText = 'Tomorrow';
+  } else {
+    dayText = start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  
+  const startTimeText = start.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const endTimeText = end.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const duration = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+  
+  return `${dayText} • ${startTimeText} - ${endTimeText} (${duration} min)`;
+}

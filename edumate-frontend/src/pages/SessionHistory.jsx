@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, Star, Filter, Download, AlertTriangle } from 'lucide-react';
 import sessionHistoryService from '../services/sessionHistory/sessionHistory';
+import { exportToCSV, formatSessionHistoryForCSV } from '../utils/csvExport';
+import { AvatarSmall } from '../components/ui/Avatar';
 
 export default function SessionHistory() {
   const [sessions, setSessions] = useState([]);
@@ -8,6 +10,7 @@ export default function SessionHistory() {
   const [sortBy, setSortBy] = useState('date'); // date, rating, module
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const fetchSessionHistory = async () => {
@@ -32,10 +35,44 @@ export default function SessionHistory() {
     fetchSessionHistory();
   }, [filter, sortBy]);
 
-  const handleExportHistory = () => {
-    // This would implement CSV export functionality
-    console.log('Exporting session history...');
-    alert('Export functionality will be implemented soon!');
+  const handleExportHistory = async () => {
+    try {
+      if (sessions.length === 0) {
+        alert('No session data to export!');
+        return;
+      }
+
+      setExporting(true);
+      
+      // Format the session data for CSV export
+      const formattedSessions = formatSessionHistoryForCSV(sessions);
+      
+      // Generate filename with current date and filter info
+      const currentDate = new Date().toISOString().split('T')[0];
+      const filterSuffix = filter !== 'all' ? `-${filter}` : '';
+      const filename = `session-history${filterSuffix}-${currentDate}.csv`;
+      
+      // Add a small delay to show the loading state
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Export to CSV
+      exportToCSV(formattedSessions, { 
+        filename,
+        dateFormat: 'short'
+      });
+      
+      console.log(`Exported ${sessions.length} sessions to ${filename}`);
+      
+      // Show success message
+      const filterText = filter !== 'all' ? ` (${filter} only)` : '';
+      alert(`Successfully exported ${sessions.length} session records${filterText} to ${filename}`);
+      
+    } catch (error) {
+      console.error('Error exporting session history:', error);
+      alert('Failed to export session history. Please try again.');
+    } finally {
+      setExporting(false);
+    }
   };
 
 
@@ -107,10 +144,24 @@ export default function SessionHistory() {
           </div>
           <button
             onClick={handleExportHistory}
-            className="flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            disabled={exporting || loading || sessions.length === 0}
+            className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
+              exporting || loading || sessions.length === 0
+                ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+            }`}
           >
-            <Download size={16} className="mr-2" />
-            Export
+            {exporting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download size={16} className="mr-2" />
+                Export to CSV
+              </>
+            )}
           </button>
         </div>
 
@@ -162,20 +213,24 @@ export default function SessionHistory() {
         {/* Session Cards */}
         <div className="grid gap-6">
           {sessions.map((session) => (
-            <div key={session.id} className="bg-card border border-border rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-start">
-                  <div className="bg-primary rounded-full w-12 h-12 flex items-center justify-center font-bold text-primary-foreground text-lg mr-4">
-                    {session.tutor.name.split(' ').map(word => word.charAt(0)).join('')}
+              <div key={session.id} className="bg-card border border-border rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-start">
+                    <AvatarSmall
+                      userId={session.tutor.id}
+                      userName={session.tutor.name}
+                      userType="tutor"
+                      size={48}
+                      className="mr-4"
+                    />
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground">{session.module.name}</h3>
+                      <p className="text-sm text-muted-foreground">with {session.tutor.name}</p>
+                      <span className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-medium mt-1 inline-block">
+                        {session.module.code}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground">{session.module.name}</h3>
-                    <p className="text-sm text-muted-foreground">with {session.tutor.name}</p>
-                    <span className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-medium mt-1 inline-block">
-                      {session.module.code}
-                    </span>
-                  </div>
-                </div>
                 <div className="text-right">
                   <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(session.status)}`}>
                     {session.status}
