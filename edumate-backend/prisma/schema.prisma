@@ -32,8 +32,11 @@ model User {
   phone           String?
   role            Role          @default(student)
   passwordHash    String
+  resetToken      String?       // For password reset functionality
+  resetTokenExpiry DateTime?    // Token expiration time
   createdAt       DateTime      @default(now())
 
+  // Existing relationships
   tutorModules    TutorModule[]
   sessions        Session[]     @relation("TutorSessions")
   messagesSent    Message[]     @relation("messagesSent")
@@ -41,6 +44,15 @@ model User {
   enrollments     Enrollment[]
   attendances     Attendance[]
   auditLogs       AuditLog[]
+  
+  // New relationships
+  profile         UserProfile?
+  conversationsCreated Conversation[]
+  conversationParticipants ConversationParticipant[]
+  conversationMessages ConversationMessage[]
+  sessionReviews  SessionReview[]
+  activities      Activity[]
+  dashboardStats  DashboardStats?
 }
 
 model Module {
@@ -81,6 +93,7 @@ model Session {
   enrollments Enrollment[]
   attendances Attendance[]
   messages    Message[]
+  reviews     SessionReview[]
 }
 
 model Enrollment {
@@ -122,6 +135,23 @@ model Message {
   session     Session? @relation(fields: [sessionId], references: [id])
 }
 
+// Additional enums for new models
+enum ActivityType {
+  session_joined
+  session_attended
+  session_completed
+  session_cancelled
+  session_booked
+  message_sent
+  profile_updated
+}
+
+enum ConversationType {
+  direct
+  group
+  session_chat
+}
+
 model AuditLog {
   id        Int      @id @default(autoincrement())
   userId    Int?
@@ -131,4 +161,109 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   user      User?    @relation(fields: [userId], references: [id])
+}
+
+// Extended user profile information
+model UserProfile {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  bio             String?
+  profilePicture  String?  // URL to profile picture
+  specialties     String[] // Array of specialties for tutors
+  favoriteSubjects String[] // Array of favorite subjects for students
+  totalSessions   Int      @default(0)
+  completedSessions Int    @default(0)
+  averageRating   Float?   @default(0)
+  isOnline        Boolean  @default(false)
+  lastSeen        DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id])
+}
+
+// Conversations for group messaging
+model Conversation {
+  id              Int               @id @default(autoincrement())
+  name            String?
+  type            ConversationType  @default(direct)
+  isGroup         Boolean           @default(false)
+  createdBy       Int?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  creator         User?             @relation(fields: [createdBy], references: [id])
+  participants    ConversationParticipant[]
+  messages        ConversationMessage[]
+}
+
+model ConversationParticipant {
+  id              Int          @id @default(autoincrement())
+  conversationId  Int
+  userId          Int
+  joinedAt        DateTime     @default(now())
+  lastRead        DateTime?    
+  unreadCount     Int          @default(0)
+
+  conversation    Conversation @relation(fields: [conversationId], references: [id])
+  user            User         @relation(fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+}
+
+model ConversationMessage {
+  id              Int          @id @default(autoincrement())
+  conversationId  Int
+  senderId        Int
+  content         String
+  isRead          Boolean      @default(false)
+  sentAt          DateTime     @default(now())
+  editedAt        DateTime?
+
+  conversation    Conversation @relation(fields: [conversationId], references: [id])
+  sender          User         @relation(fields: [senderId], references: [id])
+}
+
+// Session reviews and ratings
+model SessionReview {
+  id          Int      @id @default(autoincrement())
+  sessionId   Int      
+  studentId   Int
+  rating      Int      // 1-5 rating
+  feedback    String?
+  createdAt   DateTime @default(now())
+
+  session     Session  @relation(fields: [sessionId], references: [id])
+  student     User     @relation(fields: [studentId], references: [id])
+
+  @@unique([sessionId, studentId])
+}
+
+// User activities for dashboard
+model Activity {
+  id          Int          @id @default(autoincrement())
+  userId      Int
+  type        ActivityType
+  description String
+  entityType  String?      // 'session', 'message', etc.
+  entityId    Int?
+  metadata    Json?        // Additional data as JSON
+  createdAt   DateTime     @default(now())
+
+  user        User         @relation(fields: [userId], references: [id])
+}
+
+// Dashboard statistics cache
+model DashboardStats {
+  id                    Int      @id @default(autoincrement())
+  userId                Int      @unique
+  activeTutors          Int      @default(0)
+  sessionsThisMonth     Int      @default(0)
+  upcomingSessions      Int      @default(0)
+  averageRating         Float    @default(0)
+  totalSessions         Int      @default(0)
+  completedSessions     Int      @default(0)
+  lastUpdated           DateTime @default(now())
+
+  user                  User     @relation(fields: [userId], references: [id])
 }
