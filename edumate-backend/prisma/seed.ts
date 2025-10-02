@@ -1,5 +1,5 @@
-import { PrismaClient, Role, SessionStatus } from '@prisma/client';
-import bcrypt from 'bcryptjs'; // Import bcrypt directly
+import { PrismaClient, SessionStatus } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -7,7 +7,6 @@ async function main() {
   console.log('Seeding database...');
 
   // 1. Create Users (Admin, Tutor, and Students)
-  // Use bcrypt directly to hash passwords
   const adminPassword = await bcrypt.hash('AdminPass123', 10);
   const tutorPassword = await bcrypt.hash('TutorPass123', 10);
   const student1Password = await bcrypt.hash('Student1Pass123', 10);
@@ -15,45 +14,45 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: 'admin@edumate.com' },
-    update: {},
+    update: { passwordHash: adminPassword },
     create: {
       email: 'admin@edumate.com',
       name: 'Admin User',
       passwordHash: adminPassword,
-      role: Role.admin,
+      role: 'admin', // Use string 'admin'
     },
   });
 
   const tutor = await prisma.user.upsert({
     where: { email: 'tutor@edumate.com' },
-    update: {},
+    update: { passwordHash: tutorPassword },
     create: {
       email: 'tutor@edumate.com',
       name: 'Jane Doe',
       passwordHash: tutorPassword,
-      role: Role.tutor,
+      role: 'tutor', // Use string 'tutor'
     },
   });
 
   const student1 = await prisma.user.upsert({
     where: { email: 'student1@edumate.com' },
-    update: {},
+    update: { passwordHash: student1Password },
     create: {
       email: 'student1@edumate.com',
       name: 'John Smith',
       passwordHash: student1Password,
-      role: Role.student,
+      role: 'student', // Use string 'student'
     },
   });
 
   const student2 = await prisma.user.upsert({
     where: { email: 'student2@edumate.com' },
-    update: {},
+    update: { passwordHash: student2Password },
     create: {
       email: 'student2@edumate.com',
       name: 'Alice Johnson',
       passwordHash: student2Password,
-      role: Role.student,
+      role: 'student', // Use string 'student'
     },
   });
 

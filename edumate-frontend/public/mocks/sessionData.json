@@ -1,0 +1,7 @@
+[
+  { "month": "Aug", "sessions": 8, "students": 32, "rating": 4.6 },
+  { "month": "Sep", "sessions": 12, "students": 48, "rating": 4.7 },
+  { "month": "Oct", "sessions": 16, "students": 64, "rating": 4.8 },
+  { "month": "Nov", "sessions": 20, "students": 78, "rating": 4.9 },
+  { "month": "Dec", "sessions": 24, "students": 87, "rating": 4.8 }
+]

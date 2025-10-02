@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/jwt';
 
-// Extend the Express Request type to include our user payload
 declare global {
   namespace Express {
     interface Request {
@@ -27,7 +26,6 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
     return res.status(401).json({ message: 'Unauthorized: Invalid token' });
   }
 
-  // Attach user payload to the request object
   req.user = payload;
   next();
 };

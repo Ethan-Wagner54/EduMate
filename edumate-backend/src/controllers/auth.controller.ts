@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { PrismaClient, Role } from "@prisma/client";
+import { PrismaClient, Role } from "@prisma/client"; // Re-added 'Role'
 import { hashPassword, comparePassword } from "../utils/password";
 import { generateToken } from "../utils/jwt";
 import { logAudit } from "../utils/audit";
@@ -13,7 +13,7 @@ export async function register(req: Request, res: Response) {
       name: string;
       email: string;
       password: string;
-      role?: Role;
+      role?: Role; // Corrected back to 'Role'
     };
 
     if (!name || !email || !password) {
@@ -27,13 +27,12 @@ export async function register(req: Request, res: Response) {
 
     const passwordHash = await hashPassword(password);
     const user = await prisma.user.create({
-      data: { name, email, passwordHash, role: role ?? "student" },
+      // Use the enum for the default value
+      data: { name, email, passwordHash, role: role ?? Role.student },
     });
 
-    // Use the corrected function name: generateToken
     const token = generateToken({ userId: user.id, role: user.role });
-
-    // We can log the audit after sending the response so the user doesn't have to wait
+    
     res.status(201).json({ token });
     await logAudit(user.id, "User", user.id, "REGISTER");
 
@@ -58,7 +57,6 @@ export async function login(req: Request, res: Response) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    // Use the corrected function name: generateToken
     const token = generateToken({ userId: user.id, role: user.role });
 
     res.json({ token });

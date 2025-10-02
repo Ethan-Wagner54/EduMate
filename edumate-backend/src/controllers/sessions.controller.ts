@@ -5,16 +5,39 @@ import { logger } from '../utils/logger';
 
 const prisma = new PrismaClient();
 
-// A helper function to check for date overlaps
+// Helper functions
 function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
   return aStart < bEnd && aEnd > bStart;
+}
+
+function formatSessionTime(startTime: Date, endTime: Date): string {
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+  const now = new Date();
+  
+  const isToday = start.toDateString() === now.toDateString();
+  const isTomorrow = start.toDateString() === new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString();
+  
+  let dayText;
+  if (isToday) {
+    dayText = 'Today';
+  } else if (isTomorrow) {
+    dayText = 'Tomorrow';
+  } else {
+    dayText = start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  
+  const startTimeText = start.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const endTimeText = end.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const duration = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+  
+  return `${dayText} • ${startTimeText} - ${endTimeText} (${duration} min)`;
 }
 
 export const listSessions = async (req: Request, res: Response) => {
   try {
     const { module: moduleCode, tutorId } = req.query as { module?: string; tutorId?: string };
-    // Corrected to lowercase 'published'
-    const where: any = { status: SessionStatus.published }; 
+    const where: any = { status: SessionStatus.published };
 
     if (moduleCode) {
       where.module = { code: moduleCode };
@@ -27,13 +50,53 @@ export const listSessions = async (req: Request, res: Response) => {
       where,
       include: {
         module: { select: { code: true, name: true } },
-        tutor: { select: { id: true, name: true } },
+        tutor: {
+          select: {
+            id: true,
+            name: true,
+            profile: {
+              select: { averageRating: true }
+            }
+          }
+        },
         _count: { select: { enrollments: true } },
       },
       orderBy: { startTime: 'asc' },
     });
-    return res.json(sessions);
+
+    const formattedSessions = sessions.map(session => {
+      const tutorInitials = session.tutor.name
+        ? session.tutor.name
+          .split(' ')
+          .map((word: string) => word.charAt(0))
+          .join('')
+        : 'NA';
+      
+      return {
+        id: session.id,
+        course: session.module.code,
+        title: `${session.module.name} - Advanced Topics`,
+        tutor: session.tutor.name,
+        tutorInitials,
+        rating: session.tutor.profile?.averageRating || 4.5,
+        isFree: true,
+        time: formatSessionTime(session.startTime, session.endTime),
+        location: session.location || 'TBA',
+        enrolled: `${session._count.enrollments}/${session.capacity || 'unlimited'} students enrolled`,
+        description: `Comprehensive session covering ${session.module.name} concepts`,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        capacity: session.capacity,
+        enrolledCount: session._count.enrollments,
+        module: session.module,
+        tutorId: session.tutor.id,
+        status: session.status
+      };
+    });
+
+    return res.json(formattedSessions);
   } catch (e) {
+    console.error("--- SESSIONS_LIST_FAILED ---", e); // This will show the error
     logger.error('sessions_list_failed', { error: (e as any)?.message || String(e) });
     return res.status(500).json({ error: 'Failed to list sessions' });
   }
@@ -71,7 +134,6 @@ export const createSession = async (req: Request, res: Response) => {
         endTime: eTime,
         location,
         capacity: capacity ? Number(capacity) : null,
-        // Corrected to lowercase 'published'
         status: SessionStatus.published,
       },
     });
@@ -79,6 +141,7 @@ export const createSession = async (req: Request, res: Response) => {
     res.status(201).json(session);
     await logAudit(user.userId, 'Session', session.id, 'CREATE');
   } catch (e) {
+    console.error("--- SESSIONS_CREATE_FAILED ---", e); // This will show the error
     logger.error('sessions_create_failed', { error: (e as any)?.message || String(e) });
     return res.status(500).json({ error: 'Failed to create session' });
   }
@@ -121,6 +184,7 @@ export const joinSession = async (req: Request, res: Response) => {
     res.json({ ok: true });
     await logAudit(user.userId, 'Enrollment', enrollment.id, 'JOIN');
   } catch (e) {
+    console.error("--- SESSIONS_JOIN_FAILED ---", e); // This will show the error
     logger.error('sessions_join_failed', { error: (e as any)?.message || String(e) });
     return res.status(500).json({ error: 'Failed to join session' });
   }
@@ -139,6 +203,7 @@ export const leaveSession = async (req: Request, res: Response) => {
     res.json({ ok: true });
     await logAudit(user.userId, 'Enrollment', enrollment.id, 'LEAVE');
   } catch (e) {
+    console.error("--- SESSIONS_LEAVE_FAILED ---", e); // This will show the error
     logger.error('sessions_leave_failed', { error: (e as any)?.message || String(e) });
     res.status(500).json({ error: 'Failed to leave session' });
   }

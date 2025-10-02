@@ -1,0 +1,23 @@
+[
+  {
+    "student": "John Doe",
+    "module": "MATH111",
+    "rating": 5,
+    "comment": "Excellent explanation of derivatives! Very helpful.",
+    "date": "2024-12-08"
+  },
+  {
+    "student": "Mary Smith",
+    "module": "STAT141",
+    "rating": 5,
+    "comment": "Clear examples and patient teaching style.",
+    "date": "2024-12-07"
+  },
+  {
+    "student": "David Wilson",
+    "module": "MATH141",
+    "rating": 4,
+    "comment": "Good session, could use more practice problems.",
+    "date": "2024-12-06"
+  }
+]

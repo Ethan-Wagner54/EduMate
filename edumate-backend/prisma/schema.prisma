@@ -7,6 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ENUMS
 enum Role {
   student
   tutor
@@ -19,28 +20,70 @@ enum SessionStatus {
   cancelled
 }
 
-enum EnrollmentStatus {
-  joined
-  cancelled
-  waitlisted
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM
 }
 
-model User {
-  id              Int           @id @default(autoincrement())
-  name            String
-  email           String        @unique
-  phone           String?
-  role            Role          @default(student)
-  passwordHash    String
-  createdAt       DateTime      @default(now())
+enum ActivityType {
+  session_joined
+  session_attended
+  session_completed
+  session_cancelled
+  session_booked
+  message_sent
+  profile_updated
+}
 
-  tutorModules    TutorModule[]
-  sessions        Session[]     @relation("TutorSessions")
-  messagesSent    Message[]     @relation("messagesSent")
-  messagesReceived Message[]    @relation("messagesReceived")
-  enrollments     Enrollment[]
-  attendances     Attendance[]
-  auditLogs       AuditLog[]
+// MODELS
+model User {
+  id                      Int                       @id @default(autoincrement())
+  name                    String?
+  email                   String                    @unique
+  phone                   String?
+  role                    Role                      @default(student)
+  passwordHash            String
+  resetToken              String?
+  resetTokenExpiry        DateTime?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+
+  profile                 UserProfile?
+  tutorModules            TutorModule[]
+  sessions                Session[]
+  enrollments             Enrollment[]
+  attendances             Attendance[]
+  auditLogs               AuditLog[]
+  sessionReviews          SessionReview[]
+  activities              Activity[]
+  dashboardStats          DashboardStats?
+
+  // Relations for both messaging systems
+  messagesSent            Message[]                 @relation("messagesSent")
+  messagesReceived        Message[]                 @relation("messagesReceived")
+  conversationParticipants ConversationParticipant[]
+  sentConversationMessages ConversationMessage[]
+}
+
+model UserProfile {
+  id                Int      @id @default(autoincrement())
+  userId            Int      @unique
+  bio               String?
+  profilePicture    String?
+  specialties       String[]
+  averageRating     Float?   @default(0)
+  isOnline          Boolean  @default(false)
+  lastSeen          DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Add these two missing fields
+  totalSessions     Int      @default(0)
+  completedSessions Int      @default(0)
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 model Module {
@@ -58,10 +101,8 @@ model TutorModule {
   moduleId        Int
   approvedByAdmin Boolean  @default(false)
   createdAt       DateTime @default(now())
-
-  tutor  User   @relation(fields: [tutorId], references: [id])
-  module Module @relation(fields: [moduleId], references: [id])
-
+  tutor           User     @relation(fields: [tutorId], references: [id])
+  module          Module   @relation(fields: [moduleId], references: [id])
   @@unique([tutorId, moduleId])
 }
 
@@ -75,24 +116,22 @@ model Session {
   capacity    Int?
   status      SessionStatus  @default(draft)
   createdAt   DateTime       @default(now())
-
-  tutor       User        @relation("TutorSessions", fields: [tutorId], references: [id])
-  module      Module      @relation(fields: [moduleId], references: [id])
+  tutor       User           @relation(fields: [tutorId], references: [id])
+  module      Module         @relation(fields: [moduleId], references: [id])
   enrollments Enrollment[]
   attendances Attendance[]
+  reviews     SessionReview[]
   messages    Message[]
 }
 
 model Enrollment {
-  id        Int              @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   sessionId Int
   studentId Int
-  status    EnrollmentStatus @default(joined)
-  joinedAt  DateTime         @default(now())
-
-  session   Session @relation(fields: [sessionId], references: [id])
-  student   User    @relation(fields: [studentId], references: [id])
-
+  joinedAt  DateTime @default(now())
+  status    String   @default("joined")
+  session   Session  @relation(fields: [sessionId], references: [id])
+  student   User     @relation(fields: [studentId], references: [id])
   @@unique([sessionId, studentId])
 }
 
@@ -102,33 +141,112 @@ model Attendance {
   studentId Int
   attended  Boolean
   timestamp DateTime @default(now())
-
-  session   Session @relation(fields: [sessionId], references: [id])
-  student   User    @relation(fields: [studentId], references: [id])
-
+  session   Session  @relation(fields: [sessionId], references: [id])
+  student   User     @relation(fields: [studentId], references: [id])
   @@unique([sessionId, studentId])
 }
 
+model SessionReview {
+  id        Int      @id @default(autoincrement())
+  sessionId Int
+  studentId Int
+  rating    Int
+  feedback  String?
+  createdAt DateTime @default(now())
+  session   Session  @relation(fields: [sessionId], references: [id])
+  student   User     @relation(fields: [studentId], references: [id])
+  @@unique([sessionId, studentId])
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  entityType String
+  entityId   Int?
+  action     String
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+}
+
+model Activity {
+  id          Int          @id @default(autoincrement())
+  userId      Int
+  type        ActivityType
+  description String
+  entityType  String?
+  entityId    Int?
+  metadata    Json?
+  createdAt   DateTime     @default(now())
+  user        User         @relation(fields: [userId], references: [id])
+}
+
+model DashboardStats {
+  id                Int      @id @default(autoincrement())
+  userId            Int      @unique
+  activeTutors      Int      @default(0)
+  sessionsThisMonth Int      @default(0)
+  upcomingSessions  Int      @default(0)
+  averageRating     Float    @default(0)
+  totalSessions     Int      @default(0)
+  completedSessions Int      @default(0)
+  lastUpdated       DateTime @default(now())
+  user              User     @relation(fields: [userId], references: [id])
+}
+
+// --- SESSION MESSAGING SYSTEM ---
 model Message {
-  id          Int       @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   senderId    Int
   recipientId Int
   sessionId   Int?
   content     String
-  sentAt      DateTime  @default(now())
-
+  sentAt      DateTime @default(now())
   sender      User     @relation("messagesSent", fields: [senderId], references: [id])
   recipient   User     @relation("messagesReceived", fields: [recipientId], references: [id])
   session     Session? @relation(fields: [sessionId], references: [id])
 }
 
-model AuditLog {
-  id        Int      @id @default(autoincrement())
-  userId    Int?
-  entityType String
-  entityId   Int?
-  action     String
-  createdAt  DateTime @default(now())
+// --- GENERAL CHAT MESSAGING SYSTEM ---
+model Conversation {
+  id           Int                       @id @default(autoincrement())
+  name         String?
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  participants ConversationParticipant[]
+  messages     ConversationMessage[]
+}
 
-  user      User?    @relation(fields: [userId], references: [id])
+model ConversationParticipant {
+  id             Int          @id @default(autoincrement())
+  conversationId Int
+  userId         Int
+  joinedAt       DateTime     @default(now())
+  unreadCount    Int          @default(0)
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+  @@unique([conversationId, userId])
+}
+
+model ConversationMessage {
+  id             Int                 @id @default(autoincrement())
+  conversationId Int
+  senderId       Int
+  content        String
+  messageType    MessageType         @default(TEXT)
+  sentAt         DateTime            @default(now())
+  attachments    Attachment[]
+  conversation   Conversation        @relation(fields: [conversationId], references: [id])
+  sender         User                @relation(fields: [senderId], references: [id])
+}
+
+model Attachment {
+  id           Int                 @id @default(autoincrement())
+  filename     String
+  originalName String
+  mimetype     String
+  size         Int
+  url          String
+  messageId    Int
+  uploadedAt   DateTime            @default(now())
+  message      ConversationMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
 }

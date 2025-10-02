@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient, Role } from '@prisma/client';
+import { PrismaClient, Role } from '@prisma/client'; // Added 'Role' import
 import { logAudit } from '../utils/audit';
 import { logger } from '../utils/logger';
 
@@ -23,30 +23,27 @@ export const listUsers = async (req: Request, res: Response) => {
   }
 };
 
-// Renamed from setUserRole to updateUserRole
 export const updateUserRole = async (req: Request, res: Response) => {
   try {
     const adminUser = req.user!;
-    const { userId, role } = req.body as { userId?: number; role?: string };
+    const { userId, role } = req.body as { userId?: number; role?: Role }; // Use Role type
 
     if (!userId || !role) {
       return res.status(400).json({ message: 'userId and role are required' });
     }
 
-    const allowedRoles: Role[] = ['student', 'tutor', 'admin'];
-    if (!allowedRoles.includes(role as Role)) {
+    const allowedRoles: Role[] = [Role.student, Role.tutor, Role.admin];
+    if (!allowedRoles.includes(role)) {
       return res.status(400).json({ message: `role must be one of: ${allowedRoles.join(', ')}` });
     }
 
-    // Ensure the user exists and handle last-admin protection
     const existing = await prisma.user.findUnique({ where: { id: Number(userId) } });
     if (!existing) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const nextRole = role as Role;
-    if (existing.role === 'admin' && nextRole !== 'admin') {
-      const otherAdmins = await prisma.user.count({ where: { role: 'admin', NOT: { id: existing.id } } });
+    if (existing.role === Role.admin && role !== Role.admin) {
+      const otherAdmins = await prisma.user.count({ where: { role: Role.admin, NOT: { id: existing.id } } });
       if (otherAdmins === 0) {
         return res.status(409).json({ message: 'Cannot demote the last remaining admin' });
       }
@@ -54,13 +51,12 @@ export const updateUserRole = async (req: Request, res: Response) => {
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { role: nextRole },
+      data: { role: role },
     });
 
     res.status(200).json(updatedUser);
     
-    // Use the admin's ID from the token payload for the audit log
-    await logAudit(adminUser.userId, 'User', updatedUser.id, `ROLE_UPDATED_TO_${nextRole.toUpperCase()}`);
+    await logAudit(adminUser.userId, 'User', updatedUser.id, `ROLE_UPDATED_TO_${role.toUpperCase()}`);
 
   } catch (error) {
     logger.error('admin_update_role_failed', { error: (error as any)?.message || String(error) });
@@ -70,7 +66,6 @@ export const updateUserRole = async (req: Request, res: Response) => {
 
 // --- Tutor approvals ---
 
-// List pending tutor-module approval requests
 export const listTutorRequests = async (_req: Request, res: Response) => {
   try {
     const pending = await prisma.tutorModule.findMany({
@@ -88,7 +83,6 @@ export const listTutorRequests = async (_req: Request, res: Response) => {
   }
 };
 
-// Approve a pending tutor-module link
 export const approveTutorRequest = async (req: Request, res: Response) => {
   try {
     const adminUser = req.user!;
@@ -107,8 +101,11 @@ export const approveTutorRequest = async (req: Request, res: Response) => {
     if (tm.approvedByAdmin) {
       return res.status(409).json({ message: 'Request already approved' });
     }
-    if (tm.tutor.role !== 'tutor') {
-      return res.status(409).json({ message: 'Linked user is not a tutor' });
+    if (tm.tutor.role !== Role.tutor) {
+      await prisma.user.update({
+        where: { id: tm.tutorId },
+        data: { role: Role.tutor },
+      });
     }
 
     const updated = await prisma.tutorModule.update({
@@ -131,7 +128,6 @@ export const approveTutorRequest = async (req: Request, res: Response) => {
   }
 };
 
-// Reject a pending tutor-module link (delete the request)
 export const rejectTutorRequest = async (req: Request, res: Response) => {
   try {
     const adminUser = req.user!;
