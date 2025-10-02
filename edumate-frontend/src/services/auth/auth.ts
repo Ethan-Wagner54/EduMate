@@ -172,6 +172,17 @@ export function decodeToken(token: string): JwtPayload | null {
   }
 }
 
+/**
+ * Logout function that clears authentication data
+ */
+export const logout = (): void => {
+  // Remove token from localStorage
+  localStorage.removeItem('token');
+  
+  // Clear authentication headers
+  delete axios.defaults.headers.common['Authorization'];
+};
+
 // Add authentication header to requests
 export const setAuthHeader = (token: string = getToken() || ''): void => {
   if (token) {
@@ -189,6 +200,7 @@ if (isAuthenticated()) {
 // Export default for easier imports
 const authService = {
   login,
+  logout,
   getToken,
   isAuthenticated,
   getCurrentUser,

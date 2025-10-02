@@ -1,5 +1,5 @@
 
-import { MessagingCenter } from "./components/messaging-center";
+import { MessagingCenter } from "./components/MessagingCenter";
 
 export default function App() {
   return (
