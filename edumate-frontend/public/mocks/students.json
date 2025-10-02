@@ -1,0 +1,16 @@
+[
+  {
+    "id": 11,
+    "email": "student1@example.com",
+    "password": "password123",
+    "name": "Student One",
+    "token": "mock-student-token-1"
+  },
+  {
+    "id": 22,
+    "email": "student2@example.com",
+    "password": "password456",
+    "name": "Student Two",
+    "token": "mock-student-token-2"
+  }
+]

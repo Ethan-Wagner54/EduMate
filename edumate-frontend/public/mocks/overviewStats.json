@@ -1,0 +1,34 @@
+[
+  {
+    "title": "Total Sessions",
+    "value": 24,
+    "change": "+12%",
+    "trend": "up",
+    "icon": "Calendar",
+    "description": "from last month"
+  },
+  {
+    "title": "Students Helped",
+    "value": 87,
+    "change": "+23%",
+    "trend": "up",
+    "icon": "Users",
+    "description": "unique students"
+  },
+  {
+    "title": "Avg. Session Rating",
+    "value": 4.8,
+    "change": "+0.2",
+    "trend": "up",
+    "icon": "Star",
+    "description": "out of 5.0"
+  },
+  {
+    "title": "Completion Rate",
+    "value": 95,
+    "change": "+5%",
+    "trend": "up",
+    "icon": "Target",
+    "description": "sessions completed"
+  }
+]

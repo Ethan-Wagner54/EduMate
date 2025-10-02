@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root {
+  --font-size: 16px;
+  --radius: 0.625rem;
+
+  /* Core Colors */
+  --background: #601597;        
+  --foreground: #030213;        
+  --card: #FAF4FE;              
+  --card-foreground: #030213;   
+
+  --primary: #8e53b5;           
+  --primary-foreground: #601597;
+
+  --secondary: #8c6ac4;         
+  --secondary-foreground: #030213;
+
+  --accent: #e9d9ff;            
+  --accent-foreground: #601597;
+
+  --destructive: #d4183d;       
+  --destructive-foreground: #ffffff;
+
+  --border: rgba(255, 255, 255, 0.2);  
+  --input-background: #7a4dbb;  
+  --switch-background: #8c6ac4;
+
+  /* Font weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+}
+
+.dark {
+  --background: #30175f;        
+  --foreground: #030213;
+  --card: #4b2e8f;              
+  --card-foreground: #030213;
+
+  --primary: #c9b3ff;           
+  --primary-foreground: #30175f;
+
+  --secondary: #7a4dbb;
+  --secondary-foreground: #030213;
+
+  --accent: #8c6ac4;
+  --accent-foreground: #030213;
+
+  --destructive: #d4183d;
+  --destructive-foreground: #ffffff;
+
+  --border: #7a4dbb;
+  --input-background: #4b2e8f;
+}
+
+@layer base {
+  *, *::before, *::after {
+    @apply border-border outline-none;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-size: var(--font-size);
+  }
+
+  h1 { font-weight: var(--font-weight-medium); font-size: 2xl; line-height: 1.5; }
+  h2 { font-weight: var(--font-weight-medium); font-size: xl; line-height: 1.5; }
+  h3 { font-weight: var(--font-weight-medium); font-size: lg; line-height: 1.5; }
+  h4 { font-weight: var(--font-weight-medium); font-size: base; line-height: 1.5; }
+
+  p, input, button, label {
+    font-weight: var(--font-weight-normal);
+    font-size: base;
+    line-height: 1.5;
+  }
+}

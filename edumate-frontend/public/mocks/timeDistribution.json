@@ -1,0 +1,5 @@
+[
+  { "name": "Morning (8-12)", "value": 30, "color": "#0088FE" },
+  { "name": "Afternoon (12-17)", "value": 45, "color": "#00C49F" },
+  { "name": "Evening (17-20)", "value": 25, "color": "#FFBB28" }
+]
