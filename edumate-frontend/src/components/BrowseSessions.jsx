@@ -1,7 +1,7 @@
 // src/components/BrowseSessions.jsx
 import React, { useState, useEffect } from 'react';
 import { Search, Calendar, MapPin, Star, Users, Filter, SlidersHorizontal, ChevronDown, Hourglass } from 'lucide-react';
-import sessionService from '../services/session/session';
+import sessionService from '../services/sessions/session';
 import { AvatarSmall } from './ui/Avatar';
 
 export default function BrowseSessions() {
