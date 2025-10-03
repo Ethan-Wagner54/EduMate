@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Star, Calendar, MessageSquare, BookOpen, User } from 'lucide-react';
-import tutorService from '../services/tutor/tutor';
 import MessagingModal from '../components/student/MessagingModal';
 import { useNavigate } from 'react-router-dom';
 import { AvatarMedium } from '../components/ui/Avatar';
-import MessagingModal from '../components/student/MessagingModal';
 
 export default function MyTutors() {
   const [tutors, setTutors] = useState([]);
