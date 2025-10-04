@@ -37,7 +37,7 @@ class GroupChatService {
         limit: limit.toString()
       });
 
-      const response = await axios.get(`${API_URL}/conversations/groups?${params}`);
+      const response = await axios.get(`${API_URL}/group-chats/groups?${params}`);
       
       if (response.data && response.data.success) {
         return response.data;
@@ -65,7 +65,7 @@ class GroupChatService {
     try {
       authService.setAuthHeader();
       
-      const response = await axios.get(`${API_URL}/conversations/session/${sessionId}`);
+      const response = await axios.get(`${API_URL}/group-chats/session/${sessionId}`);
       
       if (response.data && response.data.success) {
         return response.data;
@@ -93,7 +93,7 @@ class GroupChatService {
     try {
       authService.setAuthHeader();
       
-      const response = await axios.post(`${API_URL}/conversations/groups`, request);
+      const response = await axios.post(`${API_URL}/group-chats/groups`, request);
       
       if (response.data && response.data.success) {
         // Clear cache
@@ -149,7 +149,7 @@ class GroupChatService {
       if (before) params.append('before', before);
       if (after) params.append('after', after);
 
-      const response = await axios.get(`${API_URL}/conversations/${conversationId}/messages?${params}`);
+      const response = await axios.get(`${API_URL}/group-chats/${conversationId}/messages?${params}`);
       
       if (response.data && response.data.success) {
         // Cache the result
@@ -193,7 +193,7 @@ class GroupChatService {
       }
 
       // Fallback to HTTP API
-      const response = await axios.post(`${API_URL}/conversations/${request.conversationId}/messages`, {
+      const response = await axios.post(`${API_URL}/group-chats/${request.conversationId}/messages`, {
         content: request.content,
         messageType: request.messageType || 'text',
         attachments: request.attachments || []
@@ -256,7 +256,7 @@ class GroupChatService {
       }
 
       // Also update via API
-      await axios.post(`${API_URL}/conversations/${conversationId}/mark-read`, {
+      await axios.post(`${API_URL}/group-chats/${conversationId}/mark-read`, {
         messageIds
       });
 
@@ -293,7 +293,7 @@ class GroupChatService {
       formData.append('conversationId', conversationId.toString());
       if (messageId) formData.append('messageId', messageId);
 
-      const response = await axios.post(`${API_URL}/conversations/upload`, formData, {
+      const response = await axios.post(`${API_URL}/group-chats/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

@@ -253,7 +253,7 @@ class SocketService {
       throw new Error('Socket not connected');
     }
 
-    this.socket.emit('join-group-chat-room', conversationId);
+    this.socket.emit('join-group-chat', conversationId);
   }
 
   // Leave a group chat room
@@ -262,7 +262,7 @@ class SocketService {
       return;
     }
 
-    this.socket.emit('leave-group-chat-room', conversationId);
+    this.socket.emit('leave-group-chat', conversationId);
   }
 
   // Send group typing indicator
