@@ -21,6 +21,7 @@ import Profile from "../pages/Profile";
 import TutorSessions from "../pages/TutorSessions";
 import GroupChatList from "../components/chat/GroupChatList";
 import TutorMessages from "../pages/TutorMessages";
+import Messages from "../pages/Messages";
 
 export default function AppRoutes() {
   return (
@@ -55,6 +56,7 @@ export default function AppRoutes() {
         <Route path="browse-sessions" element={<BrowseSessions />} />
         <Route path="my-sessions" element={<MySessions />} />
         <Route path="my-tutors" element={<MyTutors />} />
+        <Route path="messages" element={<Messages />} />
         <Route path="group-chats" element={<GroupChatList />} />
         <Route path="progress" element={<Progress />} />
         <Route path="session-history" element={<SessionHistory />} />
