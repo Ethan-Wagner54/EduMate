@@ -99,19 +99,34 @@ export const getGroupChats = async (req: Request, res: Response) => {
         // Get session details if it's a session chat
         let session = null;
         if (conv.type === 'session_chat') {
-          // Find session ID from conversation metadata or participants
-          // This is a placeholder - you might store session ID differently
-          const sessionId = 1; // This should be retrieved from your data structure
-          
-          session = await prisma.session.findUnique({
-            where: { id: sessionId },
-            include: {
-              module: true,
-              tutor: {
-                select: { id: true, name: true }
-              }
+          // Try to find session from conversation name pattern or participants
+          // For session chats, we can try to extract session info from existing enrollments
+          const tutorParticipant = conv.participants.find(p => p.user.role === 'tutor');
+          if (tutorParticipant) {
+            // Find a session where this tutor is teaching and has enrolled students from this conversation
+            const studentIds = conv.participants.filter(p => p.user.role === 'student').map(p => p.userId);
+            if (studentIds.length > 0) {
+              session = await prisma.session.findFirst({
+                where: {
+                  tutorId: tutorParticipant.userId,
+                  enrollments: {
+                    some: {
+                      studentId: {
+                        in: studentIds
+                      }
+                    }
+                  }
+                },
+                include: {
+                  module: true,
+                  tutor: {
+                    select: { id: true, name: true }
+                  }
+                },
+                orderBy: { createdAt: 'desc' }
+              });
             }
-          });
+          }
         }
 
         return {

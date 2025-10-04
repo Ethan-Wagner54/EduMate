@@ -50,6 +50,6 @@ app.use("/tutor-dashboard", tutorDashboardRoutes);
 app.use("/progress", progressRoutes);
 app.use("/conversations", conversationRoutes);
 app.use("/session-history", sessionHistoryRoutes);
-app.use("/conversations", groupChatRoutes);
+app.use("/group-chats", groupChatRoutes);
 
 export default app;
