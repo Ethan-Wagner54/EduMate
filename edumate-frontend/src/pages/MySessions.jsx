@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
-import sessionService from '../services/session/session';
+import sessionService from '../services/sessions/session';
 import { AvatarSmall } from '../components/ui/Avatar';
 import authService from '../services/auth/auth';
 
