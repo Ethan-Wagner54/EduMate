@@ -3,6 +3,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Users, Calendar, TrendingUp, Star, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import Register from "./Register";
 
 import logoImage from '../assets/edumateLogo.jpg';
 
@@ -13,7 +14,7 @@ export default function HomePage()
 
     // Conditional rendering for registration page
     if (currentPage === "registration") {
-        return <RegistrationPage onBack={() => setCurrentPage("home")} />;
+        return <Register />;
     }
 
     return (

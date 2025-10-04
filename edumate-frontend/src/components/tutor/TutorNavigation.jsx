@@ -1,25 +1,67 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
-import { LayoutDashboard, PlusCircle, User, ChevronLeft, ChevronRight, LogOut } from 'lucide-react'; 
+import { LayoutDashboard, PlusCircle, User, MessageSquare, ChevronLeft, ChevronRight, LogOut, BookOpen, Settings } from 'lucide-react';
+import authService from '../../services/auth/auth';
+import userService from '../../services/user/user';
+import { AvatarSmall } from '../ui/Avatar';
 
 const TutorNavigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        setLoading(true);
+        
+        // Check authentication first
+        if (!authService.isAuthenticated()) {
+          navigate('/login');
+          return;
+        }
+
+        const userId = authService.getUserId();
+        
+        if (!userId) {
+          console.error('TutorNavigation: No user ID found in token');
+          setLoading(false);
+          return;
+        }
+
+        const response = await userService.getUser({ id: userId });
+
+        if (response.success && response.data) {
+          setUser(response.data);
+        } else {
+          console.error('TutorNavigation: Failed to load user data:', response.error);
+        }
+      } catch (err) {
+        console.error("TutorNavigation: Error fetching user:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, [navigate]);
 
   const navigationItems = [
-    { name: 'Dashboard', path: '/tutor', icon: <LayoutDashboard size={20} /> },
-    { name: 'Create Session', path: '/tutor/create-session', icon: <PlusCircle size={20} /> },
-    { name: 'My Profile', path: '/tutor/profile', icon: <User size={20} /> },
+    { name: 'Dashboard', path: '/tutor', icon: <LayoutDashboard size={18} /> },
+    { name: 'Create Session', path: '/tutor/create-session', icon: <PlusCircle size={18} /> },
+    { name: 'My Sessions', path: '/tutor/sessions', icon: <BookOpen size={18} /> },
+    { name: 'Messages', path: '/tutor/messages', icon: <MessageSquare size={18} /> },
   ];
 
   const isActivePath = (path) => location.pathname === path;
 
   const handleLogout = () => {
-    console.log("Logout logic here");
-    navigate('/');
+    authService.logout();
+    navigate('/login');
   };
 
   return (
@@ -28,14 +70,12 @@ const TutorNavigation = () => {
       <div
         className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 transition-all duration-300
           ${collapsed ? 'w-20' : 'w-64'}
-          bg-primary text-primary-foreground border-r border-border
+          bg-primary text-primary-foreground shadow-lg
         `}
       >
-        <div className="flex items-center justify-between h-16 px-4 bg-primary/90 border-b border-border">
+        <div className="flex items-center justify-between p-2 mb-6">
           {!collapsed && (
-          <span className="text-xl font-bold text-primary-foreground">
-              EduMate Tutor
-            </span>
+            <div className="font-bold text-xl">EduMate</div>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -45,35 +85,66 @@ const TutorNavigation = () => {
           </button>
         </div>
 
-        <div className="flex-1 flex flex-col overflow-y-auto pt-5 pb-4">
-          <nav className="flex-1 px-2 space-y-2">
-            {navigationItems.map((item) => (
-              <Link
-                key={item.name}
-                to={item.path}
-                className={`flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-colors
-                  ${isActivePath(item.path)
-                    ? 'bg-secondary text-secondary-foreground border-l-4 border-secondary/80'
-                    : 'text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground'
-                  }
-                `}
-              >
-                <span className="mr-3">{item.icon}</span>
-                {!collapsed && item.name}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        <div className="flex-shrink-0 flex border-t border-primary/50 p-4">
-          <Button 
-            variant="secondary" 
-            onClick={handleLogout}
-            className="w-full justify-center bg-destructive/80 hover:bg-destructive/70 text-destructive-foreground"
+        {/* User Info - Only show when not collapsed and not loading */}
+        {!collapsed && !loading && user && (
+          <Link 
+            to="/tutor/profile"
+            className="p-4 flex items-center mb-4 border-b border-primary-foreground/20 pb-6 hover:bg-primary/80 rounded-lg transition-colors"
           >
-            <LogOut size={18} className="mr-2" />
+            <AvatarSmall
+              userId={user?.id || authService.getUserId()}
+              userName={user?.name}
+              userType="tutor"
+              size={40}
+              className="mr-3"
+            />
+            <div>
+              <div className="text-sm font-semibold">{user?.name || 'Loading...'}</div>
+              <div className="text-xs text-primary-foreground/70">{user?.tutorId || ''}</div>
+            </div>
+          </Link>
+        )}
+
+        {/* Navigation Menu */}
+        <nav className="flex-1 space-y-2 text-sm">
+          {navigationItems.map((item) => (
+            <Link
+              key={item.name}
+              to={item.path}
+              className={`flex items-center p-3 rounded-md transition-colors duration-200 font-semibold
+                ${isActivePath(item.path)
+                  ? 'bg-secondary hover:bg-secondary/90 text-secondary-foreground'
+                  : 'hover:bg-primary/80 text-primary-foreground'
+                }
+              `}
+            >
+              <span className="mr-3">{item.icon}</span>
+              {!collapsed && item.name}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Bottom Menu */}
+        <div className="p-4 text-sm text-primary-foreground/70 mt-auto space-y-2">
+          <Link
+            to="/tutor/settings"
+            className={`flex items-center transition-colors duration-200 p-3 rounded-md ${
+              isActivePath('/tutor/settings')
+                ? 'bg-secondary text-secondary-foreground'
+                : 'hover:bg-primary/80 hover:text-primary-foreground'
+            }`}
+          >
+            <Settings className="mr-3" size={18} />
+            {!collapsed && "Settings"}
+          </Link>
+          
+          <button
+            onClick={handleLogout}
+            className="flex items-center transition-colors duration-200 p-3 rounded-md hover:bg-destructive hover:text-destructive-foreground w-full text-left"
+          >
+            <LogOut className="mr-3" size={18} />
             {!collapsed && "Logout"}
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -122,15 +193,38 @@ const TutorNavigation = () => {
                     {item.name}
                   </Link>
                 ))}
+                <Link
+                  to="/tutor/profile"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                    isActivePath('/tutor/profile')
+                      ? 'bg-secondary text-secondary-foreground border-l-4 border-secondary/80'
+                      : 'hover:bg-primary/80 text-primary-foreground'
+                  }`}
+                >
+                  <User size={18} className="mr-3 inline" />
+                  My Profile
+                </Link>
+                <Link
+                  to="/tutor/settings"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                    isActivePath('/tutor/settings')
+                      ? 'bg-secondary text-secondary-foreground border-l-4 border-secondary/80'
+                      : 'hover:bg-primary/80 text-primary-foreground'
+                  }`}
+                >
+                  <Settings size={18} className="mr-3 inline" />
+                  Settings
+                </Link>
                 <div className="px-3 py-2">
-                  <Button 
-                    variant="secondary" 
+                  <button
                     onClick={handleLogout}
-                    className="w-full justify-start bg-destructive/80 hover:bg-destructive/70 text-destructive-foreground"
+                    className="flex items-center transition-colors duration-200 p-3 rounded-md hover:bg-destructive hover:text-destructive-foreground w-full text-left"
                   >
-                    <LogOut size={18} className="mr-2" />
+                    <LogOut size={18} className="mr-3" />
                     Logout
-                  </Button>
+                  </button>
                 </div>
               </div>
             </div>

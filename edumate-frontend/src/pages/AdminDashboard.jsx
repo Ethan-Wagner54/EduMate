@@ -17,13 +17,14 @@ export default function AdminDashboard() {
   });
 
   useEffect(() => {
-    fetch("./tutors.json")
-      .then((res) => res.json())
-      .then((data) => {
-        setTutors(data);
-        setStats((prev) => ({ ...prev, totalTutors: data.length }));
-      })
-      .catch((err) => console.error("Failed to load tutors:", err));
+    // TODO: Implement API call to get tutors data
+    // const fetchTutors = async () => {
+    //   const response = await adminService.getTutors();
+    //   setTutors(response.data);
+    //   setStats(prev => ({ ...prev, totalTutors: response.data.length }));
+    // };
+    // fetchTutors();
+    setTutors([]);
   }, []);
 
   const handleLogout = () => {

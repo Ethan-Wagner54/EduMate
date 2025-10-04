@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, BookOpen, Calendar, Star, Edit3, MapPin, Award } from 'lucide-react';
 import authService from '../services/auth/auth';
+import userService from '../services/user/user';
 import ImageUpload from '../components/ui/ImageUpload';
 import { loadProfilePicture, removeProfilePicture } from '../utils/imageUtils';
 
@@ -19,85 +20,49 @@ export default function TutorProfilePage() {
         // Get current user ID from auth service
         const userId = authService.getUserId();
         
-        // For now, let's use mock data for tutors since the backend might not be ready
-        // In a real app, this would be: const response = await tutorService.getTutorProfile(userId);
+        if (!userId) {
+          console.error('No user ID found in token');
+          return;
+        }
         
-        // Mock tutor data based on user ID
-        const mockTutorData = {
-          id: userId || 1,
-          name: "Dr. Jane Smith",
-          email: "jane.smith@nwu.ac.za",
-          phone: "+27 83 123 4567",
-          location: "Potchefstroom Campus",
-          bio: "Passionate mathematics and statistics tutor with 5+ years of experience helping students excel in their academic journey.",
-          modules: ["MATH111", "STAT141", "MATH141", "CALC101"],
-          qualifications: [
-            {
-              degree: "PhD in Mathematics",
-              institution: "North-West University",
-              year: "2019",
-              status: "Verified"
-            },
-            {
-              degree: "MSc in Applied Mathematics", 
-              institution: "University of Cape Town",
-              year: "2016",
-              status: "Verified"
-            },
-            {
-              degree: "BSc Honours in Mathematics",
-              institution: "North-West University", 
-              year: "2014",
-              status: "Verified"
-            }
-          ],
-          achievements: [
-            {
-              title: "Outstanding Tutor Award",
-              description: "Recognized for exceptional student support and academic excellence",
-              date: "2024"
-            },
-            {
-              title: "Top Rated Tutor",
-              description: "Maintained 4.8+ rating for 12 consecutive months",
-              date: "2024"
-            },
-            {
-              title: "Student Favorite",
-              description: "Most requested tutor in Mathematics department",
-              date: "2023"
-            }
-          ],
-          stats: {
-            totalSessions: 156,
-            totalStudents: 89,
-            averageRating: 4.8,
-            completionRate: 94,
-            yearsExperience: 5
-          },
-          availability: {
-            monday: { enabled: true, start: "08:00", end: "17:00" },
-            tuesday: { enabled: true, start: "08:00", end: "17:00" },
-            wednesday: { enabled: true, start: "08:00", end: "17:00" },
-            thursday: { enabled: true, start: "08:00", end: "17:00" },
-            friday: { enabled: true, start: "08:00", end: "15:00" },
-            saturday: { enabled: false, start: "09:00", end: "13:00" },
-            sunday: { enabled: false, start: "09:00", end: "13:00" }
-          },
-          preferences: {
-            maxStudentsPerSession: 15,
-            sessionDuration: 120,
-            advanceBooking: 24,
-            autoConfirm: true
-          }
-        };
+        // Get user data from API
+        const response = await userService.getUser({ id: userId });
         
-        setTutor(mockTutorData);
-        setEditData(mockTutorData);
-        
-        // Load existing profile picture
-        const savedImage = loadProfilePicture(userId || 1, 'tutor');
-        setProfilePicture(savedImage);
+        if (response.success && response.data) {
+          const user = response.data;
+          console.log('TutorProfile: User data received:', user);
+          
+          // Transform user data into tutor profile format
+          const tutorProfile = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone || '',
+            location: user.campusLocation || '',
+            bio: user.profile?.bio || '',
+            modules: user.tutorModules ? user.tutorModules.map(tm => tm.module.name) : [],
+            qualifications: user.qualifications || [],
+            stats: {
+              totalSessions: user.profile?.totalSessions || 0,
+              totalStudents: 0, // Can be calculated from sessions
+              averageRating: user.profile?.averageRating || 0,
+              completionRate: user.profile?.totalSessions > 0 
+                ? Math.round((user.profile.completedSessions / user.profile.totalSessions) * 100) 
+                : 0,
+              yearsExperience: Math.floor((new Date() - new Date(user.createdAt)) / (365 * 24 * 60 * 60 * 1000)) || 0
+            },
+            achievements: [] // Can be added later
+          };
+          
+          setTutor(tutorProfile);
+          setEditData(tutorProfile);
+          
+          // Load saved profile picture
+          const savedImage = loadProfilePicture(userId, 'tutor');
+          setProfilePicture(savedImage);
+        } else {
+          console.error('TutorProfile: Failed to load user data:', response.error);
+        }
         
       } catch (error) {
         console.error('Error fetching tutor profile:', error);
@@ -115,11 +80,26 @@ export default function TutorProfilePage() {
 
   const handleSave = async () => {
     try {
-      // API call to update tutor would go here
-      console.log('Saving tutor profile:', editData);
-      setTutor(editData);
-      setIsEditing(false);
-      alert('Profile updated successfully!');
+      const updateData = {
+        name: editData.name,
+        email: editData.email,
+        phone: editData.phone,
+        campusLocation: editData.location,
+        qualifications: editData.qualifications,
+        bio: editData.bio
+      };
+      
+      console.log('Saving tutor profile:', updateData);
+      
+      const response = await userService.updateProfile(updateData);
+      
+      if (response.success) {
+        setTutor(editData);
+        setIsEditing(false);
+        alert('Profile updated successfully!');
+      } else {
+        alert('Error updating profile: ' + response.error);
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
       alert('Error updating profile. Please try again.');
@@ -276,10 +256,11 @@ export default function TutorProfilePage() {
                             type="tel"
                             value={editData.phone || ''}
                             onChange={(e) => handleInputChange('phone', e.target.value)}
+                            placeholder="+27 XX XXX XXXX"
                             className="flex-1 px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                           />
                         ) : (
-                          <p className="text-foreground">{tutor.phone}</p>
+                          <p className="text-foreground">{tutor.phone || 'Not set'}</p>
                         )}
                       </div>
                     </div>

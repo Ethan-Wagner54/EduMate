@@ -1,11 +1,11 @@
 import { Outlet } from "react-router-dom";
-import TutorNavigation from "./TutorNavigation";
+import UnifiedSidebar from "../UnifiedSidebar";
 
 export default function TutorLayout() {
   return (
-    <div className="flex h-screen bg-background/90 text-foreground">
-      <TutorNavigation />
-      <main className="flex-1 md:ml-64 overflow-auto p-6">
+    <div className="flex h-screen bg-background-secondary text-foreground transition-colors duration-200">
+      <UnifiedSidebar userType="tutor" />
+      <main className="flex-1 overflow-auto">
         <Outlet />
       </main>
     </div>

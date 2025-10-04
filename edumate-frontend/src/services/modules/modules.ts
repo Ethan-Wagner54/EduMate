@@ -11,6 +11,9 @@ const API_URL = config.apiUrl;
  */
 export const getModules = async (): Promise<ModulesResponse> => {
   try {
+    // Ensure auth header is set
+    authService.setAuthHeader();
+    
     console.log(`Fetching modules from: ${API_URL}/modules`);
     
     const response = await axios.get<any>(`${API_URL}/modules`);

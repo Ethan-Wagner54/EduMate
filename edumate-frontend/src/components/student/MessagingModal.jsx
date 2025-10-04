@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Send, Paperclip, Search, MoreVertical, Wifi, WifiOff, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 import authService from '../../services/auth/auth';
-import messageService from '../../services/messages/messageService';
+import conversationsService from '../../services/conversations/conversations';
 import socketService from '../../services/websocket/socketService';
 import FileAttachment, { MessageAttachment } from './FileAttachment';
 import EmojiPicker from './EmojiPicker';
@@ -20,6 +20,7 @@ export default function MessagingModal({ tutor, isOpen, onClose }) {
   const [typingUsers, setTypingUsers] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasRequestedNotifications, setHasRequestedNotifications] = useState(false);
+  const [conversationId, setConversationId] = useState(null);
   
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -53,19 +54,34 @@ export default function MessagingModal({ tutor, isOpen, onClose }) {
     };
   }, [isOpen, tutor, chatRoomId]);
 
-  // Load conversation from API
+  // Load or create conversation, then load messages
   const loadConversation = async () => {
     if (!tutor) return;
     
     setLoading(true);
     try {
-      const response = await messageService.getConversation(tutor.id);
-      if (response.success && response.data.messages) {
-        const formattedMessages = response.data.messages.map(msg => ({
-          ...msg,
-          isOwn: msg.senderId === currentUserId
-        }));
-        setMessages(formattedMessages);
+      // Ensure a direct conversation exists and get its id
+      const convRes = await conversationsService.createOrGetConversation(tutor.id);
+      if (convRes.success && convRes.data) {
+        const convId = convRes.data.id;
+        setConversationId(convId);
+        const msgsRes = await conversationsService.getMessages(convId);
+        if (msgsRes.success && msgsRes.data) {
+          const formattedMessages = msgsRes.data.map(msg => ({
+            id: msg.id,
+            senderId: msg.isOwn ? currentUserId : tutor.id,
+            senderName: msg.sender,
+            content: msg.content,
+            messageType: 'text',
+            timestamp: msg.timestamp,
+            isRead: msg.isOwn,
+            isOwn: msg.isOwn,
+            attachments: []
+          }));
+          setMessages(formattedMessages);
+        } else {
+          setMessages([]);
+        }
       }
     } catch (error) {
       console.error('Error loading conversation:', error);
@@ -172,32 +188,65 @@ export default function MessagingModal({ tutor, isOpen, onClose }) {
       setNewMessage('');
       setAttachments([]);
       
-      // Send via API/WebSocket
-      const response = await messageService.sendMessage(messageData);
-      
-      if (response.success) {
-        // Replace optimistic message with real one
-        setMessages(prev => prev.map(msg => 
-          msg.id === optimisticMessage.id 
-            ? { ...response.data, isOwn: true, sending: false }
-            : msg
-        ));
-      } else {
-        // Remove failed message and show error
-        setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
-        toast.error(response.error || 'Failed to send message');
-        
-        // Restore message content
-        setNewMessage(messageContent);
-        setAttachments(messageData.attachments);
+      // Prefer socket if connected; otherwise fallback to HTTP conversations API
+      let delivered = null;
+      if (socketService.isSocketConnected()) {
+        try {
+          const socketResp = await socketService.sendMessage({ recipientId: tutor.id, content: messageContent });
+          delivered = {
+            id: socketResp.id,
+            senderId: currentUserId,
+            senderName: 'You',
+            content: socketResp.content,
+            messageType: 'text',
+            timestamp: socketResp.timestamp,
+            isOwn: true,
+            isRead: false,
+            attachments: attachments
+          };
+        } catch (socketErr) {
+          console.warn('Socket send failed, falling back to HTTP:', socketErr);
+        }
       }
+
+      if (!delivered) {
+        // Ensure we have a conversation id
+        let convId = conversationId;
+        if (!convId) {
+          const convRes = await conversationsService.createOrGetConversation(tutor.id);
+          if (!convRes.success || !convRes.data) throw new Error('Unable to create conversation');
+          convId = convRes.data.id;
+          setConversationId(convId);
+        }
+        const httpResp = await conversationsService.sendMessage(convId, messageContent);
+        if (!httpResp.success || !httpResp.data) {
+          throw new Error(httpResp.error || 'Failed to send');
+        }
+        const msg = httpResp.data;
+        delivered = {
+          id: msg.id,
+          senderId: currentUserId,
+          senderName: 'You',
+          content: msg.content,
+          messageType: 'text',
+          timestamp: msg.timestamp,
+          isOwn: true,
+          isRead: true,
+          attachments: []
+        };
+      }
+
+      // Replace optimistic with delivered
+      const finalDelivered = delivered;
+      setMessages(prev => prev.map(m => m.id === optimisticMessage.id ? { ...finalDelivered, sending: false } : m));
       
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
       
       // Remove failed message
-      setMessages(prev => prev.filter(msg => msg.id !== `temp-${Date.now()}`));
+      setMessages(prev => prev.filter(msg => String(msg.id).startsWith('temp-') === false));
+      setNewMessage(messageContent);
     } finally {
       setSending(false);
     }
@@ -221,6 +270,7 @@ export default function MessagingModal({ tutor, isOpen, onClose }) {
         socketService.sendTyping(chatRoomId, false);
       }, 2000);
     }
+    // Still allow typing while offline; typing indicators are best-effort
   };
 
   // Handle emoji selection
@@ -252,9 +302,14 @@ export default function MessagingModal({ tutor, isOpen, onClose }) {
   };
 
   const formatTime = (timestamp) => {
+    // If server sent a preformatted string, just return it
+    if (typeof timestamp === 'string' && isNaN(Date.parse(timestamp))) {
+      return timestamp;
+    }
     const now = new Date();
     const messageTime = new Date(timestamp);
-    const diffInMinutes = Math.floor((now - messageTime) / (1000 * 60));
+    if (isNaN(messageTime.getTime())) return '';
+    const diffInMinutes = Math.floor((now.getTime() - messageTime.getTime()) / (1000 * 60));
     
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
@@ -444,7 +499,7 @@ export default function MessagingModal({ tutor, isOpen, onClose }) {
                   className="w-full resize-none border border-gray-300 rounded-2xl px-4 py-3 pr-24 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent max-h-32"
                   rows="1"
                   style={{ minHeight: '44px' }}
-                  disabled={sending || !isConnected}
+                  disabled={sending}
                 />
                 <div className="absolute right-2 bottom-2 flex items-center gap-1">
                   <button
@@ -467,7 +522,7 @@ export default function MessagingModal({ tutor, isOpen, onClose }) {
               </div>
               <button
                 type="submit"
-                disabled={(!newMessage.trim() && attachments.length === 0) || sending || !isConnected}
+                disabled={(!newMessage.trim() && attachments.length === 0) || sending}
                 className="bg-[#6A0DAD] text-white rounded-full p-3 hover:bg-purple-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative"
                 title={!isConnected ? 'Reconnecting...' : 'Send message'}
               >

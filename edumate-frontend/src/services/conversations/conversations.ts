@@ -168,12 +168,34 @@ export const sendMessage = async (conversationId: number, content: string): Prom
   }
 };
 
+/**
+ * Create or get a direct conversation with a participant
+ */
+export const createOrGetConversation = async (participantId: number) => {
+  try {
+    authService.setAuthHeader();
+
+    const res = await axios.post(`${API_URL}/conversations`, { participantId });
+    if (res.data) {
+      return { success: true, data: res.data };
+    }
+    return { success: false, error: 'No data received from the server' };
+  } catch (error: any) {
+    console.error('Error creating conversation:', error);
+    if (error.response && error.response.data) {
+      return { success: false, error: error.response.data.message || error.response.data.error || 'Server error' };
+    }
+    return { success: false, error: error instanceof Error ? error.message : 'An unknown error occurred' };
+  }
+};
+
 // Export default for easier imports
 const conversationsService = {
   getConversations,
   getConversation,
   getMessages,
-  sendMessage
+  sendMessage,
+  createOrGetConversation
 };
 
 export default conversationsService;

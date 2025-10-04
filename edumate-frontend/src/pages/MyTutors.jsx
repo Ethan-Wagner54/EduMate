@@ -14,44 +14,10 @@ export default function MyTutors() {
   useEffect(() => {
     const fetchMyTutors = async () => {
       try {
-        // This would typically be an API call to get tutors for the current student
-        // For now, we'll use mock data since the endpoint might not exist yet
-        const mockTutors = [
-          {
-            id: 1,
-            name: "Sarah Johnson",
-            email: "sarah@example.com",
-            modules: ["MATH 101", "CALC 201"],
-            rating: 4.9,
-            totalSessions: 12,
-            completedSessions: 10,
-            nextSession: "2024-12-03T14:00:00",
-            specialties: ["Calculus", "Algebra", "Statistics"]
-          },
-          {
-            id: 2,
-            name: "Michael Chen",
-            email: "michael@example.com",
-            modules: ["CS 201", "CS 301"],
-            rating: 4.8,
-            totalSessions: 8,
-            completedSessions: 6,
-            nextSession: "2024-12-04T16:00:00",
-            specialties: ["Programming", "Data Structures", "Algorithms"]
-          },
-          {
-            id: 3,
-            name: "Emily Rodriguez",
-            email: "emily@example.com",
-            modules: ["CHEM 201"],
-            rating: 4.7,
-            totalSessions: 6,
-            completedSessions: 4,
-            nextSession: null,
-            specialties: ["Organic Chemistry", "Lab Techniques"]
-          }
-        ];
-        setTutors(mockTutors);
+        // TODO: Implement API call to get tutors for the current student
+        // const response = await tutorService.getMyTutors();
+        // setTutors(response.data);
+        setTutors([]);
       } catch (error) {
         console.error('Error fetching tutors:', error);
       } finally {

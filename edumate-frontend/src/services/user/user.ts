@@ -58,8 +58,49 @@ export const getUser = async (params?: GetUserQueryParams): Promise<GetUserRespo
   }
 };
 
+/**
+ * Update user profile
+ */
+export const updateProfile = async (profileData: any): Promise<GetUserResponse> => {
+  try {
+    authService.setAuthHeader();
+    
+    const url = `${API_URL}/user/profile`;
+    console.log(`Updating profile at: ${url}`);
+    
+    const response = await axios.put<any>(url, profileData);
+    
+    if (response.data) {
+      return {
+        success: true,
+        data: response.data
+      };
+    }
+    
+    return {
+      success: false,
+      error: 'No data received from the server'
+    };
+  } catch (error: any) {
+    console.error('Error updating profile:', error);
+    
+    if (error.response && error.response.data) {
+      return {
+        success: false,
+        error: error.response.data.message || error.response.data.error || 'Server error'
+      };
+    }
+    
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'An unknown error occurred'
+    };
+  }
+};
+
 const userService = {
-    getUser
+    getUser,
+    updateProfile
 };
 
 export default userService;

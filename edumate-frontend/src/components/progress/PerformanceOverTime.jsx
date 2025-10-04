@@ -21,6 +21,7 @@ import {
   generateWeeklyStudyData, 
   calculatePerformanceSummary 
 } from '../../utils/performanceData';
+import progressService from '../../services/progress/progress';
 
 export default function PerformanceOverTime() {
   const [performanceData, setPerformanceData] = useState([]);
@@ -29,21 +30,52 @@ export default function PerformanceOverTime() {
   const [summary, setSummary] = useState(null);
   const [timePeriod, setTimePeriod] = useState('6months');
   const [activeChart, setActiveChart] = useState('overview');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Generate data based on selected time period
-    const months = timePeriod === '3months' ? 3 : timePeriod === '12months' ? 12 : 6;
-    const weeks = timePeriod === '3months' ? 12 : timePeriod === '12months' ? 52 : 24;
+    const fetchPerformanceData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const months = timePeriod === '3months' ? 3 : timePeriod === '12months' ? 12 : 6;
+        const weeks = timePeriod === '3months' ? 12 : timePeriod === '12months' ? 52 : 24;
+        
+        // Fetch real performance data
+        const [perfResponse, moduleResponse] = await Promise.all([
+          progressService.getPerformanceData(months),
+          progressService.getModulePerformanceData()
+        ]);
+        
+        const perfData = perfResponse.success ? perfResponse.data : [];
+        const modData = moduleResponse.success ? moduleResponse.data : [];
+        
+        // Use real data if available, fallback to generated data
+        const finalPerfData = generatePerformanceData(perfData, months);
+        const finalModData = generateModulePerformanceData(modData);
+        const weekData = generateWeeklyStudyData(weeks); // Still generated as we don't have weekly endpoint
+        const summaryData = calculatePerformanceSummary(finalPerfData);
+        
+        setPerformanceData(finalPerfData);
+        setModuleData(finalModData);
+        setWeeklyData(weekData);
+        setSummary(summaryData);
+      } catch (err) {
+        console.error('Error fetching performance data:', err);
+        setError('Failed to load performance data');
+        
+        // Fallback to empty data
+        setPerformanceData([]);
+        setModuleData([]);
+        setWeeklyData([]);
+        setSummary(null);
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    const perfData = generatePerformanceData(months);
-    const modData = generateModulePerformanceData();
-    const weekData = generateWeeklyStudyData(weeks);
-    const summaryData = calculatePerformanceSummary(perfData);
-    
-    setPerformanceData(perfData);
-    setModuleData(modData);
-    setWeeklyData(weekData);
-    setSummary(summaryData);
+    fetchPerformanceData();
   }, [timePeriod]);
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -81,6 +113,33 @@ export default function PerformanceOverTime() {
       </div>
     </div>
   );
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading performance data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-destructive mb-4">⚠️</div>
+            <h3 className="text-lg font-medium text-foreground mb-2">Error Loading Performance Data</h3>
+            <p className="text-muted-foreground">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

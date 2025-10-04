@@ -45,20 +45,29 @@ export const getConversations = async (req: Request, res: Response) => {
       orderBy: { updatedAt: 'desc' }
     });
 
+    // Filter out invalid self-conversations (shouldn't happen, but defensive)
+    const currentId = Number(userId);
+    const validConversations = conversations.filter(conv => {
+      if (conv.type !== 'direct') return true; // allow groups
+      // Only include direct conversations with exactly 2 distinct users
+      const ids = Array.from(new Set(conv.participants.map(p => Number(p.userId))));
+      return ids.length === 2 && ids.includes(currentId);
+    });
+
     // Format conversations for frontend
-    const formattedConversations = conversations.map(conv => {
-      const otherParticipant = conv.participants.find(p => p.userId !== userId)?.user;
+    const formattedConversations = validConversations.map(conv => {
+      const other = conv.participants.find(p => Number(p.userId) !== currentId)?.user;
       const lastMessage = conv.messages[0];
-      const unreadCount = conv.participants.find(p => p.userId === userId)?.unreadCount || 0;
+      const unreadCount = conv.participants.find(p => Number(p.userId) === currentId)?.unreadCount || 0;
 
       return {
         id: conv.id,
-        name: conv.name || otherParticipant?.name || 'Conversation',
+        name: conv.name || other?.name || 'Conversation',
         lastMessage: lastMessage?.content || '',
         timestamp: lastMessage ? formatTimeAgo(lastMessage.sentAt) : '',
         unreadCount,
-        isOnline: otherParticipant?.profile?.isOnline || false,
-        userType: otherParticipant?.role || 'student'
+        isOnline: other?.profile?.isOnline || false,
+        userType: other?.role || 'student'
       };
     });
 
@@ -237,6 +246,130 @@ export const getConversation = async (req: Request, res: Response) => {
   } catch (e) {
     logger.error('conversation_get_failed', { error: (e as any)?.message || String(e) });
     return res.status(500).json({ error: 'Failed to get conversation' });
+  }
+};
+
+export const createConversation = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { participantId } = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!participantId) {
+      return res.status(400).json({ error: 'participantId is required' });
+    }
+
+    if (participantId === userId) {
+      return res.status(400).json({ error: 'Cannot create a conversation with yourself' });
+    }
+
+    // Check if participant exists
+    const participant = await prisma.user.findUnique({
+      where: { id: participantId }
+    });
+
+    if (!participant) {
+      return res.status(404).json({ error: 'Participant not found' });
+    }
+
+    // Check if conversation already exists
+    let conversation = await prisma.conversation.findFirst({
+      where: {
+        type: 'direct',
+        AND: [
+          {
+            participants: {
+              some: { userId }
+            }
+          },
+          {
+            participants: {
+              some: { userId: participantId }
+            }
+          }
+        ]
+      },
+      include: {
+        participants: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                role: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Additional validation: ensure exactly 2 participants and they match sender/recipient
+    if (conversation) {
+      const participantIds = conversation.participants.map(p => p.userId).sort();
+      const expectedIds = [userId, participantId].sort();
+      
+      // If participants don't match exactly, treat as no conversation found
+      if (participantIds.length !== 2 || 
+          participantIds[0] !== expectedIds[0] || 
+          participantIds[1] !== expectedIds[1]) {
+        conversation = null;
+      }
+    }
+
+    if (!conversation) {
+      // Create new conversation
+      conversation = await prisma.conversation.create({
+        data: {
+          type: 'direct',
+          isGroup: false,
+          participants: {
+            create: [
+              {
+                userId,
+                joinedAt: new Date(),
+                unreadCount: 0
+              },
+              {
+                userId: participantId,
+                joinedAt: new Date(),
+                unreadCount: 0
+              }
+            ]
+          }
+        },
+        include: {
+          participants: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  role: true
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    const otherParticipant = conversation.participants.find(p => p.userId !== userId)?.user;
+
+    const formattedConversation = {
+      id: conversation.id,
+      name: conversation.name || otherParticipant?.name || 'Conversation',
+      isOnline: false, // We'll implement online status later
+      userType: otherParticipant?.role || 'student'
+    };
+
+    res.status(conversation.id === conversation.id ? 200 : 201).json(formattedConversation);
+  } catch (e) {
+    logger.error('conversation_create_failed', { error: (e as any)?.message || String(e) });
+    return res.status(500).json({ error: 'Failed to create conversation' });
   }
 };
 

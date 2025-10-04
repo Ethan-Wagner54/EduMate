@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Bell, Shield, Palette, Globe, Save, Eye, EyeOff } from 'lucide-react';
 import authService from '../services/auth/auth';
+import userService from '../services/user/user';
 import { useTheme } from '../contexts/ThemeContext';
 import ThemeToggle from '../components/ui/ThemeToggle';
 
@@ -9,14 +10,16 @@ export default function Settings() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
   const [profileData, setProfileData] = useState({
-    name: 'John Smith',
-    email: 'student1@edumate.com',
-    studentId: '42351673',
-    phone: '+27 12 345 6789',
-    program: 'Computer Science',
-    year: '3rd Year'
+    name: '',
+    email: '',
+    studentId: '',
+    phone: '',
+    program: '',
+    year: ''
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -39,6 +42,67 @@ export default function Settings() {
     timeZone: 'Africa/Johannesburg',
     dateFormat: 'DD/MM/YYYY'
   });
+
+  // Load user data on component mount
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Check authentication
+        if (!authService.isAuthenticated()) {
+          setError('User not authenticated');
+          return;
+        }
+
+        const userRole = authService.getUserRole();
+        const userId = authService.getUserId();
+        
+        console.log('Settings: Loading user data for role:', userRole, 'userId:', userId);
+        
+        // Get user data from API
+        const response = await userService.getUser({ id: userId });
+        
+        if (response.success && response.data) {
+          const user = response.data;
+          console.log('Settings: User data received:', user);
+          
+          // Map user data based on role
+          const mappedData = {
+            name: user.name || '',
+            email: user.email || '',
+            phone: user.phone || '',
+          };
+          
+          if (userRole === 'student') {
+            mappedData.studentId = user.id ? user.id.toString() : '';
+            mappedData.program = user.program || 'Computer Science'; // Default for now
+            mappedData.year = user.year || '3rd Year'; // Default for now
+          } else if (userRole === 'tutor') {
+            mappedData.tutorId = user.id ? user.id.toString() : '';
+            mappedData.specialties = user.specialties || [];
+            mappedData.department = user.department || 'Computer Science'; // Default for now
+          } else if (userRole === 'admin') {
+            mappedData.adminId = user.id ? user.id.toString() : '';
+            mappedData.department = user.department || 'Administration'; // Default for now
+          }
+          
+          setProfileData(mappedData);
+        } else {
+          console.error('Settings: Failed to load user data:', response.error);
+          setError(response.error || 'Failed to load user data');
+        }
+      } catch (err) {
+        console.error('Settings: Error loading user data:', err);
+        setError('Failed to load user data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
+  }, []);
 
   const handleProfileChange = (field, value) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
@@ -137,6 +201,22 @@ export default function Settings() {
               {activeTab === 'profile' && (
                 <div className="settings-form transition-colors duration-200">
                   <h2 className="text-xl font-semibold text-foreground mb-6 transition-colors duration-200">Profile Information</h2>
+                  
+                  {loading && (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                      <span className="ml-2 text-muted-foreground">Loading user data...</span>
+                    </div>
+                  )}
+                  
+                  {error && (
+                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-6">
+                      <p className="text-destructive text-sm">{error}</p>
+                    </div>
+                  )}
+                  
+                  {!loading && !error && (
+                  <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-2 transition-colors duration-200">Full Name</label>
@@ -159,10 +239,14 @@ export default function Settings() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-2 transition-colors duration-200">Student ID</label>
+                      <label className="block text-sm font-medium text-foreground mb-2 transition-colors duration-200">
+                        {authService.getUserRole() === 'student' ? 'Student ID' : 
+                         authService.getUserRole() === 'tutor' ? 'Tutor ID' : 
+                         'Admin ID'}
+                      </label>
                       <input
                         type="text"
-                        value={profileData.studentId}
+                        value={profileData.studentId || profileData.tutorId || profileData.adminId || ''}
                         disabled
                         className="w-full px-3 py-2 border border-border rounded-lg bg-muted text-muted-foreground transition-all duration-200 cursor-not-allowed"
                         style={{ backgroundColor: 'rgb(var(--muted))', color: 'rgb(var(--muted-foreground))', borderColor: 'rgb(var(--border))' }}
@@ -179,40 +263,50 @@ export default function Settings() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-2 transition-colors duration-200">Program</label>
+                      <label className="block text-sm font-medium text-foreground mb-2 transition-colors duration-200">
+                        {authService.getUserRole() === 'student' ? 'Program' : 'Department'}
+                      </label>
                       <input
                         type="text"
-                        value={profileData.program}
-                        onChange={(e) => handleProfileChange('program', e.target.value)}
+                        value={profileData.program || profileData.department || ''}
+                        onChange={(e) => handleProfileChange(
+                          authService.getUserRole() === 'student' ? 'program' : 'department', 
+                          e.target.value
+                        )}
                         className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary"
                         style={{ backgroundColor: 'rgb(var(--background))', color: 'rgb(var(--foreground))', borderColor: 'rgb(var(--border))' }}
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2 transition-colors duration-200">Academic Year</label>
-                      <select
-                        value={profileData.year}
-                        onChange={(e) => handleProfileChange('year', e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary [&>option]:bg-background [&>option]:text-foreground"
-                        style={{ backgroundColor: 'rgb(var(--background))', color: 'rgb(var(--foreground))', borderColor: 'rgb(var(--border))' }}
-                      >
-                        <option value="1st Year">1st Year</option>
-                        <option value="2nd Year">2nd Year</option>
-                        <option value="3rd Year">3rd Year</option>
-                        <option value="4th Year">4th Year</option>
-                        <option value="Postgraduate">Postgraduate</option>
-                      </select>
-                    </div>
+                    {authService.getUserRole() === 'student' && (
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2 transition-colors duration-200">Academic Year</label>
+                        <select
+                          value={profileData.year || ''}
+                          onChange={(e) => handleProfileChange('year', e.target.value)}
+                          className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary [&>option]:bg-background [&>option]:text-foreground"
+                          style={{ backgroundColor: 'rgb(var(--background))', color: 'rgb(var(--foreground))', borderColor: 'rgb(var(--border))' }}
+                        >
+                          <option value="1st Year">1st Year</option>
+                          <option value="2nd Year">2nd Year</option>
+                          <option value="3rd Year">3rd Year</option>
+                          <option value="4th Year">4th Year</option>
+                          <option value="Postgraduate">Postgraduate</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
                   <div className="mt-6">
                     <button
                       onClick={handleSaveProfile}
-                      className="flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200"
+                      disabled={loading}
+                      className="flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Save size={16} className="mr-2" />
                       Save Changes
                     </button>
                   </div>
+                  </>
+                  )}
                 </div>
               )}
 

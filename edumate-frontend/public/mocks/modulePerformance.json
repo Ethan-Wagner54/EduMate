@@ -1,5 +1,0 @@
-[
-  { "module": "MATH111", "sessions": 10, "students": 45, "rating": 4.9, "completion": 98 },
-  { "module": "STAT141", "sessions": 8, "students": 28, "rating": 4.7, "completion": 92 },
-  { "module": "MATH141", "sessions": 6, "students": 14, "rating": 4.6, "completion": 89 }
-]
