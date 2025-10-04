@@ -35,6 +35,16 @@ model User {
   resetToken      String?       // For password reset functionality
   resetTokenExpiry DateTime?    // Token expiration time
   createdAt       DateTime      @default(now())
+  
+  // Student-specific fields
+  studentId       String?       // Student ID number
+  program         String?       // Academic program
+  academicYear    String?       // Academic year (1st Year, 2nd Year, etc.)
+  faculty         String?       // Faculty name
+  
+  // Tutor-specific fields  
+  campusLocation  String?       // Campus location for tutors
+  qualifications  Json?         // Array of qualification objects
 
   // Existing relationships
   tutorModules    TutorModule[]

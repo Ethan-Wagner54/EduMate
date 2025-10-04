@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backend Connection Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #666;
+        }
+        .test.success { border-left-color: #22c55e; }
+        .test.error { border-left-color: #ef4444; }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #2563eb; }
+        pre {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .loading { color: #fbbf24; }
+    </style>
+</head>
+<body>
+    <h1>🔍 EduMate Backend Connection Test</h1>
+    <p>This page tests if your browser can connect to the backend at <code>localhost:3000</code></p>
+
+    <button onclick="runAllTests()">Run All Tests</button>
+    <button onclick="clearResults()">Clear Results</button>
+
+    <div id="results"></div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(title, success, message, data = null) {
+            const testDiv = document.createElement('div');
+            testDiv.className = `test ${success ? 'success' : 'error'}`;
+            testDiv.innerHTML = `
+                <h3>${success ? '✅' : '❌'} ${title}</h3>
+                <p>${message}</p>
+                ${data ? `<pre>${JSON.stringify(data, null, 2)}</pre>` : ''}
+            `;
+            resultsDiv.appendChild(testDiv);
+        }
+
+        function addLoading(title) {
+            const testDiv = document.createElement('div');
+            testDiv.className = 'test loading';
+            testDiv.id = `test-${title.replace(/\s/g, '-')}`;
+            testDiv.innerHTML = `
+                <h3>⏳ ${title}</h3>
+                <p>Testing...</p>
+            `;
+            resultsDiv.appendChild(testDiv);
+            return testDiv;
+        }
+
+        function updateLoading(loadingDiv, success, message, data = null) {
+            loadingDiv.className = `test ${success ? 'success' : 'error'}`;
+            loadingDiv.innerHTML = `
+                <h3>${success ? '✅' : '❌'} ${loadingDiv.querySelector('h3').textContent.substring(2)}</h3>
+                <p>${message}</p>
+                ${data ? `<pre>${JSON.stringify(data, null, 2)}</pre>` : ''}
+            `;
+        }
+
+        async function testHealth() {
+            const loading = addLoading('Health Endpoint');
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                updateLoading(loading, response.ok, 
+                    `Status: ${response.status}${response.ok ? ' - Backend is running!' : ''}`, 
+                    data
+                );
+                return response.ok;
+            } catch (error) {
+                updateLoading(loading, false, `Connection failed: ${error.message}`);
+                return false;
+            }
+        }
+
+        async function testModules() {
+            const loading = addLoading('Modules Endpoint');
+            try {
+                const response = await fetch(`${API_URL}/modules`);
+                const data = await response.json();
+                updateLoading(loading, response.ok, 
+                    `Status: ${response.status} - Found ${data.length || 0} modules`, 
+                    data.slice(0, 2)
+                );
+                return response.ok;
+            } catch (error) {
+                updateLoading(loading, false, `Connection failed: ${error.message}`);
+                return false;
+            }
+        }
+
+        async function testSessions() {
+            const loading = addLoading('Sessions Endpoint');
+            try {
+                const response = await fetch(`${API_URL}/sessions`);
+                const data = await response.json();
+                updateLoading(loading, response.ok, 
+                    `Status: ${response.status} - Found ${data.length || 0} sessions`, 
+                    data.slice(0, 2)
+                );
+                return response.ok;
+            } catch (error) {
+                updateLoading(loading, false, `Connection failed: ${error.message}`);
+                return false;
+            }
+        }
+
+        async function testCORS() {
+            const loading = addLoading('CORS Headers');
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('access-control-allow-origin'),
+                    'Access-Control-Allow-Credentials': response.headers.get('access-control-allow-credentials'),
+                    'Access-Control-Allow-Methods': response.headers.get('access-control-allow-methods'),
+                };
+                const hasCORS = corsHeaders['Access-Control-Allow-Origin'] !== null;
+                updateLoading(loading, hasCORS, 
+                    hasCORS ? 'CORS is properly configured' : 'CORS headers might be missing', 
+                    corsHeaders
+                );
+                return hasCORS;
+            } catch (error) {
+                updateLoading(loading, false, `Failed to check CORS: ${error.message}`);
+                return false;
+            }
+        }
+
+        async function testWithAuth() {
+            const loading = addLoading('Sessions with Auth');
+            const token = prompt('Enter your auth token (from localStorage.getItem("token") in the app):');
+            
+            if (!token) {
+                updateLoading(loading, false, 'No token provided - skipped');
+                return false;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/sessions`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                updateLoading(loading, response.ok, 
+                    `Status: ${response.status} - ${response.ok ? 'Authentication works!' : 'Auth failed'}`, 
+                    data
+                );
+                return response.ok;
+            } catch (error) {
+                updateLoading(loading, false, `Connection failed: ${error.message}`);
+                return false;
+            }
+        }
+
+        async function runAllTests() {
+            clearResults();
+            
+            const healthOK = await testHealth();
+            if (!healthOK) {
+                addResult('❌ Backend Not Running', false, 
+                    'The backend is not running or not accessible on localhost:3000. Start it with: cd edumate-backend && npm run dev'
+                );
+                return;
+            }
+
+            await testModules();
+            await testSessions();
+            await testCORS();
+
+            const testAuth = confirm('Do you want to test with an authentication token?');
+            if (testAuth) {
+                await testWithAuth();
+            }
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        // Auto-run on page load
+        window.addEventListener('load', () => {
+            runAllTests();
+        });
+    </script>
+</body>
+</html>

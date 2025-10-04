@@ -26,29 +26,7 @@ export default function Profile() {
           const savedImage = loadProfilePicture(userId || 1, 'student');
           setProfilePicture(savedImage);
         } else {
-          // Fallback to mock data
-          const mockUser = {
-            id: 1,
-            name: "John Smith",
-            email: "student1@edumate.com",
-            role: "student",
-            studentId: "42351673",
-            phone: "+27 12 345 6789",
-            program: "Computer Science",
-            year: "3rd Year",
-            faculty: "Engineering",
-            joinDate: "2022-01-15",
-            totalSessions: 24,
-            completedSessions: 18,
-            averageRating: 4.7,
-            favoriteSubjects: ["Programming", "Mathematics", "Software Engineering"]
-          };
-          setUser(mockUser);
-          setEditData(mockUser);
-          
-          // Load existing profile picture
-          const savedImage = loadProfilePicture(userId || 1, 'student');
-          setProfilePicture(savedImage);
+          console.error('No user data available');
         }
       } catch (error) {
         console.error('Error fetching user:', error);
@@ -66,11 +44,28 @@ export default function Profile() {
 
   const handleSave = async () => {
     try {
-      // API call to update user would go here
-      console.log('Saving user data:', editData);
-      setUser(editData);
-      setIsEditing(false);
-      alert('Profile updated successfully!');
+      const updateData = {
+        name: editData.name,
+        email: editData.email,
+        phone: editData.phone,
+        studentId: editData.studentId,
+        program: editData.program,
+        academicYear: editData.academicYear,
+        faculty: editData.faculty,
+        favoriteSubjects: editData.favoriteSubjects || []
+      };
+      
+      console.log('Saving user data:', updateData);
+      
+      const response = await userService.updateProfile(updateData);
+      
+      if (response.success) {
+        setUser({ ...user, ...editData });
+        setIsEditing(false);
+        alert('Profile updated successfully!');
+      } else {
+        alert('Error updating profile: ' + response.error);
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
       alert('Error updating profile. Please try again.');
@@ -157,8 +152,8 @@ export default function Profile() {
                 {/* Name and Info */}
                 <div className="text-center lg:text-left">
                   <h1 className="text-2xl lg:text-3xl font-bold">{user.name}</h1>
-                  <p className="text-primary-foreground/80 text-lg">{user.program} • {user.year}</p>
-                  <p className="text-primary-foreground/60 text-sm">Student ID: {user.studentId}</p>
+                  <p className="text-primary-foreground/80 text-lg">{user.program || 'Program not set'} • {user.academicYear || 'Year not set'}</p>
+                  <p className="text-primary-foreground/60 text-sm">Student ID: {user.studentId || 'Not set'}</p>
                 </div>
               </div>
               <button
@@ -218,10 +213,11 @@ export default function Profile() {
                           type="tel"
                           value={editData.phone || ''}
                           onChange={(e) => handleInputChange('phone', e.target.value)}
+                          placeholder="+27 XX XXX XXXX"
                           className="flex-1 px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                       ) : (
-                        <p className="text-foreground">{user.phone}</p>
+                        <p className="text-foreground">{user.phone || 'Not set'}</p>
                       )}
                     </div>
                   </div>
@@ -250,8 +246,8 @@ export default function Profile() {
                     <label className="block text-sm font-medium text-foreground mb-2">Academic Year</label>
                     {isEditing ? (
                       <select
-                        value={editData.year || ''}
-                        onChange={(e) => handleInputChange('year', e.target.value)}
+                        value={editData.academicYear || ''}
+                        onChange={(e) => handleInputChange('academicYear', e.target.value)}
                         className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                       >
                         <option value="1st Year">1st Year</option>
@@ -261,20 +257,29 @@ export default function Profile() {
                         <option value="Postgraduate">Postgraduate</option>
                       </select>
                     ) : (
-                      <p className="text-foreground">{user.year}</p>
+                      <p className="text-foreground">{user.academicYear || 'Not set'}</p>
                     )}
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Faculty</label>
-                    <p className="text-foreground">{user.faculty}</p>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editData.faculty || ''}
+                        onChange={(e) => handleInputChange('faculty', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    ) : (
+                      <p className="text-foreground">{user.faculty || 'Not set'}</p>
+                    )}
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Member Since</label>
                     <div className="flex items-center">
                       <Calendar size={16} className="text-muted-foreground mr-2" />
-                      <p className="text-foreground">{new Date(user.joinDate).toLocaleDateString()}</p>
+                      <p className="text-foreground">{new Date(user.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </div>
@@ -283,11 +288,14 @@ export default function Profile() {
                 <div className="mt-8">
                   <h3 className="text-lg font-semibold text-foreground mb-4">Favorite Subjects</h3>
                   <div className="flex flex-wrap gap-2">
-                    {user.favoriteSubjects?.map((subject, index) => (
+                    {(user.profile?.favoriteSubjects || []).map((subject, index) => (
                       <span key={index} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
                         {subject}
                       </span>
                     ))}
+                    {(!user.profile?.favoriteSubjects || user.profile.favoriteSubjects.length === 0) && (
+                      <p className="text-muted-foreground">No favorite subjects set</p>
+                    )}
                   </div>
                 </div>
 
@@ -313,29 +321,29 @@ export default function Profile() {
               <div className="lg:col-span-1">
                 <h2 className="text-xl font-semibold text-foreground mb-6">Learning Statistics</h2>
                 <div className="space-y-6">
-                  <div className="bg-muted/50 rounded-xl p-6">
-                    <div className="flex items-center justify-between mb-2">
-                      <BookOpen size={20} className="text-blue-500" />
-                      <span className="text-2xl font-bold text-foreground">{user.totalSessions}</span>
+                    <div className="bg-muted/50 rounded-xl p-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <BookOpen size={20} className="text-blue-500" />
+                        <span className="text-2xl font-bold text-foreground">{user.profile?.totalSessions || 0}</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Total Sessions</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">Total Sessions</p>
-                  </div>
 
-                  <div className="bg-muted/50 rounded-xl p-6">
-                    <div className="flex items-center justify-between mb-2">
-                      <Calendar size={20} className="text-green-500" />
-                      <span className="text-2xl font-bold text-foreground">{user.completedSessions}</span>
+                    <div className="bg-muted/50 rounded-xl p-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <Calendar size={20} className="text-green-500" />
+                        <span className="text-2xl font-bold text-foreground">{user.profile?.completedSessions || 0}</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Completed Sessions</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">Completed Sessions</p>
-                  </div>
 
-                  <div className="bg-muted/50 rounded-xl p-6">
-                    <div className="flex items-center justify-between mb-2">
-                      <Star size={20} className="text-yellow-500" />
-                      <span className="text-2xl font-bold text-foreground">{user.averageRating}</span>
+                    <div className="bg-muted/50 rounded-xl p-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <Star size={20} className="text-yellow-500" />
+                        <span className="text-2xl font-bold text-foreground">{user.profile?.averageRating || 0}</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Average Rating</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">Average Rating</p>
-                  </div>
 
                   {/* Progress */}
                   <div className="bg-muted/50 rounded-xl p-6">
@@ -343,11 +351,17 @@ export default function Profile() {
                     <div className="w-full bg-border rounded-full h-2 mb-2">
                       <div
                         className="bg-primary h-2 rounded-full transition-colors duration-200"
-                        style={{ width: `${(user.completedSessions / user.totalSessions) * 100}%` }}
+                        style={{ 
+                          width: `${user.profile?.totalSessions > 0 
+                            ? Math.round((user.profile.completedSessions / user.profile.totalSessions) * 100) 
+                            : 0}%` 
+                        }}
                       ></div>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {Math.round((user.completedSessions / user.totalSessions) * 100)}% complete
+                      {user.profile?.totalSessions > 0 
+                        ? Math.round((user.profile.completedSessions / user.profile.totalSessions) * 100)
+                        : 0}% complete
                     </p>
                   </div>
                 </div>

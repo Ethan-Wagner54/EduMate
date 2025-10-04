@@ -217,7 +217,8 @@ export default function BrowseSessions() {
                   <div>
                     <p className="font-medium text-foreground">{session.tutor}</p>
                     <p className="text-sm text-muted-foreground flex items-center">
-                      <Star size={14} className="text-yellow-400 fill-current mr-1" /> {session.rating?.toFixed(1) || '4.5'}
+                      <Star size={14} className="text-yellow-400 fill-current mr-1" /> 
+                      {session.rating ? session.rating.toFixed(1) : 'Not rated'}
                     </p>
                   </div>
                 </div>

@@ -5,74 +5,29 @@
  */
 
 /**
- * Generate performance data over time
+ * Generate performance data over time from real API data or generate fallback
  */
-export const generatePerformanceData = (months = 6) => {
-  const data = [];
-  const currentDate = new Date();
-  
-  // Create data for the last 'months' months
-  for (let i = months - 1; i >= 0; i--) {
-    const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-    const monthName = date.toLocaleDateString('en-US', { month: 'short' });
-    const year = date.getFullYear();
-    
-    // Generate realistic trending data (generally improving over time)
-    const baseGrade = 65 + (months - i - 1) * 2 + Math.random() * 8; // Gradual improvement
-    const baseRating = 3.8 + (months - i - 1) * 0.1 + Math.random() * 0.4; // Rating improvement
-    const sessionsCompleted = Math.floor(2 + Math.random() * 6); // 2-8 sessions per month
-    const hoursStudied = sessionsCompleted * 1.5 + Math.random() * 5; // 1.5 hours per session + extra
-    
-    data.push({
-      month: `${monthName} ${year}`,
-      monthShort: monthName,
-      averageGrade: Math.min(100, Math.round(baseGrade * 10) / 10),
-      sessionRating: Math.min(5, Math.round(baseRating * 10) / 10),
-      sessionsCompleted,
-      hoursStudied: Math.round(hoursStudied * 10) / 10,
-      modulesActive: Math.floor(3 + Math.random() * 3), // 3-6 modules
-      attendanceRate: Math.round((85 + Math.random() * 12) * 10) / 10, // 85-97%
-    });
+export const generatePerformanceData = (realData = null, months = 6) => {
+  // If real performance data is provided, use it
+  if (realData && Array.isArray(realData) && realData.length > 0) {
+    return realData;
   }
   
-  return data;
+  // Fallback: return empty array instead of hardcoded data
+  return [];
 };
 
 /**
- * Generate module-specific performance data
+ * Generate module-specific performance data from real API data
  */
-export const generateModulePerformanceData = () => {
-  const modules = [
-    { code: 'CMPG-321', name: 'Software Engineering', color: '#8884d8' },
-    { code: 'ACCF-111', name: 'Introduction to Accounting', color: '#82ca9d' },
-    { code: 'MATH-101', name: 'Mathematics I', color: '#ffc658' },
-    { code: 'STAT-110', name: 'Statistics', color: '#ff7300' },
-    { code: 'ECON-101', name: 'Economics', color: '#00c49f' }
-  ];
+export const generateModulePerformanceData = (moduleData = null) => {
+  // If real module data is provided, use it
+  if (moduleData && Array.isArray(moduleData) && moduleData.length > 0) {
+    return moduleData;
+  }
   
-  return modules.map(module => {
-    // Generate 6 months of data for each module
-    const data = [];
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      const month = date.toLocaleDateString('en-US', { month: 'short' });
-      
-      // Generate realistic grade progression (generally improving)
-      const baseGrade = 60 + (5 - i) * 3 + Math.random() * 15;
-      data.push({
-        month,
-        grade: Math.min(100, Math.round(baseGrade))
-      });
-    }
-    
-    return {
-      ...module,
-      data,
-      currentGrade: data[data.length - 1].grade,
-      trend: data[data.length - 1].grade > data[0].grade ? 'up' : 'down'
-    };
-  });
+  // Fallback: return empty array instead of hardcoded data
+  return [];
 };
 
 /**
@@ -104,21 +59,19 @@ export const generateWeeklyStudyData = (weeks = 12) => {
 };
 
 /**
- * Generate achievement/milestone data
+ * Generate achievement/milestone data from real API data
  */
-export const generateAchievementData = () => {
-  const achievements = [
-    { name: 'First A Grade', date: '2024-09-15', module: 'MATH-101', icon: '🎯' },
-    { name: '5 Sessions Streak', date: '2024-10-01', module: 'All', icon: '🔥' },
-    { name: '90% Attendance', date: '2024-10-15', module: 'All', icon: '📚' },
-    { name: 'Module Completed', date: '2024-11-01', module: 'ACCF-111', icon: '✅' },
-    { name: 'Top Performer', date: '2024-11-20', module: 'CMPG-321', icon: '⭐' }
-  ];
+export const generateAchievementData = (achievementsData = null) => {
+  // If real achievements data is provided, use it
+  if (achievementsData && Array.isArray(achievementsData) && achievementsData.length > 0) {
+    return achievementsData.map(achievement => ({
+      ...achievement,
+      dateObj: new Date(achievement.date)
+    })).sort((a, b) => b.dateObj - a.dateObj);
+  }
   
-  return achievements.map(achievement => ({
-    ...achievement,
-    dateObj: new Date(achievement.date)
-  })).sort((a, b) => b.dateObj - a.dateObj);
+  // Fallback: return empty array
+  return [];
 };
 
 /**

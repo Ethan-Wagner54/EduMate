@@ -67,7 +67,8 @@ export default function Avatar({
         <img
           src={profileImage}
           alt={userName || 'User avatar'}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover rounded-full"
+          style={{ width: size, height: size }}
           onError={handleImageError}
         />
       ) : (

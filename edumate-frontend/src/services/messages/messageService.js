@@ -38,7 +38,7 @@ class MessageService {
       if (before) params.append('before', before);
       if (after) params.append('after', after);
 
-      const response = await axios.get(`${API_URL}/messages/conversation/${tutorId}?${params}`);
+      const response = await axios.get(`${API_URL}/api/messaging/conversation/${tutorId}?${params}`);
       
       if (response.data && response.data.success) {
         // Cache the result
@@ -54,8 +54,10 @@ class MessageService {
     } catch (error) {
       console.error('Error fetching conversation:', error);
       
-      // Return mock data for development
-      return this.getMockConversation(tutorId);
+      return {
+        success: false,
+        error: 'Failed to load conversation'
+      };
     }
   }
 
@@ -84,8 +86,8 @@ class MessageService {
         }
       }
 
-      // Fallback to HTTP API
-      const response = await axios.post(`${API_URL}/messages`, payload);
+      // Fallback to HTTP API (aligned with backend mock API)
+      const response = await axios.post(`${API_URL}/api/messaging`, payload);
       
       if (response.data && response.data.success) {
         // Clear relevant caches
@@ -217,7 +219,7 @@ class MessageService {
       if (dateTo) params.append('dateTo', dateTo);
       if (messageType) params.append('messageType', messageType);
 
-      const response = await axios.get(`${API_URL}/messages/search?${params}`);
+      const response = await axios.get(`${API_URL}/api/messaging/search?${params}`);
       
       if (response.data && response.data.success) {
         // Cache results for 5 minutes
@@ -259,13 +261,16 @@ class MessageService {
         limit: limit.toString()
       });
 
-      const response = await axios.get(`${API_URL}/messages/history?${params}`);
+      const response = await axios.get(`${API_URL}/api/messaging/history?${params}`);
       
       if (response.data && response.data.success) {
         return response.data;
       }
 
-      return this.getMockMessageHistory();
+      return {
+        success: false,
+        error: 'Failed to load message history'
+      };
 
     } catch (error) {
       console.error('Error fetching message history:', error);
@@ -283,10 +288,13 @@ class MessageService {
         socketService.markMessagesAsRead(messageIds);
       }
 
-      // Also update via API
-      await axios.post(`${API_URL}/messages/mark-read`, {
-        messageIds
-      });
+      // Also update via API (no-op placeholder on backend)
+      try {
+        await axios.post(`${API_URL}/api/messaging/mark-read`, { messageIds });
+      } catch (e) {
+        // Ignore if endpoint is not implemented yet
+        console.warn('mark-read endpoint not available, continuing');
+      }
 
       return { success: true };
 
@@ -301,7 +309,7 @@ class MessageService {
     try {
       authService.setAuthHeader();
       
-      const response = await axios.get(`${API_URL}/messages/unread-count`);
+      const response = await axios.get(`${API_URL}/api/messaging/unread-count`);
       
       if (response.data && response.data.success) {
         return response.data;
@@ -320,7 +328,7 @@ class MessageService {
     try {
       authService.setAuthHeader();
       
-      const response = await axios.delete(`${API_URL}/messages/${messageId}`);
+      const response = await axios.delete(`${API_URL}/api/messaging/${messageId}`);
       
       if (response.data && response.data.success) {
         // Clear caches
@@ -361,112 +369,6 @@ class MessageService {
     this.searchCache.clear();
   }
 
-  // Mock data for development
-  getMockConversation(tutorId) {
-    const currentUserId = authService.getUserId();
-    
-    return {
-      success: true,
-      data: {
-        messages: [
-          {
-            id: 1,
-            senderId: tutorId,
-            senderName: "Sarah Johnson",
-            recipientId: currentUserId,
-            content: "Hi! I'm ready to help you with your studies. What topics would you like to focus on?",
-            messageType: "text",
-            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            isRead: true,
-            attachments: []
-          },
-          {
-            id: 2,
-            senderId: currentUserId,
-            senderName: "You",
-            recipientId: tutorId,
-            content: "Hello! I'm struggling with object-oriented programming concepts, especially inheritance and polymorphism.",
-            messageType: "text",
-            timestamp: new Date(Date.now() - 1.5 * 60 * 60 * 1000).toISOString(),
-            isRead: true,
-            attachments: []
-          },
-          {
-            id: 3,
-            senderId: tutorId,
-            senderName: "Sarah Johnson",
-            recipientId: currentUserId,
-            content: "Perfect! Those are fundamental OOP concepts. I have some great examples we can work through. Would you like to schedule a session this week?",
-            messageType: "text",
-            timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-            isRead: true,
-            attachments: []
-          },
-          {
-            id: 4,
-            senderId: currentUserId,
-            senderName: "You",
-            recipientId: tutorId,
-            content: "Yes, that would be great! When are you available?",
-            messageType: "text",
-            timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-            isRead: false,
-            attachments: []
-          }
-        ],
-        pagination: {
-          page: 1,
-          limit: 50,
-          total: 4,
-          hasMore: false
-        }
-      }
-    };
-  }
-
-  getMockMessageHistory() {
-    const currentUserId = authService.getUserId();
-    
-    return {
-      success: true,
-      data: {
-        conversations: [
-          {
-            id: 1,
-            participantId: 1,
-            participantName: "Sarah Johnson",
-            participantRole: "tutor",
-            lastMessage: {
-              content: "Yes, that would be great! When are you available?",
-              timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-              isOwn: true
-            },
-            unreadCount: 0,
-            totalMessages: 4
-          },
-          {
-            id: 2,
-            participantId: 2,
-            participantName: "Michael Chen",
-            participantRole: "tutor",
-            lastMessage: {
-              content: "I'll send you the practice problems we discussed.",
-              timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-              isOwn: false
-            },
-            unreadCount: 1,
-            totalMessages: 8
-          }
-        ],
-        pagination: {
-          page: 1,
-          limit: 20,
-          total: 2,
-          hasMore: false
-        }
-      }
-    };
-  }
 }
 
 // Create singleton instance

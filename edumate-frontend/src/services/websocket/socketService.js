@@ -12,6 +12,8 @@ class SocketService {
     this.messageListeners = new Set();
     this.connectionListeners = new Set();
     this.notificationListeners = new Set();
+    this.groupMessageListeners = new Set();
+    this.groupTypingListeners = new Set();
   }
 
   connect() {
@@ -127,6 +129,35 @@ class SocketService {
         // Handle typing indicators
       });
 
+      // Listen for group messages
+      this.socket.on('new-group-message', (messageData) => {
+        console.log('New group message received:', messageData);
+        this.groupMessageListeners.forEach(listener => {
+          try {
+            listener(messageData);
+          } catch (error) {
+            console.error('Error in group message listener:', error);
+          }
+        });
+
+        // Show notification if page is not visible
+        if (document.hidden && 'Notification' in window) {
+          this.showNotification(messageData);
+        }
+      });
+
+      // Listen for group typing indicators
+      this.socket.on('group-user-typing', (typingData) => {
+        console.log('Group user typing:', typingData);
+        this.groupTypingListeners.forEach(listener => {
+          try {
+            listener(typingData);
+          } catch (error) {
+            console.error('Error in group typing listener:', error);
+          }
+        });
+      });
+
       // Authentication error
       this.socket.on('auth-error', (error) => {
         console.error('Socket authentication error:', error);
@@ -197,6 +228,61 @@ class SocketService {
     this.socket.emit('mark-messages-read', messageIds);
   }
 
+  // Group chat methods
+  
+  // Send a group message
+  sendGroupMessage(messageData) {
+    if (!this.socket?.connected) {
+      throw new Error('Socket not connected');
+    }
+
+    return new Promise((resolve, reject) => {
+      this.socket.emit('send-group-message', messageData, (response) => {
+        if (response.success) {
+          resolve(response.message);
+        } else {
+          reject(new Error(response.error));
+        }
+      });
+    });
+  }
+
+  // Join a group chat room
+  joinGroupChatRoom(conversationId) {
+    if (!this.socket?.connected) {
+      throw new Error('Socket not connected');
+    }
+
+    this.socket.emit('join-group-chat-room', conversationId);
+  }
+
+  // Leave a group chat room
+  leaveGroupChatRoom(conversationId) {
+    if (!this.socket?.connected) {
+      return;
+    }
+
+    this.socket.emit('leave-group-chat-room', conversationId);
+  }
+
+  // Send group typing indicator
+  sendGroupTyping(conversationId, isTyping = true) {
+    if (!this.socket?.connected) {
+      return;
+    }
+
+    this.socket.emit('group-typing', { conversationId, isTyping });
+  }
+
+  // Mark group messages as read
+  markGroupMessagesAsRead(conversationId, messageIds) {
+    if (!this.socket?.connected) {
+      return;
+    }
+
+    this.socket.emit('mark-group-messages-read', { conversationId, messageIds });
+  }
+
   // Event listeners
   onMessage(listener) {
     this.messageListeners.add(listener);
@@ -222,6 +308,24 @@ class SocketService {
     // Return cleanup function
     return () => {
       this.notificationListeners.delete(listener);
+    };
+  }
+
+  onGroupMessage(listener) {
+    this.groupMessageListeners.add(listener);
+    
+    // Return cleanup function
+    return () => {
+      this.groupMessageListeners.delete(listener);
+    };
+  }
+
+  onGroupTyping(listener) {
+    this.groupTypingListeners.add(listener);
+    
+    // Return cleanup function
+    return () => {
+      this.groupTypingListeners.delete(listener);
     };
   }
 
@@ -258,8 +362,8 @@ class SocketService {
     }
   }
 
-  // Request notification permission
-  static async requestNotificationPermission() {
+  // Request notification permission (instance method)
+  async requestNotificationPermission() {
     if ('Notification' in window) {
       const permission = await Notification.requestPermission();
       return permission === 'granted';
