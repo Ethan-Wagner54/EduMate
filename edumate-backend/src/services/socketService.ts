@@ -149,7 +149,7 @@ class SocketService {
       }
     });
 
-    // Handle sending messages
+    // Handle sending messages (direct messages)
     socket.on('send-message', async (messageData: MessageData, callback?: (response: any) => void) => {
       try {
         const message = await this.saveMessage({
@@ -196,6 +196,86 @@ class SocketService {
             success: false,
             error: 'Failed to send message'
           });
+        }
+      }
+    });
+
+    // Handle sending group messages
+    socket.on('send-group-message', async (messageData: { conversationId: number; content: string; messageType?: string }, callback?: (response: any) => void) => {
+      try {
+        const message = await this.saveGroupMessage({
+          conversationId: messageData.conversationId,
+          senderId: socketAny.userId,
+          content: messageData.content,
+          messageType: messageData.messageType || 'text'
+        });
+
+        // Broadcast to all users in the group chat room
+        socket.to(`group-${messageData.conversationId}`).emit('new-group-message', {
+          id: message.id,
+          conversationId: messageData.conversationId,
+          senderId: message.senderId,
+          senderName: socketAny.user.name,
+          senderRole: socketAny.user.role,
+          content: message.content,
+          messageType: message.messageType,
+          timestamp: message.createdAt,
+          isRead: false
+        });
+
+        // Callback to confirm message sent
+        if (callback) {
+          callback({
+            success: true,
+            message: {
+              id: message.id,
+              conversationId: messageData.conversationId,
+              senderId: message.senderId,
+              senderName: socketAny.user.name,
+              senderRole: socketAny.user.role,
+              content: message.content,
+              messageType: message.messageType,
+              timestamp: message.createdAt,
+              isRead: false
+            }
+          });
+        }
+
+        console.log(`Group message sent from ${socketAny.user.name} to conversation ${messageData.conversationId}`);
+      } catch (error) {
+        console.error('Error sending group message:', error);
+        if (callback) {
+          callback({
+            success: false,
+            error: 'Failed to send group message'
+          });
+        }
+      }
+    });
+
+    // Handle joining group chat rooms
+    socket.on('join-group-chat', (conversationId: number) => {
+      const roomId = `group-${conversationId}`;
+      socket.join(roomId);
+      console.log(`User ${socketAny.user.name} joined group chat room: ${roomId}`);
+      
+      // Track room participants
+      if (!this.chatRooms.has(roomId)) {
+        this.chatRooms.set(roomId, new Set());
+      }
+      this.chatRooms.get(roomId)!.add(socketAny.userId);
+    });
+
+    // Handle leaving group chat rooms
+    socket.on('leave-group-chat', (conversationId: number) => {
+      const roomId = `group-${conversationId}`;
+      socket.leave(roomId);
+      console.log(`User ${socketAny.user.name} left group chat room: ${roomId}`);
+      
+      if (this.chatRooms.has(roomId)) {
+        this.chatRooms.get(roomId)!.delete(socketAny.userId);
+        if (this.chatRooms.get(roomId)!.size === 0) {
+          this.chatRooms.delete(roomId);
         }
       }
     });
@@ -361,6 +441,65 @@ class SocketService {
         createdAt: new Date(),
         isRead: false
       };
+    }
+  }
+
+  async saveGroupMessage(messageData: { conversationId: number; senderId: number; content: string; messageType?: string }): Promise<SavedMessage> {
+    try {
+      // Verify the conversation exists and user is a participant
+      const conversation = await prisma.conversation.findFirst({
+        where: {
+          id: messageData.conversationId,
+          participants: {
+            some: { userId: messageData.senderId }
+          }
+        }
+      });
+
+      if (!conversation) {
+        throw new Error('Conversation not found or user is not a participant');
+      }
+
+      // Save the message
+      const message = await prisma.conversationMessage.create({
+        data: {
+          conversationId: messageData.conversationId,
+          senderId: messageData.senderId,
+          content: messageData.content,
+          isRead: false,
+          sentAt: new Date()
+        }
+      });
+
+      // Update conversation timestamp
+      await prisma.conversation.update({
+        where: { id: messageData.conversationId },
+        data: { updatedAt: new Date() }
+      });
+
+      // Update unread counts for other participants
+      await prisma.conversationParticipant.updateMany({
+        where: {
+          conversationId: messageData.conversationId,
+          userId: { not: messageData.senderId }
+        },
+        data: {
+          unreadCount: { increment: 1 }
+        }
+      });
+
+      return {
+        id: message.id,
+        senderId: message.senderId,
+        content: message.content,
+        messageType: messageData.messageType || 'text',
+        attachments: [],
+        createdAt: message.sentAt,
+        isRead: message.isRead
+      };
+    } catch (error) {
+      console.error('Error saving group message:', error);
+      throw error;
     }
   }
 

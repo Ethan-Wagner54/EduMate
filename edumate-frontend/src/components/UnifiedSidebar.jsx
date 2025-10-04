@@ -43,8 +43,13 @@ const navigationConfig = {
       label: 'My Tutors'
     },
     {
-      to: '/student/group-chats',
+      to: '/student/messages',
       icon: MessageSquare,
+      label: 'Messages'
+    },
+    {
+      to: '/student/group-chats',
+      icon: Users,
       label: 'Group Chats'
     },
     {

@@ -132,25 +132,31 @@ export default function UnifiedMessaging({
 
   const loadGroupChats = async () => {
     try {
-      const response = await groupChatService.getGroupChats();
-      if (response.success && response.data && response.data.groupChats) {
-        const formattedGroupChats = response.data.groupChats.map(chat => ({
+      // Use conversations API to get group conversations
+      const response = await conversationsService.getConversations();
+      if (response.success && response.data) {
+        // Filter for group conversations only
+        const groupConversations = response.data.filter(conv => 
+          conv.name && (conv.name.includes('Study Group') || conv.name.includes('Chat') || conv.name.includes('Group'))
+        );
+        
+        const formattedGroupChats = groupConversations.map(chat => ({
           id: chat.id,
           type: 'group',
           name: chat.name,
-          sessionId: chat.sessionId,
-          session: chat.session,
-          participants: chat.participants,
+          sessionId: null,
+          session: null,
+          participants: [],
           lastMessage: chat.lastMessage ? {
-            content: chat.lastMessage.content,
-            timestamp: chat.lastMessage.sentAt,
-            senderName: chat.lastMessage.senderName,
+            content: chat.lastMessage,
+            timestamp: chat.timestamp,
+            senderName: 'Member',
             isOwn: false
           } : null,
           unreadCount: chat.unreadCount || 0,
-          totalMessages: chat.totalMessages || 0,
-          createdAt: chat.createdAt,
-          updatedAt: chat.updatedAt
+          totalMessages: 0,
+          createdAt: new Date(),
+          updatedAt: new Date()
         }));
         setGroupChats(formattedGroupChats);
       }
@@ -256,35 +262,20 @@ export default function UnifiedMessaging({
     try {
       let response;
       
-      if (conversation.type === 'group') {
-        response = await groupChatService.getGroupChatMessages(conversation.id);
-      } else {
-        response = await conversationsService.getMessages(conversation.id);
-      }
+      // Use conversations API for both private and group messages
+      response = await conversationsService.getMessages(conversation.id);
       
       if (response.success && response.data) {
-        const formattedMessages = conversation.type === 'group' 
-          ? response.data.messages.map(msg => ({
-              id: msg.id,
-              senderId: msg.senderId,
-              senderName: msg.senderName,
-              senderRole: msg.senderRole,
-              content: msg.content,
-              messageType: msg.messageType || 'text',
-              timestamp: msg.sentAt,
-              isOwn: msg.isOwn,
-              attachments: msg.attachments || []
-            }))
-          : response.data.map(msg => ({
-              id: msg.id,
-              senderId: msg.isOwn ? currentUserId : conversation.participantId,
-              senderName: msg.sender,
-              content: msg.content,
-              messageType: 'text',
-              timestamp: msg.timestamp,
-              isOwn: msg.isOwn,
-              attachments: []
-            }));
+        const formattedMessages = response.data.map(msg => ({
+          id: msg.id,
+          senderId: msg.isOwn ? currentUserId : (conversation.participantId || 0),
+          senderName: msg.sender,
+          content: msg.content,
+          messageType: 'text',
+          timestamp: msg.timestamp,
+          isOwn: msg.isOwn,
+          attachments: []
+        }));
         
         setMessages(formattedMessages);
       }
@@ -338,15 +329,8 @@ export default function UnifiedMessaging({
       
       let response;
       
-      if (activeConversation.type === 'group') {
-        response = await groupChatService.sendGroupMessage({
-          conversationId: activeConversation.id,
-          content: messageContent,
-          messageType: 'text'
-        });
-      } else {
-        response = await conversationsService.sendMessage(activeConversation.id, messageContent);
-      }
+      // Use conversations API for both private and group messages
+      response = await conversationsService.sendMessage(activeConversation.id, messageContent);
       
       if (response.success) {
         // Replace optimistic message with real one
