@@ -24,6 +24,8 @@ import conversationsService from '../../services/conversations/conversations';
 import groupChatService from '../../services/groupChat/groupChatService';
 import messageService from '../../services/messages/messageService';
 import socketService from '../../services/websocket/socketService';
+import fileUploadService from '../../services/fileUpload/fileUploadService';
+import userService from '../../services/user/user';
 import { AvatarSmall, AvatarMedium } from '../ui/Avatar';
 
 export default function UnifiedMessaging({ 
@@ -41,6 +43,11 @@ export default function UnifiedMessaging({
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState(type === 'both' ? 'private' : type);
+  const [currentUser, setCurrentUser] = useState(null);
+  
+  // File upload state
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
   
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -59,8 +66,24 @@ export default function UnifiedMessaging({
   // User info
   const currentUserId = authService.getUserId();
 
+  // Fetch current user data
+  const fetchCurrentUser = async () => {
+    try {
+      const userId = authService.getUserId();
+      if (userId) {
+        const response = await userService.getUser({ id: userId });
+        if (response.success && response.data) {
+          setCurrentUser(response.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+    }
+  };
+
   // Initialize component
   useEffect(() => {
+    fetchCurrentUser();
     loadData();
     setupSocketConnection();
     
@@ -108,13 +131,18 @@ export default function UnifiedMessaging({
     try {
       const response = await conversationsService.getConversations();
       if (response.success && response.data) {
-        const formattedConversations = response.data.map(conv => ({
+        // Filter for direct/private conversations only
+        const privateConversations = response.data.filter(conv => 
+          conv.type === 'direct' && !conv.isGroup
+        );
+        
+        const formattedConversations = privateConversations.map(conv => ({
           id: conv.id,
           type: 'private',
           name: conv.name,
           participantName: conv.name,
-          participantRole: conv.userType,
-          participantId: conv.userId,
+          participantRole: conv.userType || 'student',
+          participantId: conv.userId || 0,
           lastMessage: conv.lastMessage ? {
             content: conv.lastMessage,
             timestamp: conv.timestamp,
@@ -137,7 +165,7 @@ export default function UnifiedMessaging({
       if (response.success && response.data) {
         // Filter for group conversations only
         const groupConversations = response.data.filter(conv => 
-          conv.name && (conv.name.includes('Study Group') || conv.name.includes('Chat') || conv.name.includes('Group'))
+          (conv.type === 'group' || conv.type === 'session_chat') || conv.isGroup
         );
         
         const formattedGroupChats = groupConversations.map(chat => ({
@@ -172,6 +200,8 @@ export default function UnifiedMessaging({
     });
 
     const messageListener = socketService.onMessage((messageData) => {
+      console.log('📡 WebSocket message received:', messageData);
+      
       if (activeConversation && 
           ((activeConversation.type === 'private' && messageData.senderId !== currentUserId) ||
            (activeConversation.type === 'group' && messageData.conversationId === activeConversation.id))) {
@@ -184,8 +214,10 @@ export default function UnifiedMessaging({
           messageType: messageData.messageType || 'text',
           timestamp: messageData.timestamp || new Date().toISOString(),
           isOwn: messageData.senderId === currentUserId,
-          attachments: messageData.attachments || []
+          attachments: messageData.attachments || messageData.files || []
         };
+        
+        console.log('📨 Formatted WebSocket message:', newMessage);
         
         setMessages(prev => {
           if (prev.some(msg => msg.id === newMessage.id)) {
@@ -266,16 +298,19 @@ export default function UnifiedMessaging({
       response = await conversationsService.getMessages(conversation.id);
       
       if (response.success && response.data) {
-        const formattedMessages = response.data.map(msg => ({
-          id: msg.id,
-          senderId: msg.isOwn ? currentUserId : (conversation.participantId || 0),
-          senderName: msg.sender,
-          content: msg.content,
-          messageType: 'text',
-          timestamp: msg.timestamp,
-          isOwn: msg.isOwn,
-          attachments: []
-        }));
+        const formattedMessages = response.data.map(msg => {
+          console.log('📨 Loading message from DB:', msg);
+          return {
+            id: msg.id,
+            senderId: msg.isOwn ? currentUserId : (conversation.participantId || 0),
+            senderName: msg.sender,
+            content: msg.content,
+            messageType: msg.messageType || 'text',
+            timestamp: msg.timestamp,
+            isOwn: msg.isOwn,
+            attachments: msg.attachments || msg.files || [] // Try both fields
+          };
+        });
         
         setMessages(formattedMessages);
       }
@@ -385,6 +420,95 @@ export default function UnifiedMessaging({
     }
   };
 
+  // File handling functions
+  const handleFileSelect = (event) => {
+    const files = Array.from(event.target.files);
+    const validFiles = files.filter(file => {
+      if (!fileUploadService.isValidFileType(file)) {
+        toast.error(`File type not supported: ${file.name}`);
+        return false;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`File too large: ${file.name}`);
+        return false;
+      }
+      return true;
+    });
+    
+    setSelectedFiles(prev => [...prev, ...validFiles].slice(0, 5)); // Max 5 files
+    event.target.value = ''; // Reset input
+  };
+
+  const removeSelectedFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSendWithAttachments = async () => {
+    if (!activeConversation || (!newMessage.trim() && selectedFiles.length === 0)) {
+      return;
+    }
+
+    setUploading(true);
+    setSending(true);
+
+    try {
+      let attachments = [];
+      
+      // Upload files if any are selected
+      if (selectedFiles.length > 0) {
+        const uploadResponse = await fileUploadService.uploadFiles(selectedFiles, activeConversation.id);
+        if (uploadResponse.success && uploadResponse.data) {
+          attachments = uploadResponse.data.attachments;
+        } else {
+          throw new Error(uploadResponse.error || 'Upload failed');
+        }
+      }
+
+      // Send message with attachments
+      if (attachments.length > 0) {
+        const response = await fileUploadService.sendMessageWithAttachments(
+          activeConversation.id,
+          newMessage.trim(),
+          attachments
+        );
+        
+        if (response.success) {
+          // Add message to UI
+          const newMsg = {
+            id: response.data.id,
+            senderId: currentUserId,
+            senderName: 'You',
+            content: response.data.content,
+            attachments: attachments,
+            timestamp: response.data.timestamp,
+            isOwn: true
+          };
+          setMessages(prev => [...prev, newMsg]);
+          
+          // Clear inputs
+          setNewMessage('');
+          setSelectedFiles([]);
+          
+          // Update conversation list
+          const displayContent = newMessage.trim() || `📎 ${attachments.length} file(s)`;
+          updateConversationLastMessage(activeConversation, displayContent, new Date().toISOString());
+        } else {
+          throw new Error(response.error || 'Failed to send message');
+        }
+      } else {
+        // Send regular message
+        await handleSendMessage({ preventDefault: () => {} });
+      }
+      
+    } catch (error) {
+      console.error('Error sending message with attachments:', error);
+      toast.error('Failed to send message with attachments');
+    } finally {
+      setUploading(false);
+      setSending(false);
+    }
+  };
+
   // Helper functions
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
@@ -409,13 +533,6 @@ export default function UnifiedMessaging({
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage(e);
-    }
-  };
 
   // Filter conversations based on search
   const filteredConversations = conversations.filter(conv =>
@@ -732,32 +849,151 @@ export default function UnifiedMessaging({
                 </div>
               ) : (
                 messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        message.isOwn
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-muted-foreground'
-                      } ${message.sending ? 'opacity-70' : ''}`}
-                    >
-                      {!message.isOwn && activeConversation.type === 'group' && (
-                        <div className="flex items-center gap-1 mb-1">
-                          <span className="text-xs font-medium">
-                            {message.senderName}
-                          </span>
-                          {message.senderRole === 'tutor' && (
-                            <Crown size={12} className="text-yellow-500" />
-                          )}
-                        </div>
+                  <div key={message.id} className={`flex gap-3 mb-4 ${
+                    message.isOwn ? 'flex-row-reverse' : 'flex-row'
+                  }`}>
+                    {/* Avatar */}
+                    <div className="flex-shrink-0">
+                      {message.isOwn ? (
+                        // For your own messages, show the current logged-in user (Sarah Mitchell)
+                        <AvatarMedium
+                          userId={currentUser?.id || currentUserId}
+                          userName={currentUser?.name || 'You'}
+                          userType={currentUser?.role || authService.getUserRole() || 'tutor'}
+                          size={32}
+                          showOnlineStatus={false}
+                        />
+                      ) : (
+                        // For other people's messages, show their avatar
+                        <AvatarMedium
+                          userId={message.senderId}
+                          userName={message.senderName}
+                          userType={message.senderRole}
+                          size={32}
+                          showOnlineStatus={false}
+                        />
                       )}
-                      <p className="text-sm">{message.content}</p>
-                      <p className="text-xs mt-1 opacity-70">
-                        {formatTime(message.timestamp)}
-                        {message.sending && ' • Sending...'}
-                      </p>
+                    </div>
+                    
+                    {/* Message Content */}
+                    <div className={`flex-1 max-w-xs md:max-w-md lg:max-w-lg ${
+                      message.sending ? 'opacity-70' : ''
+                    }`}>
+                      {/* Message Header */}
+                      <div className={`flex items-center gap-2 mb-1 ${
+                        message.isOwn ? 'flex-row-reverse' : 'flex-row'
+                      }`}>
+                        <span className={`text-sm font-medium ${
+                          message.isOwn ? 'text-primary' : 'text-foreground'
+                        }`}>
+                          {message.isOwn ? 'You' : message.senderName}
+                        </span>
+                        {message.senderRole === 'tutor' && (
+                          <Crown size={12} className="text-yellow-500" />
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {formatTime(message.timestamp)}
+                          {message.sending && ' • Sending...'}
+                        </span>
+                      </div>
+                      
+                      {/* Message Bubble */}
+                      <div className={`rounded-2xl px-4 py-3 ${
+                        message.isOwn 
+                          ? 'bg-primary text-primary-foreground ml-auto'
+                          : 'bg-muted text-muted-foreground'
+                      }`}>
+                        {message.content && (
+                          <p className="text-sm whitespace-pre-wrap break-words">
+                            {message.content}
+                          </p>
+                        )}
+                        
+                        {/* Display attachments */}
+                        {message.attachments && message.attachments.length > 0 && (
+                          <div className={`space-y-2 ${message.content ? 'mt-3' : ''}`}>
+                            {message.attachments.map((attachment, index) => {
+                              const isImage = attachment.mimeType?.startsWith('image/');
+                              const fileUrl = fileUploadService.getFileUrl(attachment.filename);
+                              
+                              if (isImage) {
+                                console.log('📎 Image attachment:', attachment.originalName, '→', fileUrl);
+                              }
+                              
+                              return (
+                                <div key={index}>
+                                  {isImage ? (
+                                    // Image preview
+                                    <div className="rounded-lg overflow-hidden">
+                                      <img 
+                                        src={fileUrl}
+                                        alt={attachment.originalName}
+                                        className="max-w-full max-h-64 w-auto h-auto cursor-pointer hover:opacity-90 transition-opacity rounded"
+                                        style={{
+                                          minWidth: '100px',
+                                          minHeight: '60px'
+                                        }}
+                                        onClick={() => window.open(fileUrl, '_blank')}
+                                        onLoad={(e) => {
+                                          console.log('✅ Image loaded and should be visible!');
+                                          console.log('Image element:', e.target);
+                                          console.log('Computed style display:', getComputedStyle(e.target).display);
+                                          console.log('Computed style visibility:', getComputedStyle(e.target).visibility);
+                                        }}
+                                        onError={(e) => {
+                                          console.error('❌ Failed to load image:', fileUrl);
+                                          // Show fallback
+                                          e.target.style.display = 'none';
+                                          const fallback = e.target.nextSibling;
+                                          if (fallback) fallback.style.display = 'block';
+                                        }}
+                                      />
+                                      {/* Fallback file link (hidden by default) */}
+                                      <div 
+                                        style={{display: 'none'}} 
+                                        className="flex items-center gap-2 p-2 bg-black/20 rounded text-xs mt-2"
+                                      >
+                                        <span>🖼️</span>
+                                        <a 
+                                          href={fileUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex-1 truncate hover:underline"
+                                          title={attachment.originalName}
+                                        >
+                                          {attachment.originalName}
+                                        </a>
+                                        <span className="text-xs opacity-70">
+                                          {fileUploadService.formatFileSize(attachment.size)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    // Non-image file
+                                    <div className="flex items-center gap-3 p-2 bg-black/20 rounded-lg">
+                                      <span className="text-lg">{fileUploadService.getFileTypeIcon(attachment.mimeType)}</span>
+                                      <div className="flex-1 min-w-0">
+                                        <a 
+                                          href={fileUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-sm font-medium hover:underline block truncate"
+                                          title={attachment.originalName}
+                                        >
+                                          {attachment.originalName}
+                                        </a>
+                                        <span className="text-xs opacity-70">
+                                          {fileUploadService.formatFileSize(attachment.size)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))
@@ -767,31 +1003,95 @@ export default function UnifiedMessaging({
 
             {/* Message Input */}
             <div className="p-4 border-t border-border bg-card">
-              <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
-                <button
-                  type="button"
-                  className="p-2 hover:bg-accent rounded-lg transition-colors"
+              {/* Selected Files Preview */}
+              {selectedFiles.length > 0 && (
+                <div className="mb-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Selected Files ({selectedFiles.length})</span>
+                    <button
+                      onClick={() => setSelectedFiles([])}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-background rounded text-sm">
+                        <span>{fileUploadService.getFileTypeIcon(file.type)}</span>
+                        <span className="flex-1 truncate" title={file.name}>{file.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {fileUploadService.formatFileSize(file.size)}
+                        </span>
+                        <button
+                          onClick={() => removeSelectedFile(index)}
+                          className="text-red-500 hover:text-red-700 ml-2"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (selectedFiles.length > 0) {
+                    handleSendWithAttachments();
+                  } else {
+                    handleSendMessage(e);
+                  }
+                }} 
+                className="flex items-center space-x-2"
+              >
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  id="file-upload"
+                  disabled={uploading || sending}
+                />
+                <label
+                  htmlFor="file-upload"
+                  className="p-2 hover:bg-accent rounded-lg transition-colors cursor-pointer"
                 >
                   <Paperclip size={18} className="text-muted-foreground" />
-                </button>
+                </label>
                 
                 <input
                   ref={messageInputRef}
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Type a message..."
-                  disabled={sending}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (selectedFiles.length > 0) {
+                        handleSendWithAttachments();
+                      } else {
+                        handleSendMessage(e);
+                      }
+                    }
+                  }}
+                  placeholder={selectedFiles.length > 0 ? 'Add a caption...' : 'Type a message...'}
+                  disabled={sending || uploading}
                   className="flex-1 px-4 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                 />
                 
                 <button
                   type="submit"
-                  disabled={!newMessage.trim() || sending}
+                  disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending || uploading}
                   className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  <Send size={18} />
+                  {uploading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground" />
+                  ) : (
+                    <Send size={18} />
+                  )}
                 </button>
               </form>
             </div>

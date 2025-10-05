@@ -13,3 +13,7 @@
 
 # Logs
 /logs
+
+# Uploads
+/uploads/*
+!/uploads/.gitkeep

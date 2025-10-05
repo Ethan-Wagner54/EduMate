@@ -226,6 +226,7 @@ model ConversationMessage {
   conversationId  Int
   senderId        Int
   content         String
+  metadata        Json?        // For storing attachments and other message metadata
   isRead          Boolean      @default(false)
   sentAt          DateTime     @default(now())
   editedAt        DateTime?
