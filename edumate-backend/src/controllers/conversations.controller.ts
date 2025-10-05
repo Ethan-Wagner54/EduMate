@@ -116,6 +116,7 @@ export const getMessages = async (req: Request, res: Response) => {
       id: msg.id,
       sender: msg.sender.name,
       content: msg.content,
+      attachments: (msg as any).metadata?.attachments || [],
       timestamp: formatTime(msg.sentAt),
       isOwn: msg.senderId === userId
     }));
