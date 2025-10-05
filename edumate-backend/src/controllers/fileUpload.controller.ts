@@ -1,15 +1,26 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import multer from 'multer';
+import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
+
+// Interface for file attachments
+interface FileAttachment {
+  id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  uploadedAt: Date;
+}
 
 const prisma = new PrismaClient();
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: (req: Request, file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
     const uploadDir = path.join(process.cwd(), 'uploads', 'chat-attachments');
     
     // Create directory if it doesn't exist
@@ -19,7 +30,7 @@ const storage = multer.diskStorage({
     
     cb(null, uploadDir);
   },
-  filename: (req, file, cb) => {
+  filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
     const uniqueId = uuidv4();
     const extension = path.extname(file.originalname);
     const filename = `${uniqueId}${extension}`;
@@ -28,7 +39,7 @@ const storage = multer.diskStorage({
 });
 
 // File filter for security
-const fileFilter = (req: any, file: any, cb: any) => {
+const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
   // Allowed file types
   const allowedTypes = [
     'image/jpeg',
@@ -48,7 +59,7 @@ const fileFilter = (req: any, file: any, cb: any) => {
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('File type not allowed'), false);
+    cb(null, false);
   }
 };
 
@@ -112,7 +123,7 @@ export const uploadFiles = async (req: Request, res: Response) => {
     }
 
     // Process uploaded files
-    const attachments = files.map(file => ({
+    const attachments: FileAttachment[] = files.map((file: Express.Multer.File) => ({
       id: uuidv4(),
       filename: file.filename,
       originalName: file.originalname,
