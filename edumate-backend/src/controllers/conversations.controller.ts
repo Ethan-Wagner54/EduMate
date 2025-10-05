@@ -62,12 +62,15 @@ export const getConversations = async (req: Request, res: Response) => {
 
       return {
         id: conv.id,
+        type: conv.type, // Include conversation type
         name: conv.name || other?.name || 'Conversation',
         lastMessage: lastMessage?.content || '',
         timestamp: lastMessage ? formatTimeAgo(lastMessage.sentAt) : '',
         unreadCount,
         isOnline: other?.profile?.isOnline || false,
-        userType: other?.role || 'student'
+        userType: other?.role || 'student',
+        isGroup: conv.isGroup, // Include isGroup flag
+        participantCount: conv.participants.length // Include participant count
       };
     });
 

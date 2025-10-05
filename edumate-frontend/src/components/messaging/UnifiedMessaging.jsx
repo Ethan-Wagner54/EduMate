@@ -108,13 +108,18 @@ export default function UnifiedMessaging({
     try {
       const response = await conversationsService.getConversations();
       if (response.success && response.data) {
-        const formattedConversations = response.data.map(conv => ({
+        // Filter for direct/private conversations only
+        const privateConversations = response.data.filter(conv => 
+          conv.type === 'direct' && !conv.isGroup
+        );
+        
+        const formattedConversations = privateConversations.map(conv => ({
           id: conv.id,
           type: 'private',
           name: conv.name,
           participantName: conv.name,
-          participantRole: conv.userType,
-          participantId: conv.userId,
+          participantRole: conv.userType || 'student',
+          participantId: conv.userId || 0,
           lastMessage: conv.lastMessage ? {
             content: conv.lastMessage,
             timestamp: conv.timestamp,
@@ -137,7 +142,7 @@ export default function UnifiedMessaging({
       if (response.success && response.data) {
         // Filter for group conversations only
         const groupConversations = response.data.filter(conv => 
-          conv.name && (conv.name.includes('Study Group') || conv.name.includes('Chat') || conv.name.includes('Group'))
+          (conv.type === 'group' || conv.type === 'session_chat') || conv.isGroup
         );
         
         const formattedGroupChats = groupConversations.map(chat => ({
