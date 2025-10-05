@@ -25,6 +25,7 @@ import groupChatService from '../../services/groupChat/groupChatService';
 import messageService from '../../services/messages/messageService';
 import socketService from '../../services/websocket/socketService';
 import fileUploadService from '../../services/fileUpload/fileUploadService';
+import userService from '../../services/user/user';
 import { AvatarSmall, AvatarMedium } from '../ui/Avatar';
 
 export default function UnifiedMessaging({ 
@@ -42,6 +43,7 @@ export default function UnifiedMessaging({
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState(type === 'both' ? 'private' : type);
+  const [currentUser, setCurrentUser] = useState(null);
   
   // File upload state
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -64,8 +66,24 @@ export default function UnifiedMessaging({
   // User info
   const currentUserId = authService.getUserId();
 
+  // Fetch current user data
+  const fetchCurrentUser = async () => {
+    try {
+      const userId = authService.getUserId();
+      if (userId) {
+        const response = await userService.getUser({ id: userId });
+        if (response.success && response.data) {
+          setCurrentUser(response.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+    }
+  };
+
   // Initialize component
   useEffect(() => {
+    fetchCurrentUser();
     loadData();
     setupSocketConnection();
     
@@ -182,6 +200,8 @@ export default function UnifiedMessaging({
     });
 
     const messageListener = socketService.onMessage((messageData) => {
+      console.log('📡 WebSocket message received:', messageData);
+      
       if (activeConversation && 
           ((activeConversation.type === 'private' && messageData.senderId !== currentUserId) ||
            (activeConversation.type === 'group' && messageData.conversationId === activeConversation.id))) {
@@ -194,8 +214,10 @@ export default function UnifiedMessaging({
           messageType: messageData.messageType || 'text',
           timestamp: messageData.timestamp || new Date().toISOString(),
           isOwn: messageData.senderId === currentUserId,
-          attachments: messageData.attachments || []
+          attachments: messageData.attachments || messageData.files || []
         };
+        
+        console.log('📨 Formatted WebSocket message:', newMessage);
         
         setMessages(prev => {
           if (prev.some(msg => msg.id === newMessage.id)) {
@@ -276,16 +298,19 @@ export default function UnifiedMessaging({
       response = await conversationsService.getMessages(conversation.id);
       
       if (response.success && response.data) {
-        const formattedMessages = response.data.map(msg => ({
-          id: msg.id,
-          senderId: msg.isOwn ? currentUserId : (conversation.participantId || 0),
-          senderName: msg.sender,
-          content: msg.content,
-          messageType: 'text',
-          timestamp: msg.timestamp,
-          isOwn: msg.isOwn,
-          attachments: []
-        }));
+        const formattedMessages = response.data.map(msg => {
+          console.log('📨 Loading message from DB:', msg);
+          return {
+            id: msg.id,
+            senderId: msg.isOwn ? currentUserId : (conversation.participantId || 0),
+            senderName: msg.sender,
+            content: msg.content,
+            messageType: msg.messageType || 'text',
+            timestamp: msg.timestamp,
+            isOwn: msg.isOwn,
+            attachments: msg.attachments || msg.files || [] // Try both fields
+          };
+        });
         
         setMessages(formattedMessages);
       }
@@ -824,56 +849,151 @@ export default function UnifiedMessaging({
                 </div>
               ) : (
                 messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        message.isOwn
-                          ? 'bg-primary text-primary-foreground'
+                  <div key={message.id} className={`flex gap-3 mb-4 ${
+                    message.isOwn ? 'flex-row-reverse' : 'flex-row'
+                  }`}>
+                    {/* Avatar */}
+                    <div className="flex-shrink-0">
+                      {message.isOwn ? (
+                        // For your own messages, show the current logged-in user (Sarah Mitchell)
+                        <AvatarMedium
+                          userId={currentUser?.id || currentUserId}
+                          userName={currentUser?.name || 'You'}
+                          userType={currentUser?.role || authService.getUserRole() || 'tutor'}
+                          size={32}
+                          showOnlineStatus={false}
+                        />
+                      ) : (
+                        // For other people's messages, show their avatar
+                        <AvatarMedium
+                          userId={message.senderId}
+                          userName={message.senderName}
+                          userType={message.senderRole}
+                          size={32}
+                          showOnlineStatus={false}
+                        />
+                      )}
+                    </div>
+                    
+                    {/* Message Content */}
+                    <div className={`flex-1 max-w-xs md:max-w-md lg:max-w-lg ${
+                      message.sending ? 'opacity-70' : ''
+                    }`}>
+                      {/* Message Header */}
+                      <div className={`flex items-center gap-2 mb-1 ${
+                        message.isOwn ? 'flex-row-reverse' : 'flex-row'
+                      }`}>
+                        <span className={`text-sm font-medium ${
+                          message.isOwn ? 'text-primary' : 'text-foreground'
+                        }`}>
+                          {message.isOwn ? 'You' : message.senderName}
+                        </span>
+                        {message.senderRole === 'tutor' && (
+                          <Crown size={12} className="text-yellow-500" />
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {formatTime(message.timestamp)}
+                          {message.sending && ' • Sending...'}
+                        </span>
+                      </div>
+                      
+                      {/* Message Bubble */}
+                      <div className={`rounded-2xl px-4 py-3 ${
+                        message.isOwn 
+                          ? 'bg-primary text-primary-foreground ml-auto'
                           : 'bg-muted text-muted-foreground'
-                      } ${message.sending ? 'opacity-70' : ''}`}
-                    >
-                      {!message.isOwn && activeConversation.type === 'group' && (
-                        <div className="flex items-center gap-1 mb-1">
-                          <span className="text-xs font-medium">
-                            {message.senderName}
-                          </span>
-                          {message.senderRole === 'tutor' && (
-                            <Crown size={12} className="text-yellow-500" />
-                          )}
-                        </div>
-                      )}
-                      {message.content && <p className="text-sm">{message.content}</p>}
-                      
-                      {/* Display attachments */}
-                      {message.attachments && message.attachments.length > 0 && (
-                        <div className="mt-2 space-y-1">
-                          {message.attachments.map((attachment, index) => (
-                            <div key={index} className="flex items-center gap-2 p-2 bg-black/10 rounded text-xs">
-                              <span>{fileUploadService.getFileTypeIcon(attachment.mimeType)}</span>
-                              <a 
-                                href={fileUploadService.getFileUrl(attachment.filename)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 truncate hover:underline"
-                                title={attachment.originalName}
-                              >
-                                {attachment.originalName}
-                              </a>
-                              <span className="text-xs opacity-70">
-                                {fileUploadService.formatFileSize(attachment.size)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      
-                      <p className="text-xs mt-1 opacity-70">
-                        {formatTime(message.timestamp)}
-                        {message.sending && ' • Sending...'}
-                      </p>
+                      }`}>
+                        {message.content && (
+                          <p className="text-sm whitespace-pre-wrap break-words">
+                            {message.content}
+                          </p>
+                        )}
+                        
+                        {/* Display attachments */}
+                        {message.attachments && message.attachments.length > 0 && (
+                          <div className={`space-y-2 ${message.content ? 'mt-3' : ''}`}>
+                            {message.attachments.map((attachment, index) => {
+                              const isImage = attachment.mimeType?.startsWith('image/');
+                              const fileUrl = fileUploadService.getFileUrl(attachment.filename);
+                              
+                              if (isImage) {
+                                console.log('📎 Image attachment:', attachment.originalName, '→', fileUrl);
+                              }
+                              
+                              return (
+                                <div key={index}>
+                                  {isImage ? (
+                                    // Image preview
+                                    <div className="rounded-lg overflow-hidden">
+                                      <img 
+                                        src={fileUrl}
+                                        alt={attachment.originalName}
+                                        className="max-w-full max-h-64 w-auto h-auto cursor-pointer hover:opacity-90 transition-opacity rounded"
+                                        style={{
+                                          minWidth: '100px',
+                                          minHeight: '60px'
+                                        }}
+                                        onClick={() => window.open(fileUrl, '_blank')}
+                                        onLoad={(e) => {
+                                          console.log('✅ Image loaded and should be visible!');
+                                          console.log('Image element:', e.target);
+                                          console.log('Computed style display:', getComputedStyle(e.target).display);
+                                          console.log('Computed style visibility:', getComputedStyle(e.target).visibility);
+                                        }}
+                                        onError={(e) => {
+                                          console.error('❌ Failed to load image:', fileUrl);
+                                          // Show fallback
+                                          e.target.style.display = 'none';
+                                          const fallback = e.target.nextSibling;
+                                          if (fallback) fallback.style.display = 'block';
+                                        }}
+                                      />
+                                      {/* Fallback file link (hidden by default) */}
+                                      <div 
+                                        style={{display: 'none'}} 
+                                        className="flex items-center gap-2 p-2 bg-black/20 rounded text-xs mt-2"
+                                      >
+                                        <span>🖼️</span>
+                                        <a 
+                                          href={fileUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex-1 truncate hover:underline"
+                                          title={attachment.originalName}
+                                        >
+                                          {attachment.originalName}
+                                        </a>
+                                        <span className="text-xs opacity-70">
+                                          {fileUploadService.formatFileSize(attachment.size)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    // Non-image file
+                                    <div className="flex items-center gap-3 p-2 bg-black/20 rounded-lg">
+                                      <span className="text-lg">{fileUploadService.getFileTypeIcon(attachment.mimeType)}</span>
+                                      <div className="flex-1 min-w-0">
+                                        <a 
+                                          href={fileUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-sm font-medium hover:underline block truncate"
+                                          title={attachment.originalName}
+                                        >
+                                          {attachment.originalName}
+                                        </a>
+                                        <span className="text-xs opacity-70">
+                                          {fileUploadService.formatFileSize(attachment.size)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))
