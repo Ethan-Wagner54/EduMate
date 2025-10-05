@@ -4,49 +4,118 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Eye, EyeOff } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import authService from "../services/auth/auth";
 
-export default function Registration() //main registration component
-{
+export default function Registration() {
+    
+    const navigate = useNavigate();
     //state to manage form data
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '', role: '', academicLevel: '', modules: [] });
-
+    const [formData, setFormData] = useState({ 
+        name: '', 
+        email: '', 
+        password: '', 
+        confirmPassword: '', 
+        role: '', 
+        academicLevel: '', 
+        modules: [] 
+    });
+    
+    // New state for validation errors
+    const [errors, setErrors] = useState({});
+    
     //modules and academic level options
     const moduleOptions = ["Mathematics", "Computer Science", "Physics", "Economics", "Chemistry", "Other"];
     const academicLevels = ["1st Year", "2nd Year", "3rd Year", "4th Year", "Honours Student", "Master's Student", "PhD Student", "Postdoctoral Researcher"];
 
     //handle input changes for text fields and dropdowns
-    const handleChange = (e) => 
-    {
+    const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+        
+        // Clear error for this field when user starts typing
+        if (errors[name]) {
+            setErrors(prev => ({ ...prev, [name]: null }));
+        }
     }; 
 
     //toggle module selection (checkbox logic)
-    const handleModuleToggle = (module) => 
-    {
-        setFormData(prev => 
-        {
+    const handleModuleToggle = (module) => {
+        setFormData(prev => {
             const modules = prev.modules.includes(module)
             ? prev.modules.filter(m => m !== module)
             : [...prev.modules, module];
             return { ...prev, modules };
         });
+        
+        // Clear module error when selection changes
+        if (errors.modules) {
+            setErrors(prev => ({ ...prev, modules: null }));
+        }
+    };
+
+    // Validate the form
+    const validateForm = () => {
+        const newErrors = {};
+        
+        // Check required fields
+        if (!formData.name.trim()) newErrors.name = "Name is required";
+        if (!formData.email.trim()) newErrors.email = "Email is required";
+        //if (!formData.role) newErrors.role = "Please select a role";
+        if (!formData.academicLevel) newErrors.academicLevel = "Please select your academic level";
+        if (formData.modules.length === 0) newErrors.modules = "Please select at least one module";
+        
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (formData.email && !emailRegex.test(formData.email)) {
+            newErrors.email = "Please enter a valid email address";
+        }
+        
+        // Password validation
+        if (!formData.password) {
+            newErrors.password = "Password is required";
+        } else {
+            // Check password requirements
+            const hasMinLength = formData.password.length >= 8;
+            const hasLetter = /[a-zA-Z]/.test(formData.password);
+            const hasNumber = /[0-9]/.test(formData.password);
+            const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(formData.password);
+            
+            if (!hasMinLength || !hasLetter || !hasNumber || !hasSpecial) {
+                newErrors.password = "Password must be at least 8 characters and contain at least one letter, one number, and one special character";
+            }
+        }
+        
+        // Confirm password validation
+        if (!formData.confirmPassword) {
+            newErrors.confirmPassword = "Please confirm your password";
+        } else if (formData.password !== formData.confirmPassword) {
+            newErrors.confirmPassword = "Passwords do not match";
+        }
+        
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
     //handle form submission
-    const handleSubmit = (e) =>
-    {
-        e.preventDefault();
-        if(formData.password !== formData.confirmPassword)
-        {
-            alert("Passwords do not match");
-            return;
-        }
-        console.log("Registration data:", formData);
+    const handleSubmit = (e) => {
 
-        // TO DO: Connect to back-end API here
+        e.preventDefault();
+        
+        // Validate the form before submission
+        if (validateForm()) {
+           authService.register({
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+            role: formData.role,
+            academicLevel: formData.academicLevel,
+            modules: formData.modules
+        });
+
+        window.alert("Registration successful!");
+        navigate("/HomePage");
+        }
     };
 
     //layout for the page
@@ -78,6 +147,7 @@ export default function Registration() //main registration component
                                 onChange={handleChange}
                                 required
                             />
+                            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                         </div>
                          {/* Email */}
                         <div className="space-y-2">
@@ -91,6 +161,7 @@ export default function Registration() //main registration component
                                 onChange={handleChange}
                                 required
                             />
+                            {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                         </div>
                         {/* Password */}
                         <div className="space-y-2">
@@ -104,6 +175,8 @@ export default function Registration() //main registration component
                                 onChange={handleChange}
                                 required
                             />
+                            {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
+                            <p className="text-xs text-purple-200">Must be at least 8 characters with a letter, number, and special character.</p>
                         </div>
                         {/* Confirm Password */}
                         <div className="space-y-2">
@@ -117,17 +190,18 @@ export default function Registration() //main registration component
                                 onChange={handleChange}
                                 required
                             />
+                            {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
                         </div>
                         {/* Role Selection */}
-                        <div className="space-y-2">
+                        {/*<div className="space-y-2">
                             <Label>I want to...</Label>
                             <div className="flex gap-4">
                                 {["Student", "Tutor", "Both"].map(role => (
                                     <label
                                         key={role}
                                         className={`flex items-center gap-2 px-3 py-2 rounded-full border-2 ${
-                                            formData.role == role
-                                                ? "bg-primary border-primary text-white" //ADD OR REMOVE TABBING
+                                            formData.role === role
+                                                ? "bg-primary border-primary text-white" 
                                                 : "border to-white text-white"
                                         } cursor-pointer`}
                                     >
@@ -137,13 +211,13 @@ export default function Registration() //main registration component
                                         value={role}
                                         checked={formData.role === role}
                                         onChange={handleChange}
-                                        //className was hidden
                                     />
                                     {role}
                                     </label>
                                 ))}
                             </div>
-                        </div>
+                            {errors.role && <p className="text-red-500 text-sm mt-1">{errors.role}</p>}
+                        </div>*/}
                         {/*Academic Level Dropdown */}
                         <div className="space-y-2">
                             <Label htmlFor="academicLevel">Current Academic Level</Label>
@@ -154,13 +228,13 @@ export default function Registration() //main registration component
                                 onChange={handleChange}
                                 required
                                 style={{ backgroundColor: '#3C1A4F' }} className="w-full p-2 rounded bg-input bg-edumatePurpleLight text-white placeholder:text-purple-200 border border-grey"
-                                //className="w-full p-2 rounded bg-input dark:bg-input-dark border border-border dark:border-border-dark text-foreground dark:text-foreground-dark"
                             >
                                 <option value="">Select your level</option>
                                 {academicLevels.map(level => (
                                     <option key={level} value={level}>{level}</option>
                                 ))}
                             </select>
+                            {errors.academicLevel && <p className="text-red-500 text-sm mt-1">{errors.academicLevel}</p>}
                         </div>
                         {/*Module Interests*/}
                         <div className="space-y-2">
@@ -171,7 +245,7 @@ export default function Registration() //main registration component
                                         key={module}
                                         className={`flex items-center gap-2 px-3 py-2 rounded border ${
                                             formData.modules.includes(module)
-                                                ? "bg-primary text-white border-primary" //ADD OR REMOVE TABBING
+                                                ? "bg-primary text-white border-primary" 
                                                 : "border to-white text-white"
                                         } cursor-pointer`}
                                     >
@@ -185,32 +259,31 @@ export default function Registration() //main registration component
                                     </label>
                                 ))}
                             </div>
+                            {errors.modules && <p className="text-red-500 text-sm mt-1">{errors.modules}</p>}
                         </div>
-                        {/*Submit Button*/}
-                        <Link to="/HomePage">
-                                <Button
-                                    type="submit"
-                                    className="w-full bg-primary dark:bg-primary-dark hover:bg-primary-dark text-primary-foreground dark:text-primary-foreground-dark transition-colors"
-                                >
-                                    Register
-                                </Button>
-                        </Link>
+                        {/*Submit Button - Replaced Link with regular button for form submission*/}
+                        <Button
+                            type="submit"
+                            className="w-full bg-primary dark:bg-primary-dark hover:bg-primary-dark text-primary-foreground dark:text-primary-foreground-dark transition-colors"
+                        >
+                            Register
+                        </Button>
                     </form>
-                {/*Footer*/}
-                <div className="text-center mt-6 text-sm text-muted-foreground dark:text-muted-foreground-dark">
-                    <p>
-                        Already have an Account?{" "}
-                        <button className="text-secondary dark:text-secondary-dark hover:underline font-bold">
-                            Sign In
-                        </button>
-                    </p>
-                    <p className="mt-2">
-                        By registering, you agree to our{" "}
-                        <button className="text-primary hover:underline font-bold">Terms of Service</button>{" "}
-                        and{" "}
-                        <button className="text-primary hover:underline font-bold">Privacy Policy</button>.
-                    </p>
-                </div>
+                    {/*Footer*/}
+                    <div className="text-center mt-6 text-sm text-muted-foreground dark:text-muted-foreground-dark">
+                        <p>
+                            Already have an Account?{" "}
+                            <Link to="/login" className="text-secondary dark:text-secondary-dark hover:underline font-bold">
+                                Sign In
+                            </Link>
+                        </p>
+                        <p className="mt-2">
+                            By registering, you agree to our{" "}
+                            <button type="button" className="text-primary hover:underline font-bold">Terms of Service</button>{" "}
+                            and{" "}
+                            <button type="button" className="text-primary hover:underline font-bold">Privacy Policy</button>.
+                        </p>
+                    </div>
                 </CardContent>
             </Card>
         </div>
