@@ -1,26 +1,18 @@
-name: Build & Deploy API to Azure
-
+name: Build & Deploy API
 on:
   push:
     branches: [ main ]
-
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-
-    - name: Set up Node
-      uses: actions/setup-node@v4
+    - uses: actions/setup-node@v4
+      with: { node-version: 18 }
+    - run: npm ci          # requires package-lock.json to exist
+    - run: npm run build --if-present
+    - uses: azure/webapps-deploy@v2
       with:
-        node-version: '18'
-
-    - run: npm ci
-    - run: npm run build --if-present   # optional TS build
-
-    - name: Deploy to Azure Web App
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: 'edu-api-${{ vars.AZURE_PREFIX }}'   # optional variable
+        app-name: 'edu-api-group'
         publish-profile: ${{ secrets.AZURE_APISITE_PROFILE }}
         package: .
