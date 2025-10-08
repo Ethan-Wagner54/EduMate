@@ -32,7 +32,6 @@ export default function MyTutors() {
           toast.error(response.error || 'Failed to load tutors');
         }
       } catch (error) {
-        console.error('Error fetching tutors:', error);
         setError('Failed to load tutors');
         toast.error('Failed to load tutors');
       } finally {
@@ -53,7 +52,8 @@ export default function MyTutors() {
   };
 
   const handleViewTutorSessions = (tutor) => {
-    navigate(`/student/tutor-sessions/${tutor.id}`);
+    // Navigate to browse sessions with tutor name as search parameter
+    navigate(`/student/browse-sessions?tutor=${encodeURIComponent(tutor.name)}`);
   };
 
   const handleCloseMessaging = () => {

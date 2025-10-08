@@ -3,12 +3,16 @@ import Login from "../pages/Login";
 import Register from "../pages/Register";
 import ForgotPassword from "../pages/ForgotPassword";
 import ResetPassword from "../pages/ResetPassword";
-import SessionManagement from "../components/tutor/SessionManagement";
+import CreateSession from "../pages/CreateSession";
 import HomePage from "../pages/HomePage";
 import TutorDashboard from "../pages/TutorDashboard"; 
 import TutorProfilePage from "../pages/TutorProfilePage";
 import TutorLayout from "../components/tutor/TutorLayout"; 
 import AdminDashboard from "../pages/AdminDashboard";
+import AdminLayout from "../components/admin/AdminLayout";
+import UserManagement from "../pages/admin/UserManagement";
+import AdminSessionManagement from "../pages/admin/SessionManagement";
+import ChatModeration from "../pages/admin/ChatModeration";
 import StudentDashboard from "../pages/StudentDashboard";
 import StudentLayout from "../components/student/StudentLayout";
 import BrowseSessions from "../pages/BrowseSessions";
@@ -38,15 +42,21 @@ export default function AppRoutes() {
       {/* Tutor routes with shared layout */}
       <Route path="/tutor" element={<TutorLayout />}>
         <Route index element={<TutorDashboard />} />
-        <Route path="create-session" element={<SessionManagement />} />
+        <Route path="create-session" element={<CreateSession />} />
         <Route path="sessions" element={<TutorSessions />} />
         <Route path="messages" element={<TutorMessages />} />
         <Route path="profile" element={<TutorProfilePage />} />
         <Route path="settings" element={<Settings />} />
       </Route>
 
-      {/* Admin route */}
-      <Route path="/admin" element={<AdminDashboard />} />
+      {/* Admin routes with shared layout */}
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<AdminDashboard />} />
+        <Route path="users" element={<UserManagement />} />
+        <Route path="sessions" element={<AdminSessionManagement />} />
+        <Route path="chats" element={<ChatModeration />} />
+        <Route path="settings" element={<Settings />} />
+      </Route>
 
       {/* Student routes with shared layout */}
       <Route path="/student" element={<StudentLayout />}>
@@ -59,7 +69,6 @@ export default function AppRoutes() {
         <Route path="session-history" element={<SessionHistory />} />
         <Route path="settings" element={<Settings />} />
         <Route path="profile" element={<Profile />} />
-        <Route path="tutor-sessions/:tutorId" element={<TutorSessions />} />
       </Route>
 
       {/* Catch-all fallback */}

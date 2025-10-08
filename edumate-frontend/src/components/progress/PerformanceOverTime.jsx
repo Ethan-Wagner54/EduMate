@@ -62,7 +62,6 @@ export default function PerformanceOverTime() {
         setWeeklyData(weekData);
         setSummary(summaryData);
       } catch (err) {
-        console.error('Error fetching performance data:', err);
         setError('Failed to load performance data');
         
         // Fallback to empty data

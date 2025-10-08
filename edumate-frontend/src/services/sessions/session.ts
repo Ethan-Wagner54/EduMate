@@ -28,7 +28,6 @@ export const getSessions = async (params?: SessionQueryParams): Promise<Sessions
     // Construct URL with query parameters
     const url = `/sessions${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
     
-    console.log(`Fetching sessions from: ${url}`);
     
     const response = await axiosInstance.get<any>(url);
     if (response.data) {
@@ -43,7 +42,6 @@ export const getSessions = async (params?: SessionQueryParams): Promise<Sessions
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error fetching sessions:', error);
     
     // Check if there's a response with error message
     if (error.response && error.response.data) {
@@ -66,7 +64,6 @@ export const getSessions = async (params?: SessionQueryParams): Promise<Sessions
  */
 export const createSession = async (params: CreateSessionParams): Promise<CreateSessionResponse> => {
   try {
-    console.log('Creating session with params:', params);
     
     const response = await axiosInstance.post<any>(`/sessions`, params);
     if (response.data) {
@@ -81,7 +78,6 @@ export const createSession = async (params: CreateSessionParams): Promise<Create
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error creating session:', error);
     
     // Check if there's a response with error message
     if (error.response && error.response.data) {
@@ -104,7 +100,6 @@ export const createSession = async (params: CreateSessionParams): Promise<Create
  */
 export const deleteSession = async (sessionId: number): Promise<{ success: boolean; error?: string }> => {
   try {
-    console.log(`Deleting session ${sessionId}`);
     
     await axiosInstance.delete(`/sessions/${sessionId}`);
     
@@ -112,7 +107,6 @@ export const deleteSession = async (sessionId: number): Promise<{ success: boole
       success: true
     };
   } catch (error: any) {
-    console.error('Error deleting session:', error);
     
     // Check if there's a response with error message
     if (error.response && error.response.data) {
@@ -135,7 +129,6 @@ export const deleteSession = async (sessionId: number): Promise<{ success: boole
  */
 export const joinSession = async (sessionId: number): Promise<{ success: boolean; error?: string; data?: any }> => {
   try {
-    console.log(`Joining session ${sessionId}`);
     
     const response = await axiosInstance.post(`/sessions/${sessionId}/join`);
     
@@ -144,7 +137,6 @@ export const joinSession = async (sessionId: number): Promise<{ success: boolean
       data: response.data
     };
   } catch (error: any) {
-    console.error('Error joining session:', error);
     
     // Check if there's a response with error message
     if (error.response && error.response.data) {
@@ -163,11 +155,10 @@ export const joinSession = async (sessionId: number): Promise<{ success: boolean
 };
 
 /**
- * Leave a session
+ * Leave a session (students only)
  */
 export const leaveSession = async (sessionId: number): Promise<{ success: boolean; error?: string; data?: any }> => {
   try {
-    console.log(`Leaving session ${sessionId}`);
     
     const response = await axiosInstance.post(`/sessions/${sessionId}/leave`);
     
@@ -176,7 +167,36 @@ export const leaveSession = async (sessionId: number): Promise<{ success: boolea
       data: response.data
     };
   } catch (error: any) {
-    console.error('Error leaving session:', error);
+    
+    // Check if there's a response with error message
+    if (error.response && error.response.data) {
+      return {
+        success: false,
+        error: error.response.data.message || error.response.data.error || 'Server error'
+      };
+    }
+    
+    // Generic error
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'An unknown error occurred'
+    };
+  }
+};
+
+/**
+ * Cancel a session (tutors only)
+ */
+export const cancelSession = async (sessionId: number, reason?: string): Promise<{ success: boolean; error?: string; data?: any }> => {
+  try {
+    
+    const response = await axiosInstance.post(`/sessions/${sessionId}/cancel`, { reason });
+    
+    return {
+      success: true,
+      data: response.data
+    };
+  } catch (error: any) {
     
     // Check if there's a response with error message
     if (error.response && error.response.data) {
@@ -199,7 +219,6 @@ export const leaveSession = async (sessionId: number): Promise<{ success: boolea
  */
 export const editSession = async (sessionId: number, params: Partial<CreateSessionParams>): Promise<{ success: boolean; error?: string; data?: any }> => {
   try {
-    console.log(`Editing session ${sessionId}`, params);
     
     const response = await axiosInstance.put(`/sessions/${sessionId}`, params);
     
@@ -208,7 +227,6 @@ export const editSession = async (sessionId: number, params: Partial<CreateSessi
       data: response.data
     };
   } catch (error: any) {
-    console.error('Error editing session:', error);
     
     // Check if there's a response with error message
     if (error.response && error.response.data) {
@@ -231,7 +249,6 @@ export const editSession = async (sessionId: number, params: Partial<CreateSessi
  */
 export const getSessionDetails = async (sessionId: number): Promise<{ success: boolean; error?: string; data?: any }> => {
   try {
-    console.log(`Getting session details ${sessionId}`);
     
     const response = await axiosInstance.get(`/sessions/${sessionId}`);
     
@@ -240,7 +257,6 @@ export const getSessionDetails = async (sessionId: number): Promise<{ success: b
       data: response.data
     };
   } catch (error: any) {
-    console.error('Error getting session details:', error);
     
     // Check if there's a response with error message
     if (error.response && error.response.data) {
@@ -263,7 +279,6 @@ export const getSessionDetails = async (sessionId: number): Promise<{ success: b
  */
 export const updateSessionStatus = async (sessionId: number, status: string): Promise<{ success: boolean; error?: string }> => {
   try {
-    console.log(`Updating session ${sessionId} status to ${status}`);
     
     await axiosInstance.patch(`/sessions/${sessionId}/status`, { status });
     
@@ -271,7 +286,6 @@ export const updateSessionStatus = async (sessionId: number, status: string): Pr
       success: true
     };
   } catch (error: any) {
-    console.error('Error updating session status:', error);
     
     // Check if there's a response with error message
     if (error.response && error.response.data) {
@@ -296,7 +310,6 @@ export const updateSessionStatus = async (sessionId: number, status: string): Pr
  */
 export const getUserSessions = async (): Promise<SessionsResponse> => {
   try {
-    console.log('Fetching user sessions');
     
     const response = await axiosInstance.get<any>(`/sessions/my-sessions`);
     if (response.data) {
@@ -311,7 +324,6 @@ export const getUserSessions = async (): Promise<SessionsResponse> => {
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error fetching user sessions:', error);
     
     // Check if there's a response with error message
     if (error.response && error.response.data) {
@@ -338,6 +350,7 @@ const sessionService = {
   updateSessionStatus,
   joinSession,
   leaveSession,
+  cancelSession,
   editSession,
   getSessionDetails
 };

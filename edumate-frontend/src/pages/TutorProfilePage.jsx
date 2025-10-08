@@ -21,7 +21,6 @@ export default function TutorProfilePage() {
         const userId = authService.getUserId();
         
         if (!userId) {
-          console.error('No user ID found in token');
           return;
         }
         
@@ -30,7 +29,6 @@ export default function TutorProfilePage() {
         
         if (response.success && response.data) {
           const user = response.data;
-          console.log('TutorProfile: User data received:', user);
           
           // Transform user data into tutor profile format
           const tutorProfile = {
@@ -61,11 +59,9 @@ export default function TutorProfilePage() {
           const savedImage = loadProfilePicture(userId, 'tutor');
           setProfilePicture(savedImage);
         } else {
-          console.error('TutorProfile: Failed to load user data:', response.error);
         }
         
       } catch (error) {
-        console.error('Error fetching tutor profile:', error);
       } finally {
         setLoading(false);
       }
@@ -89,7 +85,6 @@ export default function TutorProfilePage() {
         bio: editData.bio
       };
       
-      console.log('Saving tutor profile:', updateData);
       
       const response = await userService.updateProfile(updateData);
       
@@ -101,7 +96,6 @@ export default function TutorProfilePage() {
         alert('Error updating profile: ' + response.error);
       }
     } catch (error) {
-      console.error('Error updating profile:', error);
       alert('Error updating profile. Please try again.');
     }
   };

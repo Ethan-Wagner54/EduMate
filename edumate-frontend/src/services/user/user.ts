@@ -25,7 +25,6 @@ export const getUser = async (params?: GetUserQueryParams): Promise<GetUserRespo
     // Construct URL with query parameters
     const url = `${API_URL}/user${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
 
-    console.log(`Fetching user from: ${url}`);
 
     const response = await axios.get<any>(url);
     if (response.data) {
@@ -40,7 +39,6 @@ export const getUser = async (params?: GetUserQueryParams): Promise<GetUserRespo
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error fetching sessions:', error);
     
     // Check if there's a response with error message
     if (error.response && error.response.data) {
@@ -66,7 +64,6 @@ export const updateProfile = async (profileData: any): Promise<GetUserResponse> 
     authService.setAuthHeader();
     
     const url = `${API_URL}/user/profile`;
-    console.log(`Updating profile at: ${url}`);
     
     const response = await axios.put<any>(url, profileData);
     
@@ -82,7 +79,6 @@ export const updateProfile = async (profileData: any): Promise<GetUserResponse> 
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error updating profile:', error);
     
     if (error.response && error.response.data) {
       return {

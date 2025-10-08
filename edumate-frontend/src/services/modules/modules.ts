@@ -10,7 +10,6 @@ const API_URL = config.apiUrl;
  */
 export const getModules = async (): Promise<ModulesResponse> => {
   try {
-    console.log(`Fetching modules from: /modules`);
     
     const response = await axiosInstance.get<any>(`/modules`);
     if (response.data) {
@@ -25,7 +24,42 @@ export const getModules = async (): Promise<ModulesResponse> => {
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error fetching modules:', error);
+    
+    // Check if there's a response with error message
+    if (error.response && error.response.data) {
+      return {
+        success: false,
+        error: error.response.data.message || error.response.data.error || 'Server error'
+      };
+    }
+    
+    // Generic error
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'An unknown error occurred'
+    };
+  }
+};
+
+/**
+ * Fetch modules that the authenticated tutor is approved to teach
+ */
+export const getTutorModules = async (): Promise<ModulesResponse> => {
+  try {
+    
+    const response = await axiosInstance.get<any>(`/modules/tutor`);
+    if (response.data) {
+      return {
+        success: true,
+        data: response.data
+      };
+    }
+    
+    return {
+      success: false,
+      error: 'No data received from the server'
+    };
+  } catch (error: any) {
     
     // Check if there's a response with error message
     if (error.response && error.response.data) {
@@ -45,7 +79,8 @@ export const getModules = async (): Promise<ModulesResponse> => {
 
 // Export default for easier imports
 const moduleService = {
-  getModules
+  getModules,
+  getTutorModules
 };
 
 export default moduleService;

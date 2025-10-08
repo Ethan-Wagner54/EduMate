@@ -45,7 +45,7 @@ export default function UnifiedMessaging({
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState(type === 'both' ? 'private' : type);
+  const [activeTab, setActiveTab] = useState(type === 'both' ? 'group' : type);
   const [currentUser, setCurrentUser] = useState(null);
   
   // File upload state
@@ -86,7 +86,6 @@ export default function UnifiedMessaging({
         }
       }
     } catch (error) {
-      console.error('Error fetching current user:', error);
     }
   };
 
@@ -94,15 +93,24 @@ export default function UnifiedMessaging({
   useEffect(() => {
     fetchCurrentUser();
     loadData();
-    setupSocketConnection();
+    
+    const cleanupSocket = setupSocketConnection();
     
     return () => {
       // Cleanup socket listeners
       if (activeConversation) {
         leaveCurrentRoom();
       }
+      cleanupSocket();
     };
   }, []);
+  
+  // Re-setup socket listeners when activeConversation changes
+  useEffect(() => {
+    const cleanupSocket = setupSocketConnection();
+    
+    return cleanupSocket;
+  }, [activeConversation, currentUserId]);
 
   // Load conversations and group chats
   const loadData = async () => {
@@ -124,11 +132,12 @@ export default function UnifiedMessaging({
       
       // Auto-select initial conversation if provided
       if (initialConversationId) {
-        selectConversation(initialConversationId, type === 'group' ? 'group' : 'private');
+        // When type is 'both', prefer group over private for initial selection
+        const conversationType = type === 'both' ? 'group' : type === 'group' ? 'group' : 'private';
+        selectConversation(initialConversationId, conversationType);
       }
       
     } catch (error) {
-      console.error('Error loading messaging data:', error);
       setError('Failed to load messaging data');
       toast.error('Failed to load messaging data');
     } finally {
@@ -163,7 +172,6 @@ export default function UnifiedMessaging({
         setConversations(formattedConversations);
       }
     } catch (error) {
-      console.error('Error loading private conversations:', error);
     }
   };
 
@@ -193,7 +201,6 @@ export default function UnifiedMessaging({
         setGroupChats(formattedGroupChats);
       }
     } catch (error) {
-      console.error('Error loading group chats:', error);
       // Fallback to conversations service if group chat service fails
       try {
         const fallbackResponse = await conversationsService.getConversations();
@@ -223,7 +230,6 @@ export default function UnifiedMessaging({
           setGroupChats(formattedGroupChats);
         }
       } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError);
       }
     }
   };
@@ -235,8 +241,6 @@ export default function UnifiedMessaging({
     });
 
     const messageListener = socketService.onMessage((messageData) => {
-      console.log('📡 WebSocket message received:', messageData);
-      
       if (activeConversation && 
           ((activeConversation.type === 'private' && messageData.senderId !== currentUserId) ||
            (activeConversation.type === 'group' && messageData.conversationId === activeConversation.id))) {
@@ -252,31 +256,75 @@ export default function UnifiedMessaging({
           attachments: messageData.attachments || messageData.files || []
         };
         
-        console.log('📨 Formatted WebSocket message:', newMessage);
-        
         setMessages(prev => {
           if (prev.some(msg => msg.id === newMessage.id)) {
             return prev;
           }
-          return [...prev, newMessage];
+          const updatedMessages = [...prev, newMessage];
+          // Scroll to bottom after state update
+          setTimeout(() => scrollToBottom(), 100);
+          return updatedMessages;
         });
         
         // Show notification if not focused
         if (!document.hasFocus()) {
           toast.info(`New message from ${messageData.senderName}`);
         }
+      } else {
+        // Message doesn't match active conversation, ignore
       }
     });
 
+    // Add group message listener
+    const groupMessageListener = socketService.onGroupMessage((messageData) => {
+      if (activeConversation && 
+          (activeConversation.type === 'group' || activeConversation.type === 'session') &&
+          messageData.conversationId === activeConversation.id &&
+          messageData.senderId !== currentUserId) {
+        
+        const newMessage = {
+          id: messageData.id || Date.now(),
+          senderId: messageData.senderId,
+          senderName: messageData.senderName,
+          senderRole: messageData.senderRole,
+          content: messageData.content,
+          messageType: messageData.messageType || 'text',
+          timestamp: messageData.timestamp || new Date().toISOString(),
+          isOwn: messageData.senderId === currentUserId,
+          attachments: messageData.attachments || messageData.files || []
+        };
+        
+        setMessages(prev => {
+          if (prev.some(msg => msg.id === newMessage.id)) {
+            return prev;
+          }
+          const updatedMessages = [...prev, newMessage];
+          // Scroll to bottom after state update
+          setTimeout(() => scrollToBottom(), 100);
+          return updatedMessages;
+        });
+        
+        // Show notification if not focused
+        if (!document.hasFocus()) {
+          toast.info(`New message from ${messageData.senderName}`);
+        }
+      } else {
+        // Group message doesn't match active conversation, ignore
+      }
+    });
+    
     return () => {
       connectionListener();
       messageListener();
+      groupMessageListener();
     };
   };
 
   // Conversation selection
   const selectConversation = async (conversationId, conversationType) => {
-    if (activeConversation?.id === conversationId) return;
+    if (activeConversation?.id === conversationId) {
+      return;
+    }
     
     // Leave current room if any
     leaveCurrentRoom();
@@ -285,7 +333,10 @@ export default function UnifiedMessaging({
     const allConversations = [...conversations, ...groupChats];
     const conversation = allConversations.find(c => c.id === conversationId);
     
-    if (!conversation) return;
+    if (!conversation) {
+      console.error('UnifiedMessaging: Conversation not found:', conversationId);
+      return;
+    }
     
     setActiveConversation(conversation);
     setShowMobileConversationList(false);
@@ -302,7 +353,7 @@ export default function UnifiedMessaging({
 
   const joinConversationRoom = (conversation) => {
     if (socketService.isSocketConnected()) {
-      if (conversation.type === 'group') {
+      if (conversation.type === 'group' || conversation.type === 'session') {
         socketService.joinGroupChatRoom(conversation.id);
       } else {
         // For private chats, we might use a different room format
@@ -334,7 +385,6 @@ export default function UnifiedMessaging({
       
       if (response.success && response.data) {
         const formattedMessages = response.data.map(msg => {
-          console.log('📨 Loading message from DB:', msg);
           return {
             id: msg.id,
             senderId: msg.isOwn ? currentUserId : (conversation.participantId || 0),
@@ -350,17 +400,16 @@ export default function UnifiedMessaging({
         setMessages(formattedMessages);
       }
     } catch (error) {
-      console.error('Error loading messages:', error);
       toast.error('Failed to load messages');
     } finally {
       setMessagesLoading(false);
     }
   };
 
-  const markConversationAsRead = (conversation) => {
+  const markConversationAsRead = async (conversation) => {
     if (conversation.unreadCount > 0) {
-      // Update local state
-      if (conversation.type === 'group') {
+      // Update local state immediately for better UX
+      if (conversation.type === 'group' || conversation.type === 'session') {
         setGroupChats(prev => prev.map(chat => 
           chat.id === conversation.id ? { ...chat, unreadCount: 0 } : chat
         ));
@@ -368,6 +417,21 @@ export default function UnifiedMessaging({
         setConversations(prev => prev.map(conv => 
           conv.id === conversation.id ? { ...conv, unreadCount: 0 } : conv
         ));
+      }
+      
+      // Persist to backend via API and WebSocket
+      try {
+        // Use WebSocket for immediate update if connected
+        if (socketService.isSocketConnected()) {
+          socketService.markMessagesAsRead([], conversation.id);
+        }
+        
+        // Also call the API endpoint to ensure persistence
+        await conversationsService.markAsRead(conversation.id);
+      } catch (error) {
+        console.error('Failed to mark conversation as read:', error);
+        // Optionally revert local state if the API call fails
+        // but we'll keep the optimistic update for now
       }
     }
   };
@@ -377,7 +441,10 @@ export default function UnifiedMessaging({
     e.preventDefault();
     
     const messageContent = newMessage.trim();
-    if (!messageContent || !activeConversation || sending) return;
+    
+    if (!messageContent || !activeConversation || sending) {
+      return;
+    }
     
     setSending(true);
     
@@ -394,35 +461,61 @@ export default function UnifiedMessaging({
         sending: true
       };
       
-      setMessages(prev => [...prev, tempMessage]);
+      setMessages(prev => {
+        const newMessages = [...prev, tempMessage];
+        return newMessages;
+      });
+      
       setNewMessage('');
       
       let response;
       
-      // Use conversations API for both private and group messages
-      response = await conversationsService.sendMessage(activeConversation.id, messageContent);
+      // Use WebSocket service for real-time messaging
+      if (activeConversation.type === 'group' || activeConversation.type === 'session') {
+        response = await socketService.sendGroupMessage({
+          conversationId: activeConversation.id,
+          content: messageContent,
+          messageType: 'text'
+        });
+      } else {
+        // Validate recipientId for private messages
+        if (!activeConversation.participantId || activeConversation.participantId <= 0) {
+          throw new Error('Invalid recipient ID for private message. Please refresh and try again.');
+        }
+        
+        response = await socketService.sendMessage({
+          recipientId: activeConversation.participantId,
+          content: messageContent,
+          messageType: 'text'
+        });
+      }
       
-      if (response.success) {
+      // Handle WebSocket response - it returns the message directly, not wrapped in success/data
+      if (response && response.id) {
         // Replace optimistic message with real one
-        setMessages(prev => prev.map(msg => 
-          msg.id === tempMessage.id 
-            ? {
+        setMessages(prev => {
+          const updatedMessages = prev.map(msg => {
+            if (msg.id === tempMessage.id) {
+              const updatedMsg = {
                 ...tempMessage,
-                id: response.data.id,
-                timestamp: response.data.timestamp,
+                id: response.id,
+                timestamp: response.timestamp,
                 sending: false
-              }
-            : msg
-        ));
+              };
+              return updatedMsg;
+            }
+            return msg;
+          });
+          return updatedMessages;
+        });
         
         // Update conversation list
-        updateConversationLastMessage(activeConversation, messageContent, new Date().toISOString());
+        updateConversationLastMessage(activeConversation, messageContent, response.timestamp);
       } else {
-        throw new Error(response.error || 'Failed to send message');
+        throw new Error('Failed to send message - no valid response');
       }
       
     } catch (error) {
-      console.error('Error sending message:', error);
       toast.error('Failed to send message');
       
       // Remove optimistic message
@@ -499,23 +592,42 @@ export default function UnifiedMessaging({
         }
       }
 
-      // Send message with attachments
+      // Send message with attachments via WebSocket
       if (attachments.length > 0) {
-        const response = await fileUploadService.sendMessageWithAttachments(
-          activeConversation.id,
-          newMessage.trim(),
-          attachments
-        );
+        let response;
+        const messageContent = newMessage.trim() || `📎 ${attachments.length} file(s)`;
         
-        if (response.success) {
+        // Use WebSocket service with attachments
+        if (activeConversation.type === 'group' || activeConversation.type === 'session') {
+          response = await socketService.sendGroupMessage({
+            conversationId: activeConversation.id,
+            content: messageContent,
+            messageType: 'text',
+            attachments: attachments
+          });
+        } else {
+          // Validate recipientId for private messages with attachments
+          if (!activeConversation.participantId || activeConversation.participantId <= 0) {
+            throw new Error('Invalid recipient ID for private message. Please refresh and try again.');
+          }
+          
+          response = await socketService.sendMessage({
+            recipientId: activeConversation.participantId,
+            content: messageContent,
+            messageType: 'text',
+            attachments: attachments
+          });
+        }
+        
+        if (response && response.id) {
           // Add message to UI
           const newMsg = {
-            id: response.data.id,
+            id: response.id,
             senderId: currentUserId,
             senderName: 'You',
-            content: response.data.content,
+            content: messageContent,
             attachments: attachments,
-            timestamp: response.data.timestamp,
+            timestamp: response.timestamp,
             isOwn: true
           };
           setMessages(prev => [...prev, newMsg]);
@@ -525,10 +637,9 @@ export default function UnifiedMessaging({
           setSelectedFiles([]);
           
           // Update conversation list
-          const displayContent = newMessage.trim() || `📎 ${attachments.length} file(s)`;
-          updateConversationLastMessage(activeConversation, displayContent, new Date().toISOString());
+          updateConversationLastMessage(activeConversation, messageContent, response.timestamp);
         } else {
-          throw new Error(response.error || 'Failed to send message');
+          throw new Error('Failed to send message - no valid response');
         }
       } else {
         // Send regular message
@@ -536,7 +647,6 @@ export default function UnifiedMessaging({
       }
       
     } catch (error) {
-      console.error('Error sending message with attachments:', error);
       toast.error('Failed to send message with attachments');
     } finally {
       setUploading(false);
@@ -570,7 +680,6 @@ export default function UnifiedMessaging({
         throw new Error(response.error || 'Failed to delete chat');
       }
     } catch (error) {
-      console.error('Error deleting chat:', error);
       toast.error('Failed to delete chat: ' + error.message);
     }
   };
@@ -600,7 +709,6 @@ export default function UnifiedMessaging({
         throw new Error(response.error || 'Failed to leave chat');
       }
     } catch (error) {
-      console.error('Error leaving chat:', error);
       toast.error('Failed to leave chat: ' + error.message);
     }
   };
@@ -1141,10 +1249,6 @@ export default function UnifiedMessaging({
                               const isImage = attachment.mimeType?.startsWith('image/');
                               const fileUrl = fileUploadService.getFileUrl(attachment.filename);
                               
-                              if (isImage) {
-                                console.log('📎 Image attachment:', attachment.originalName, '→', fileUrl);
-                              }
-                              
                               return (
                                 <div key={index}>
                                   {isImage ? (
@@ -1160,13 +1264,8 @@ export default function UnifiedMessaging({
                                         }}
                                         onClick={() => window.open(fileUrl, '_blank')}
                                         onLoad={(e) => {
-                                          console.log('✅ Image loaded and should be visible!');
-                                          console.log('Image element:', e.target);
-                                          console.log('Computed style display:', getComputedStyle(e.target).display);
-                                          console.log('Computed style visibility:', getComputedStyle(e.target).visibility);
                                         }}
                                         onError={(e) => {
-                                          console.error('❌ Failed to load image:', fileUrl);
                                           // Show fallback
                                           e.target.style.display = 'none';
                                           const fallback = e.target.nextSibling;

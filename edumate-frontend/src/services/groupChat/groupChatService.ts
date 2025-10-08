@@ -46,7 +46,6 @@ class GroupChatService {
       };
 
     } catch (error: any) {
-      console.error('Error fetching group chats:', error);
       
       return {
         success: false,
@@ -72,7 +71,6 @@ class GroupChatService {
       };
 
     } catch (error: any) {
-      console.error('Error fetching session group chat:', error);
       
       return {
         success: false,
@@ -100,7 +98,6 @@ class GroupChatService {
       };
 
     } catch (error: any) {
-      console.error('Error creating group chat:', error);
       
       if (error.response && error.response.data) {
         return {
@@ -154,7 +151,6 @@ class GroupChatService {
       };
 
     } catch (error: any) {
-      console.error('Error fetching group chat messages:', error);
       
       return {
         success: false,
@@ -177,7 +173,6 @@ class GroupChatService {
             data: socketResponse
           };
         } catch (socketError) {
-          console.warn('Socket send failed, falling back to HTTP:', socketError);
         }
       }
 
@@ -200,7 +195,6 @@ class GroupChatService {
       };
 
     } catch (error: any) {
-      console.error('Error sending group message:', error);
       
       if (error.response && error.response.data) {
         return {
@@ -250,7 +244,6 @@ class GroupChatService {
       return { success: true };
 
     } catch (error: any) {
-      console.error('Error marking group messages as read:', error);
       return { success: false, error: 'Failed to mark messages as read' };
     }
   }
@@ -294,7 +287,6 @@ class GroupChatService {
       };
 
     } catch (error: any) {
-      console.error('Error uploading group chat attachment:', error);
       return {
         success: false,
         error: 'Upload failed'
@@ -323,7 +315,6 @@ class GroupChatService {
       };
 
     } catch (error: any) {
-      console.error('Error deleting group chat:', error);
       
       if (error.response && error.response.data) {
         return {
@@ -360,7 +351,6 @@ class GroupChatService {
       };
 
     } catch (error: any) {
-      console.error('Error leaving group chat:', error);
       
       if (error.response && error.response.data) {
         return {

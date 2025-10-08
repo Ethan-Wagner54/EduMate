@@ -12,7 +12,6 @@ class StudentTutorsService {
         data: response.data.data
       };
     } catch (error) {
-      console.error('Error fetching my tutors:', error);
       return {
         success: false,
         error: error.response?.data?.error || 'Failed to fetch tutors'
@@ -31,7 +30,6 @@ class StudentTutorsService {
         data: response.data.data
       };
     } catch (error) {
-      console.error('Error fetching tutor profile:', error);
       return {
         success: false,
         error: error.response?.data?.error || 'Failed to fetch tutor profile'
@@ -52,7 +50,6 @@ class StudentTutorsService {
         data: response.data
       };
     } catch (error) {
-      console.error('Error rating tutor:', error);
       return {
         success: false,
         error: error.response?.data?.error || 'Failed to rate tutor'
@@ -70,7 +67,7 @@ class StudentTutorsService {
       email: tutorData.email,
       bio: tutorData.bio,
       profilePicture: tutorData.profilePicture,
-      rating: tutorData.averageRating || 0,
+      rating: tutorData.averageRating ? parseFloat(tutorData.averageRating.toFixed(1)) : 0,
       totalSessions: tutorData.totalSessions || 0,
       isOnline: tutorData.isOnline,
       lastSeen: tutorData.lastSeen,

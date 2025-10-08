@@ -25,7 +25,6 @@ const MessageSearch = ({ isOpen, onClose, tutorId = null, tutorName = null }) =>
       try {
         setSearchHistory(JSON.parse(savedHistory));
       } catch (error) {
-        console.error('Error loading search history:', error);
       }
     }
   }, []);
@@ -35,7 +34,6 @@ const MessageSearch = ({ isOpen, onClose, tutorId = null, tutorName = null }) =>
     try {
       localStorage.setItem('messageSearchHistory', JSON.stringify(newHistory));
     } catch (error) {
-      console.error('Error saving search history:', error);
     }
   };
 
@@ -103,10 +101,8 @@ const MessageSearch = ({ isOpen, onClose, tutorId = null, tutorName = null }) =>
         saveSearchHistory(updatedHistory);
       } else {
         setResults([]);
-        console.error('Search failed:', response.error);
       }
     } catch (error) {
-      console.error('Search error:', error);
       setResults([]);
     } finally {
       setLoading(false);
@@ -117,7 +113,6 @@ const MessageSearch = ({ isOpen, onClose, tutorId = null, tutorName = null }) =>
     setQuery(historyItem.query);
     if (historyItem.tutorId && historyItem.tutorId !== tutorId) {
       // If the history item is for a different tutor, you might want to handle this
-      console.log('Search was for different tutor:', historyItem.tutorName);
     }
   };
 

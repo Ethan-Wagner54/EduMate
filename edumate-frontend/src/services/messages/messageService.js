@@ -52,7 +52,6 @@ class MessageService {
       };
 
     } catch (error) {
-      console.error('Error fetching conversation:', error);
       
       return {
         success: false,
@@ -82,7 +81,6 @@ class MessageService {
             data: socketResponse
           };
         } catch (socketError) {
-          console.warn('Socket send failed, falling back to HTTP:', socketError);
         }
       }
 
@@ -101,7 +99,6 @@ class MessageService {
       };
 
     } catch (error) {
-      console.error('Error sending message:', error);
       
       if (error.response && error.response.data) {
         return {
@@ -158,7 +155,6 @@ class MessageService {
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           // You can emit progress events here if needed
-          console.log(`Upload progress: ${percentCompleted}%`);
         }
       });
 
@@ -172,7 +168,6 @@ class MessageService {
       };
 
     } catch (error) {
-      console.error('Error uploading attachment:', error);
       
       if (error.response && error.response.data) {
         return {
@@ -237,7 +232,6 @@ class MessageService {
       };
 
     } catch (error) {
-      console.error('Error searching messages:', error);
       
       return {
         success: false,
@@ -273,33 +267,34 @@ class MessageService {
       };
 
     } catch (error) {
-      console.error('Error fetching message history:', error);
       return this.getMockMessageHistory();
     }
   }
 
   // Mark messages as read
-  async markAsRead(messageIds) {
+  async markAsRead(messageIds, conversationId = null) {
     try {
       authService.setAuthHeader();
       
       // Try WebSocket first
       if (socketService.isSocketConnected()) {
-        socketService.markMessagesAsRead(messageIds);
+        socketService.markMessagesAsRead(messageIds, conversationId);
       }
 
       // Also update via API (no-op placeholder on backend)
       try {
-        await axios.post(`${API_URL}/api/messaging/mark-read`, { messageIds });
+        const payload = { messageIds };
+        if (conversationId) {
+          payload.conversationId = conversationId;
+        }
+        await axios.post(`${API_URL}/api/messaging/mark-read`, payload);
       } catch (e) {
         // Ignore if endpoint is not implemented yet
-        console.warn('mark-read endpoint not available, continuing');
       }
 
       return { success: true };
 
     } catch (error) {
-      console.error('Error marking messages as read:', error);
       return { success: false, error: 'Failed to mark messages as read' };
     }
   }
@@ -318,7 +313,6 @@ class MessageService {
       return { success: true, data: { count: 0 } };
 
     } catch (error) {
-      console.error('Error fetching unread count:', error);
       return { success: true, data: { count: 0 } };
     }
   }
@@ -342,7 +336,6 @@ class MessageService {
       };
 
     } catch (error) {
-      console.error('Error deleting message:', error);
       return {
         success: false,
         error: 'Failed to delete message'

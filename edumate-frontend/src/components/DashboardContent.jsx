@@ -1,15 +1,20 @@
 // src/components/DashboardContent.jsx
 import React, { useState, useEffect } from "react";
-import { Users, Calendar, AlertTriangle, Star } from "lucide-react";
+import { useNavigate } from 'react-router-dom';
+import { Users, Calendar, AlertTriangle, Star, MessageSquare, Loader } from "lucide-react";
 import dashboardService from '../services/dashboard/dashboard';
+import groupChatService from '../services/groupChat/groupChatService';
+import authService from '../services/auth/auth';
 
 export default function DashboardContent() {
+  const navigate = useNavigate();
   const [dashboardStats, setDashboardStats] = useState(null);
   const [upcomingSessions, setUpcomingSessions] = useState([]);
   const [tutorProgress, setTutorProgress] = useState([]);
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [joinChatLoading, setJoinChatLoading] = useState({});
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -28,29 +33,24 @@ export default function DashboardContent() {
         if (statsResponse.success) {
           setDashboardStats(statsResponse.data);
         } else {
-          console.error('Failed to fetch dashboard stats:', statsResponse.error);
         }
 
         if (upcomingResponse.success) {
           setUpcomingSessions(upcomingResponse.data || []);
         } else {
-          console.error('Failed to fetch upcoming sessions:', upcomingResponse.error);
         }
 
         if (progressResponse.success) {
           setTutorProgress(progressResponse.data || []);
         } else {
-          console.error('Failed to fetch tutor progress:', progressResponse.error);
         }
 
         if (activitiesResponse.success) {
           setActivities(activitiesResponse.data || []);
         } else {
-          console.error('Failed to fetch activities:', activitiesResponse.error);
         }
 
       } catch (err) {
-        console.error('Error fetching dashboard data:', err);
         setError('Failed to load dashboard data');
       } finally {
         setLoading(false);
@@ -59,6 +59,45 @@ export default function DashboardContent() {
 
     fetchDashboardData();
   }, []);
+
+  // Navigation handlers
+  const handleActiveTutorsClick = () => {
+    navigate('/student/my-tutors');
+  };
+
+  const handleSessionsThisMonthClick = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
+    navigate(`/student/session-history?month=${year}-${month.toString().padStart(2, '0')}`);
+  };
+
+  const handleUpcomingSessionsClick = () => {
+    navigate('/student/my-sessions?filter=upcoming');
+  };
+
+  const handleJoinSessionChat = async (sessionId) => {
+    try {
+      setJoinChatLoading(prev => ({ ...prev, [sessionId]: true }));
+      
+      // Get or create the session group chat
+      const groupChatResponse = await groupChatService.getGroupChatBySession(sessionId);
+      
+      if (groupChatResponse.success && groupChatResponse.data) {
+        // Navigate to messages with the conversation ID
+        const userRole = authService.getUserRole();
+        const messagesPath = userRole === 'tutor' ? '/tutor/messages' : '/student/messages';
+        navigate(`${messagesPath}?conversation=${groupChatResponse.data.id}`);
+      } else {
+        // If group chat doesn't exist, user might not be enrolled or session hasn't started
+        alert('Unable to join session chat. Make sure you are enrolled in this session.');
+      }
+    } catch (error) {
+      alert('Failed to join session chat.');
+    } finally {
+      setJoinChatLoading(prev => ({ ...prev, [sessionId]: false }));
+    }
+  };
 
   if (loading) {
     return (
@@ -114,38 +153,47 @@ export default function DashboardContent() {
       {/* Greeting */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">
-          Welcome back, <span className="text-primary">Student!</span>
+          Welcome back, <span className="text-primary">{dashboardStats?.user?.firstName || 'Student'}!</span>
         </h1>
         <p className="text-muted-foreground">Here's what's happening with your tutoring sessions today.</p>
       </div>
 
       {/* Top Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm flex items-start justify-between transition-colors duration-200">
+        <div 
+          onClick={handleActiveTutorsClick}
+          className="bg-card border border-border rounded-xl p-6 shadow-sm flex items-start justify-between transition-colors duration-200 cursor-pointer hover:bg-accent/50"
+        >
           <div>
             <h2 className="text-sm text-muted-foreground font-medium">Active Tutors</h2>
             <p className="text-3xl font-bold mt-1 text-foreground">{dashboardStats?.activeTutors || 0}</p>
-            <p className="text-xs text-muted-foreground">Access {dashboardStats?.activeTutors || 0} tutors</p>
+            <p className="text-xs text-muted-foreground">Click to view your tutors</p>
           </div>
           <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-full">
               <Users size={20} className="text-green-500"/>
           </div>
         </div>
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm flex items-start justify-between transition-colors duration-200">
+        <div 
+          onClick={handleSessionsThisMonthClick}
+          className="bg-card border border-border rounded-xl p-6 shadow-sm flex items-start justify-between transition-colors duration-200 cursor-pointer hover:bg-accent/50"
+        >
           <div>
             <h2 className="text-sm text-muted-foreground font-medium">Sessions This Month</h2>
             <p className="text-3xl font-bold mt-1 text-foreground">{dashboardStats?.sessionsThisMonth || 0}</p>
-            <p className="text-xs text-muted-foreground">Total enrolled sessions</p>
+            <p className="text-xs text-muted-foreground">Click to view session history</p>
           </div>
           <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full">
               <Calendar size={20} className="text-blue-500"/>
           </div>
         </div>
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm flex items-start justify-between transition-colors duration-200">
+        <div 
+          onClick={handleUpcomingSessionsClick}
+          className="bg-card border border-border rounded-xl p-6 shadow-sm flex items-start justify-between transition-colors duration-200 cursor-pointer hover:bg-accent/50"
+        >
           <div>
             <h2 className="text-sm text-muted-foreground font-medium">Upcoming Sessions</h2>
             <p className="text-3xl font-bold mt-1 text-foreground">{dashboardStats?.upcomingSessions || 0}</p>
-            <p className="text-xs text-muted-foreground">This week</p>
+            <p className="text-xs text-muted-foreground">Click to view upcoming sessions</p>
           </div>
           <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-full">
               <AlertTriangle size={20} className="text-purple-500"/>
@@ -166,7 +214,15 @@ export default function DashboardContent() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Upcoming Sessions */}
         <div className="bg-card border border-border rounded-xl p-6 shadow-sm transition-colors duration-200">
-          <h2 className="text-lg font-semibold text-foreground mb-4">Upcoming Sessions</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Upcoming Sessions</h2>
+            <button 
+              onClick={handleUpcomingSessionsClick}
+              className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+            >
+              View All Sessions
+            </button>
+          </div>
           {upcomingSessions.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No upcoming sessions scheduled</p>
           ) : (
@@ -200,7 +256,23 @@ export default function DashboardContent() {
                       </div>
                     </div>
                   </div>
-                  <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">Join</button>
+                  <button 
+                    onClick={() => handleJoinSessionChat(session.id)}
+                    disabled={joinChatLoading[session.id]}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  >
+                    {joinChatLoading[session.id] ? (
+                      <>
+                        <Loader className="animate-spin h-4 w-4 mr-2" />
+                        Joining...
+                      </>
+                    ) : (
+                      <>
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Join Chat
+                      </>
+                    )}
+                  </button>
                 </div>
               );
             })
@@ -209,7 +281,15 @@ export default function DashboardContent() {
 
         {/* Progress with Tutors */}
         <div className="bg-card border border-border rounded-xl p-6 shadow-sm transition-colors duration-200">
-          <h2 className="text-lg font-semibold text-foreground mb-4">Progress with Tutors</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Progress with Tutors</h2>
+            <button 
+              onClick={handleActiveTutorsClick}
+              className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+            >
+              View All Tutors
+            </button>
+          </div>
           {tutorProgress.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No tutor progress data available</p>
           ) : (
@@ -248,19 +328,34 @@ export default function DashboardContent() {
             {activities.slice(0, 5).map((activity) => {
               const getActivityColor = (type) => {
                 switch (type) {
-                  case 'session_attended': return 'bg-green-500';
-                  case 'session_booked': return 'bg-blue-500';
-                  case 'session_completed': return 'bg-yellow-500';
+                  case 'session_completed': return 'bg-green-500';
+                  case 'session_enrolled': return 'bg-blue-500';
+                  case 'session_attended': return 'bg-emerald-500';
                   case 'session_cancelled': return 'bg-red-500';
                   case 'message_sent': return 'bg-purple-500';
+                  case 'session_reviewed': return 'bg-yellow-500';
                   default: return 'bg-gray-500';
+                }
+              };
+              
+              const getActivityIcon = (type) => {
+                switch (type) {
+                  case 'session_completed': return '✓';
+                  case 'session_enrolled': return '+';
+                  case 'session_attended': return '👥';
+                  case 'session_cancelled': return '✕';
+                  case 'message_sent': return '💬';
+                  case 'session_reviewed': return '⭐';
+                  default: return '•';
                 }
               };
 
               return (
-                <li key={activity.id} className="flex justify-between items-center">
+                <li key={activity.id} className="flex justify-between items-center hover:bg-accent/20 rounded-lg p-2 -m-2 transition-colors">
                   <div className="flex items-center">
-                    <div className={`w-2 h-2 ${getActivityColor(activity.type)} rounded-full mr-3`}></div>
+                    <div className={`w-6 h-6 ${getActivityColor(activity.type)} rounded-full mr-3 flex items-center justify-center text-white text-xs font-bold`}>
+                      {getActivityIcon(activity.type)}
+                    </div>
                     <span className="text-foreground">{activity.description}</span>
                   </div>
                   <span className="text-muted-foreground text-xs">{formatTimeAgo(activity.createdAt)}</span>

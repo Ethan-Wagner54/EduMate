@@ -49,18 +49,15 @@ export default function SessionManagement() {
       if (sessionResponse.success) {
         setSessions(sessionResponse.data || []);
       } else {
-        console.error('Failed to fetch sessions:', sessionResponse.error);
         showNotification('Failed to load sessions', 'error');
       }
       
       if (moduleResponse.success) {
         setModules(moduleResponse.data || []);
       } else {
-        console.error('Failed to fetch modules:', moduleResponse.error);
         showNotification('Failed to load modules', 'error');
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
       showNotification('Error loading data', 'error');
     } finally {
       setLoading(false);
@@ -70,7 +67,6 @@ export default function SessionManagement() {
   const showNotification = (message, type = 'info') => {
     // Simple notification implementation - in a real app you'd use a toast library
     const style = type === 'error' ? 'color: red;' : type === 'success' ? 'color: green;' : 'color: blue;';
-    console.log(`%c${message}`, style);
     // For now, still using alert for user feedback
     if (type === 'error') {
       alert(`Error: ${message}`);
@@ -81,8 +77,28 @@ export default function SessionManagement() {
 
   const addSession = async () => {
     try {
-      if (!newSession.moduleId || !newSession.startTime || !newSession.endTime) {
-        showNotification('Please fill in all required fields', 'error');
+      // Debug logging to see what values we have
+      console.log('Session data before validation:', newSession);
+      console.log('moduleId:', newSession.moduleId, 'type:', typeof newSession.moduleId);
+      console.log('startTime:', newSession.startTime, 'type:', typeof newSession.startTime);
+      console.log('endTime:', newSession.endTime, 'type:', typeof newSession.endTime);
+      
+      // More specific validation with better error messages
+      if (!newSession.moduleId || newSession.moduleId === "") {
+        console.log('Validation failed: moduleId is empty');
+        showNotification('Please select a module', 'error');
+        return;
+      }
+      
+      if (!newSession.startTime || newSession.startTime === "") {
+        console.log('Validation failed: startTime is empty');
+        showNotification('Please select a start time', 'error');
+        return;
+      }
+      
+      if (!newSession.endTime || newSession.endTime === "") {
+        console.log('Validation failed: endTime is empty');
+        showNotification('Please select an end time', 'error');
         return;
       }
 
@@ -100,6 +116,7 @@ export default function SessionManagement() {
         endTime: newSession.endTime,
         location: newSession.location || undefined,
         capacity: newSession.capacity || undefined,
+        status: 'published' // Make session visible to students immediately
       };
       
       const response = await sessionService.createSession(sessionData);
@@ -113,7 +130,6 @@ export default function SessionManagement() {
         showNotification(response.error || 'Failed to create session', 'error');
       }
     } catch (error) {
-      console.error('Error creating session:', error);
       showNotification('Error creating session', 'error');
     } finally {
       setCreating(false);
@@ -135,7 +151,6 @@ export default function SessionManagement() {
         showNotification(response.error || 'Failed to delete session', 'error');
       }
     } catch (error) {
-      console.error('Error deleting session:', error);
       showNotification('Error deleting session', 'error');
     }
   };
@@ -155,7 +170,6 @@ export default function SessionManagement() {
         showNotification(response.error || 'Failed to update session status', 'error');
       }
     } catch (error) {
-      console.error('Error updating session status:', error);
       showNotification('Error updating session status', 'error');
     }
   };
@@ -175,7 +189,6 @@ export default function SessionManagement() {
         showNotification(response.error || 'Failed to join session', 'error');
       }
     } catch (error) {
-      console.error('Error joining session:', error);
       showNotification('Error joining session', 'error');
     }
   };
@@ -216,7 +229,7 @@ export default function SessionManagement() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Tabs defaultValue="list" className="space-y-4">
+          <Tabs defaultValue="new" className="space-y-4">
             <TabsList className="w-full">
               <TabsTrigger value="list">
                 Active Sessions

@@ -69,7 +69,6 @@ export const getStudentProgress = async (): Promise<{ success: boolean; data?: S
     authService.setAuthHeader();
     
     const url = `${API_URL}/progress/student`;
-    console.log(`Fetching student progress from: ${url}`);
 
     const response = await axios.get<StudentProgressResponse>(url);
     
@@ -85,7 +84,6 @@ export const getStudentProgress = async (): Promise<{ success: boolean; data?: S
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error fetching student progress:', error);
     
     if (error.response && error.response.data) {
       return {
@@ -109,7 +107,6 @@ export const getPerformanceData = async (months: number = 6): Promise<{ success:
     authService.setAuthHeader();
     
     const url = `${API_URL}/progress/performance?months=${months}`;
-    console.log(`Fetching performance data from: ${url}`);
 
     const response = await axios.get<PerformanceDataPoint[]>(url);
     
@@ -125,7 +122,6 @@ export const getPerformanceData = async (months: number = 6): Promise<{ success:
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error fetching performance data:', error);
     
     if (error.response && error.response.data) {
       return {
@@ -149,7 +145,6 @@ export const getModulePerformanceData = async (): Promise<{ success: boolean; da
     authService.setAuthHeader();
     
     const url = `${API_URL}/progress/modules`;
-    console.log(`Fetching module performance data from: ${url}`);
 
     const response = await axios.get<ModulePerformanceData[]>(url);
     
@@ -165,7 +160,6 @@ export const getModulePerformanceData = async (): Promise<{ success: boolean; da
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error fetching module performance data:', error);
     
     if (error.response && error.response.data) {
       return {

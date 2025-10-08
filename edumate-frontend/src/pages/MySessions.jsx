@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, CheckCircle, AlertCircle, XCircle, Loader, Search, ChevronDown, SlidersHorizontal, RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Calendar, Clock, MapPin, CheckCircle, AlertCircle, XCircle, Loader, Search, ChevronDown, SlidersHorizontal, RefreshCw, MessageSquare } from 'lucide-react';
 import sessionService from '../services/sessions/session';
+import groupChatService from '../services/groupChat/groupChatService';
 import { AvatarSmall } from '../components/ui/Avatar';
 import authService from '../services/auth/auth';
 
 export default function MySessions() {
+  const navigate = useNavigate();
   const [sessions, setSessions] = useState([]);
   const [filteredSessions, setFilteredSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [leaveLoading, setLeaveLoading] = useState({});
+  const [joinChatLoading, setJoinChatLoading] = useState({});
+  const [cancelLoading, setCancelLoading] = useState({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
   // Filter states
-  const [filter, setFilter] = useState('all'); // all, upcoming, completed, cancelled
+  const [filter, setFilter] = useState('upcoming'); // upcoming as default, all, completed, left, cancelled
   const [searchQuery, setSearchQuery] = useState('');
   const [moduleFilter, setModuleFilter] = useState('all');
   const [timeFilter, setTimeFilter] = useState('any');
@@ -37,7 +42,6 @@ export default function MySessions() {
         setError(response.error || 'Failed to load sessions');
       }
     } catch (error) {
-      console.error('Error fetching my sessions:', error);
       setError('Failed to load sessions');
     } finally {
       setLoading(false);
@@ -105,11 +109,13 @@ export default function MySessions() {
         
         switch (filter) {
           case 'upcoming':
-            return isUpcoming;
+            return isUpcoming && session.enrollmentStatus !== 'left'; // Exclude left sessions from upcoming
           case 'completed':
             return isCompleted;
+          case 'left':
+            return session.enrollmentStatus === 'left';
           case 'cancelled':
-            return session.status === 'cancelled' || session.enrollmentStatus === 'cancelled';
+            return session.status === 'cancelled'; // Session was cancelled by tutor
           default:
             return true;
         }
@@ -118,6 +124,37 @@ export default function MySessions() {
 
     setFilteredSessions(filtered);
   }, [sessions, searchQuery, moduleFilter, timeFilter, filter]);
+
+  const handleJoinSessionChat = async (sessionId) => {
+    try {
+      setJoinChatLoading(prev => ({ ...prev, [sessionId]: true }));
+      setError('');
+      setSuccess('');
+
+      // First, try to get or create the session group chat
+      const groupChatResponse = await groupChatService.getGroupChatBySession(sessionId);
+      
+      if (groupChatResponse.success && groupChatResponse.data) {
+        // Successfully got/created group chat - navigate to messaging
+        setSuccess('Successfully joined session chat!');
+        
+        // Navigate to messages page with the conversation ID
+        const userRole = authService.getUserRole();
+        const messagesPath = userRole === 'tutor' ? '/tutor/messages' : '/student/messages';
+        
+        // Add conversation ID as a query parameter so the Messages component can auto-select it
+        navigate(`${messagesPath}?conversation=${groupChatResponse.data.id}`);
+        
+        return; // Don't clear success message since we're navigating away
+      } else {
+        setError(groupChatResponse.error || 'Failed to join session chat');
+      }
+    } catch (error) {
+      setError('Failed to join session chat');
+    } finally {
+      setJoinChatLoading(prev => ({ ...prev, [sessionId]: false }));
+    }
+  };
 
   const handleLeaveSession = async (sessionId) => {
     try {
@@ -138,10 +175,39 @@ export default function MySessions() {
         setError(response.error || 'Failed to leave session');
       }
     } catch (error) {
-      console.error('Error leaving session:', error);
       setError('Failed to leave session');
     } finally {
       setLeaveLoading(prev => ({ ...prev, [sessionId]: false }));
+    }
+  };
+
+  const handleCancelSession = async (sessionId) => {
+    const reason = prompt('Please provide a reason for cancelling this session (optional):');
+    
+    // If user clicks cancel, don't proceed
+    if (reason === null) return;
+    
+    try {
+      setCancelLoading(prev => ({ ...prev, [sessionId]: true }));
+      setError('');
+      setSuccess('');
+
+      const response = await sessionService.cancelSession(sessionId, reason);
+      
+      if (response.success) {
+        setSuccess('Session successfully cancelled. All enrolled students have been notified.');
+        // Refresh sessions using the reusable function
+        await fetchMySessions();
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => setSuccess(''), 5000);
+      } else {
+        setError(response.error || 'Failed to cancel session');
+      }
+    } catch (error) {
+      setError('Failed to cancel session');
+    } finally {
+      setCancelLoading(prev => ({ ...prev, [sessionId]: false }));
     }
   };
 
@@ -156,17 +222,30 @@ export default function MySessions() {
     };
   }, []);
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle size={20} className="text-success" />;
-      case 'cancelled':
-        return <XCircle size={20} className="text-destructive" />;
-      case 'upcoming':
-        return <AlertCircle size={20} className="text-info" />;
-      default:
-        return <Clock size={20} className="text-muted-foreground" />;
+  const getStatusIcon = (session) => {
+    const now = new Date();
+    const isUpcoming = new Date(session.startTime) > now;
+    const isCompleted = new Date(session.endTime) < now;
+    
+    // Check if student has left the session
+    if (session.enrollmentStatus === 'left') {
+      return <XCircle size={20} className="text-orange-500" />;
     }
+    
+    // Check if tutor cancelled the session
+    if (session.status === 'cancelled') {
+      return <XCircle size={20} className="text-destructive" />;
+    }
+    
+    // Default status based on timing
+    if (isCompleted) {
+      return <CheckCircle size={20} className="text-success" />;
+    }
+    if (isUpcoming) {
+      return <AlertCircle size={20} className="text-info" />;
+    }
+    
+    return <Clock size={20} className="text-muted-foreground" />;
   };
 
   // Removed old filtering logic - now handled in useEffect above
@@ -280,12 +359,30 @@ export default function MySessions() {
           </div>
           
           <div className="flex flex-wrap gap-2">
-            {[
-              { key: 'all', label: 'All Sessions' },
-              { key: 'upcoming', label: 'Upcoming' },
-              { key: 'completed', label: 'Completed' },
-              { key: 'cancelled', label: 'Cancelled' }
-            ].map(({ key, label }) => (
+            {(() => {
+              const userRole = authService.getUserRole();
+              const baseFilters = [
+                { key: 'upcoming', label: 'Upcoming' },
+                { key: 'completed', label: 'Completed' }
+              ];
+              
+              // Add role-specific filters
+              if (userRole === 'student') {
+                baseFilters.push(
+                  { key: 'left', label: 'Left Sessions' },
+                  { key: 'cancelled', label: 'Cancelled by Tutor' }
+                );
+              } else {
+                baseFilters.push(
+                  { key: 'cancelled', label: 'Cancelled Sessions' }
+                );
+              }
+              
+              // Add All Sessions at the end
+              baseFilters.push({ key: 'all', label: 'All Sessions' });
+              
+              return baseFilters;
+            })().map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setFilter(key)}
@@ -306,13 +403,13 @@ export default function MySessions() {
             <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">No sessions found</h3>
             <p className="text-muted-foreground mb-4">
-              {searchQuery || moduleFilter !== 'all' || timeFilter !== 'any' || filter !== 'all'
+              {searchQuery || moduleFilter !== 'all' || timeFilter !== 'any' || filter !== 'upcoming'
                 ? 'No sessions match your current filters. Try adjusting your search criteria.'
                 : authService.getUserRole() === 'tutor'
-                ? "You haven't created any sessions yet."
-                : "You haven't enrolled in any sessions yet."}
+                ? "You have no upcoming sessions. Create a new session to get started."
+                : "You have no upcoming sessions. Browse available sessions to join."}
             </p>
-            {(!searchQuery && moduleFilter === 'all' && timeFilter === 'any' && filter === 'all') && (
+            {(!searchQuery && moduleFilter === 'all' && timeFilter === 'any' && filter === 'upcoming') && (
               <div className="flex gap-2 justify-center">
                 <button 
                   onClick={() => window.location.href = authService.getUserRole() === 'tutor' ? '/create-session' : '/browse-sessions'}
@@ -328,7 +425,24 @@ export default function MySessions() {
             {filteredSessions.map((session) => {
               const isUpcoming = new Date(session.startTime) > new Date();
               const isCompleted = new Date(session.endTime) < new Date();
-              const status = isCompleted ? 'completed' : isUpcoming ? 'upcoming' : 'in-progress';
+              
+              // Determine session status with proper priority
+              let status = 'in-progress';
+              let statusLabel = 'In Progress';
+              
+              if (session.enrollmentStatus === 'left') {
+                status = 'left';
+                statusLabel = 'Left Session';
+              } else if (session.status === 'cancelled') {
+                status = 'cancelled';
+                statusLabel = 'Cancelled by Tutor';
+              } else if (isCompleted) {
+                status = 'completed';
+                statusLabel = 'Completed';
+              } else if (isUpcoming) {
+                status = 'upcoming';
+                statusLabel = 'Upcoming';
+              }
               
               return (
                 <div key={session.id} className="bg-card rounded-xl p-6 shadow-sm border border-border">
@@ -336,15 +450,15 @@ export default function MySessions() {
                     <div className="flex-1">
                       <div className="flex items-center mb-3">
                         <AvatarSmall
-                          userId={session.tutor?.id}
-                          userName={session.tutor?.name}
+                          userId={session.tutorId}
+                          userName={session.tutor}
                           userType="tutor"
                           size={40}
                           className="mr-4"
                         />
                         <div>
                           <h3 className="text-lg font-semibold text-foreground">{session.module?.name || 'Session'}</h3>
-                          <p className="text-sm text-muted-foreground">with {session.tutor?.name || 'Tutor'}</p>
+                          <p className="text-sm text-muted-foreground">with {session.tutor || 'Tutor'}</p>
                         </div>
                       </div>
                       
@@ -362,8 +476,8 @@ export default function MySessions() {
                           <span>{session.location || 'Location TBD'}</span>
                         </div>
                         <div className="flex items-center">
-                          {getStatusIcon(status)}
-                          <span className="ml-2 capitalize">{status.replace('-', ' ')}</span>
+                          {getStatusIcon(session)}
+                          <span className="ml-2">{statusLabel}</span>
                         </div>
                       </div>
 
@@ -380,10 +494,24 @@ export default function MySessions() {
                       {authService.getUserRole() === 'student' ? (
                         // Student buttons
                         <>
-                          {isUpcoming && (
+                          {isUpcoming && session.enrollmentStatus !== 'left' && (
                             <>
-                              <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium">
-                                Join Session
+                              <button 
+                                onClick={() => handleJoinSessionChat(session.id)}
+                                disabled={joinChatLoading[session.id]}
+                                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                              >
+                                {joinChatLoading[session.id] ? (
+                                  <>
+                                    <Loader className="animate-spin h-4 w-4 mr-2" />
+                                    Joining Chat...
+                                  </>
+                                ) : (
+                                  <>
+                                    <MessageSquare className="h-4 w-4 mr-2" />
+                                    Join Session Chat
+                                  </>
+                                )}
                               </button>
                               <button 
                                 onClick={() => handleLeaveSession(session.id)}
@@ -401,7 +529,7 @@ export default function MySessions() {
                               </button>
                             </>
                           )}
-                          {isCompleted && (
+                          {isCompleted && session.enrollmentStatus !== 'left' && (
                             <button className="px-4 py-2 bg-success text-white rounded-lg hover:bg-success/90 transition-colors font-medium">
                               Rate Session
                             </button>
@@ -410,21 +538,24 @@ export default function MySessions() {
                       ) : (
                         // Tutor buttons
                         <>
-                          {isUpcoming && (
+                          {isUpcoming && status !== 'cancelled' && (
                             <>
                               <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium">
                                 Edit Session
                               </button>
                               <button 
-                                onClick={() => {
-                                  if (window.confirm('Are you sure you want to delete this session?')) {
-                                    // handleDeleteSession(session.id);
-                                    console.log('Delete session functionality to be implemented');
-                                  }
-                                }}
-                                className="px-4 py-2 border border-destructive text-destructive rounded-lg hover:bg-destructive hover:text-destructive-foreground transition-colors font-medium"
+                                onClick={() => handleCancelSession(session.id)}
+                                disabled={cancelLoading[session.id]}
+                                className="px-4 py-2 border border-orange-500 text-orange-600 rounded-lg hover:bg-orange-500 hover:text-white transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                               >
-                                Delete Session
+                                {cancelLoading[session.id] ? (
+                                  <>
+                                    <Loader className="animate-spin h-4 w-4 mr-2" />
+                                    Cancelling...
+                                  </>
+                                ) : (
+                                  'Cancel Session'
+                                )}
                               </button>
                             </>
                           )}

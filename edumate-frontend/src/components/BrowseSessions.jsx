@@ -1,19 +1,29 @@
 // src/components/BrowseSessions.jsx
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, Calendar, MapPin, Star, Users, Filter, SlidersHorizontal, ChevronDown, Hourglass, AlertTriangle, CheckCircle, Loader } from 'lucide-react';
 import sessionService from '../services/sessions/session';
 import authService from '../services/auth/auth';
 import { AvatarSmall } from './ui/Avatar';
 
 export default function BrowseSessions() {
+  const [searchParams] = useSearchParams();
   const [sessions, setSessions] = useState([]);
   const [filteredSessions, setFilteredSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('tutor') || '');
   const [moduleFilter, setModuleFilter] = useState('all');
   const [timeFilter, setTimeFilter] = useState('any');
   const [availableModules, setAvailableModules] = useState([]);
+
+  // Effect to update search query when URL params change
+  useEffect(() => {
+    const tutorParam = searchParams.get('tutor');
+    if (tutorParam && tutorParam !== searchQuery) {
+      setSearchQuery(tutorParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -33,7 +43,6 @@ export default function BrowseSessions() {
           setError(response.error || 'Failed to load sessions');
         }
       } catch (err) {
-        console.error('Error fetching sessions:', err);
         setError('Failed to load sessions');
       } finally {
         setLoading(false);
@@ -103,7 +112,7 @@ export default function BrowseSessions() {
       const response = await sessionService.joinSession(sessionId);
       
       if (response.success) {
-        setJoinSuccess('Successfully joined session!');
+        setJoinSuccess('Successfully added session to My Sessions!');
         // Refresh sessions to update enrollment count
         const updatedSessions = await sessionService.getSessions();
         if (updatedSessions.success) {
@@ -119,11 +128,10 @@ export default function BrowseSessions() {
         // Clear success message after 3 seconds
         setTimeout(() => setJoinSuccess(''), 3000);
       } else {
-        setJoinError(response.error || 'Failed to join session');
+        setJoinError(response.error || 'Failed to add session');
       }
     } catch (error) {
-      console.error('Error joining session:', error);
-      setJoinError('Failed to join session');
+      setJoinError('Failed to add session');
     } finally {
       setJoinLoading(prev => ({ ...prev, [sessionId]: false }));
     }
@@ -166,6 +174,16 @@ export default function BrowseSessions() {
         <p className="text-muted-foreground mt-2">
           Discover and join upcoming tutoring sessions that you can participate in.
         </p>
+        
+        {/* Tutor Filter Message */}
+        {searchParams.get('tutor') && (
+          <div className="mt-4 p-3 bg-blue-100 border border-blue-200 rounded-lg flex items-center">
+            <Search className="h-4 w-4 text-blue-600 mr-2" />
+            <span className="text-blue-700 text-sm">
+              Showing sessions by <strong>{searchParams.get('tutor')}</strong>. Clear the search to see all sessions.
+            </span>
+          </div>
+        )}
         
         {/* Success/Error Messages */}
         {joinError && (
@@ -299,10 +317,10 @@ export default function BrowseSessions() {
                     {joinLoading[session.id] ? (
                       <>
                         <Loader className="animate-spin h-4 w-4 mr-2" />
-                        Joining...
+                        Adding...
                       </>
                     ) : (
-                      'Join Session'
+                      'Add to My Sessions'
                     )}
                   </button>
                 ) : (

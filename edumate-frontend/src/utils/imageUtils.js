@@ -90,7 +90,6 @@ export const saveProfilePicture = (userId, base64Image, userType = 'student') =>
     localStorage.setItem(key, base64Image);
     return { success: true };
   } catch (error) {
-    console.error('Error saving profile picture:', error);
     return { success: false, error: 'Failed to save image. Storage might be full.' };
   }
 };
@@ -103,7 +102,6 @@ export const loadProfilePicture = (userId, userType = 'student') => {
     const key = `profile_picture_${userType}_${userId}`;
     return localStorage.getItem(key);
   } catch (error) {
-    console.error('Error loading profile picture:', error);
     return null;
   }
 };
@@ -117,7 +115,6 @@ export const removeProfilePicture = (userId, userType = 'student') => {
     localStorage.removeItem(key);
     return { success: true };
   } catch (error) {
-    console.error('Error removing profile picture:', error);
     return { success: false, error: 'Failed to remove image' };
   }
 };
@@ -186,7 +183,6 @@ export const processImageUpload = async (file, userId, userType = 'student') => 
     }
     
   } catch (error) {
-    console.error('Error processing image upload:', error);
     return { 
       success: false, 
       errors: ['Failed to process image. Please try again.'] 

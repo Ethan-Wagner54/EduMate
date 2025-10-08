@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Calendar, Clock, MapPin, Users, BookOpen, Star, AlertTriangle, Plus, Edit, Trash2, Loader, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, BookOpen, Star, AlertTriangle, Plus, Edit, Trash2, Loader, CheckCircle, Eye } from 'lucide-react';
 import sessionService from '../services/sessions/session';
 import authService from '../services/auth/auth';
 
@@ -9,9 +9,11 @@ export default function TutorSessions() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState({});
+  const [cancelLoading, setCancelLoading] = useState({});
+  const [publishLoading, setPublishLoading] = useState({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [filter, setFilter] = useState('all'); // all, upcoming, completed
+  const [filter, setFilter] = useState('all'); // all, upcoming, completed, cancelled
 
   useEffect(() => {
     // Check if user is a tutor
@@ -33,7 +35,6 @@ export default function TutorSessions() {
           setError(response.error || 'Failed to load sessions');
         }
       } catch (err) {
-        console.error('Error fetching tutor sessions:', err);
         setError('Failed to load sessions');
       } finally {
         setLoading(false);
@@ -65,10 +66,70 @@ export default function TutorSessions() {
         setError(response.error || 'Failed to delete session');
       }
     } catch (error) {
-      console.error('Error deleting session:', error);
       setError('Failed to delete session');
     } finally {
       setDeleteLoading(prev => ({ ...prev, [sessionId]: false }));
+    }
+  };
+
+  const handleCancelSession = async (sessionId) => {
+    const reason = prompt('Please provide a reason for cancelling this session (optional):');
+    
+    // If user clicks cancel, don't proceed
+    if (reason === null) return;
+    
+    try {
+      setCancelLoading(prev => ({ ...prev, [sessionId]: true }));
+      setError('');
+      setSuccess('');
+
+      const response = await sessionService.cancelSession(sessionId, reason);
+      
+      if (response.success) {
+        setSuccess('Session successfully cancelled. All enrolled students have been notified.');
+        // Refresh sessions
+        const updatedResponse = await sessionService.getUserSessions();
+        if (updatedResponse.success && updatedResponse.data) {
+          setSessions(updatedResponse.data);
+        }
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => setSuccess(''), 5000);
+      } else {
+        setError(response.error || 'Failed to cancel session');
+      }
+    } catch (error) {
+      setError('Failed to cancel session');
+    } finally {
+      setCancelLoading(prev => ({ ...prev, [sessionId]: false }));
+    }
+  };
+
+  const handlePublishSession = async (sessionId) => {
+    try {
+      setPublishLoading(prev => ({ ...prev, [sessionId]: true }));
+      setError('');
+      setSuccess('');
+
+      const response = await sessionService.updateSessionStatus(sessionId, 'published');
+      
+      if (response.success) {
+        setSuccess('Session published successfully! It is now visible to students.');
+        // Refresh sessions
+        const updatedResponse = await sessionService.getUserSessions();
+        if (updatedResponse.success && updatedResponse.data) {
+          setSessions(updatedResponse.data);
+        }
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(response.error || 'Failed to publish session');
+      }
+    } catch (error) {
+      setError('Failed to publish session');
+    } finally {
+      setPublishLoading(prev => ({ ...prev, [sessionId]: false }));
     }
   };
 
@@ -79,9 +140,11 @@ export default function TutorSessions() {
 
     switch (filter) {
       case 'upcoming':
-        return sessionStart > now;
+        return sessionStart > now && session.status !== 'cancelled';
       case 'completed':
-        return sessionEnd < now;
+        return sessionEnd < now && session.status !== 'cancelled';
+      case 'cancelled':
+        return session.status === 'cancelled';
       default:
         return true;
     }
@@ -114,7 +177,7 @@ export default function TutorSessions() {
             </div>
             
             <Link
-              to="/create-session"
+              to="/tutor/create-session"
               className="inline-flex items-center px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
             >
               <Plus size={20} className="mr-2" />
@@ -144,7 +207,8 @@ export default function TutorSessions() {
             {[
               { key: 'all', label: 'All Sessions' },
               { key: 'upcoming', label: 'Upcoming' },
-              { key: 'completed', label: 'Completed' }
+              { key: 'completed', label: 'Completed' },
+              { key: 'cancelled', label: 'Cancelled' }
             ].map(({ key, label }) => (
               <button
                 key={key}
@@ -172,7 +236,7 @@ export default function TutorSessions() {
                 : `No ${filter} sessions found.`}
             </p>
             <Link
-              to="/create-session"
+              to="/tutor/create-session"
               className="inline-flex items-center px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
             >
               <Plus size={20} className="mr-2" />
@@ -218,7 +282,7 @@ export default function TutorSessions() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-medium">
                           {session.module?.code || session.course}
                         </span>
@@ -231,10 +295,29 @@ export default function TutorSessions() {
                         }`}>
                           {isCompleted ? 'completed' : isUpcoming ? 'upcoming' : session.status}
                         </span>
+                        {session.status === 'draft' && (
+                          <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Not visible to students
+                          </span>
+                        )}
                       </div>
                     </div>
                     
                     <div className="ml-6 flex gap-2">
+                      {session.status === 'draft' && isUpcoming && (
+                        <button 
+                          onClick={() => handlePublishSession(session.id)}
+                          disabled={publishLoading[session.id]}
+                          className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center"
+                        >
+                          {publishLoading[session.id] ? (
+                            <Loader className="animate-spin h-4 w-4 mr-1" />
+                          ) : (
+                            <Eye className="h-4 w-4 mr-1" />
+                          )}
+                          {publishLoading[session.id] ? 'Publishing...' : 'Publish'}
+                        </button>
+                      )}
                       {isUpcoming && (
                         <>
                           <button className="p-2 border border-border text-muted-foreground rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors">

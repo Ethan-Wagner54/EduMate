@@ -18,16 +18,17 @@ class SocketService {
 
   connect() {
     if (this.socket?.connected) {
+      console.log('SocketService: Already connected, skipping');
       return Promise.resolve();
     }
 
     const token = authService.getToken();
+    
     if (!token) {
-      console.warn('No auth token found, cannot connect to socket');
       return Promise.reject('No authentication token');
     }
 
-    // Socket.io connection with auth
+    // Socket.io connection with auth (reduced logging)
     this.socket = io(config.apiUrl, {
       auth: {
         token: token
@@ -40,7 +41,6 @@ class SocketService {
     return new Promise((resolve, reject) => {
       // Connection successful
       this.socket.on('connect', () => {
-        console.log('Socket connected:', this.socket.id);
         this.isConnected = true;
         this.reconnectAttempts = 0;
         
@@ -55,7 +55,7 @@ class SocketService {
           try {
             listener({ connected: true, socketId: this.socket.id });
           } catch (error) {
-            console.error('Error in connection listener:', error);
+            console.error('SocketService: Connection listener error:', error);
           }
         });
 
@@ -64,12 +64,11 @@ class SocketService {
 
       // Connection failed
       this.socket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
+        console.error('SocketService: Connection error:', error);
         this.isConnected = false;
         
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
           this.reconnectAttempts++;
-          console.log(`Reconnection attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
           
           setTimeout(() => {
             this.connect();
@@ -81,7 +80,6 @@ class SocketService {
 
       // Disconnection
       this.socket.on('disconnect', (reason) => {
-        console.log('Socket disconnected:', reason);
         this.isConnected = false;
         
         // Notify listeners
@@ -89,7 +87,6 @@ class SocketService {
           try {
             listener({ connected: false, reason });
           } catch (error) {
-            console.error('Error in disconnection listener:', error);
           }
         });
 
@@ -102,12 +99,11 @@ class SocketService {
 
       // Listen for new messages
       this.socket.on('new-message', (messageData) => {
-        console.log('New message received:', messageData);
         this.messageListeners.forEach(listener => {
           try {
             listener(messageData);
           } catch (error) {
-            console.error('Error in message listener:', error);
+            console.error('SocketService: Message listener error:', error);
           }
         });
 
@@ -119,24 +115,21 @@ class SocketService {
 
       // Listen for message status updates
       this.socket.on('message-status', (statusData) => {
-        console.log('Message status update:', statusData);
         // You can add status listeners here if needed
       });
 
       // Listen for typing indicators
       this.socket.on('user-typing', (typingData) => {
-        console.log('User typing:', typingData);
         // Handle typing indicators
       });
 
       // Listen for group messages
       this.socket.on('new-group-message', (messageData) => {
-        console.log('New group message received:', messageData);
         this.groupMessageListeners.forEach(listener => {
           try {
             listener(messageData);
           } catch (error) {
-            console.error('Error in group message listener:', error);
+            console.error('SocketService: Group message listener error:', error);
           }
         });
 
@@ -148,21 +141,24 @@ class SocketService {
 
       // Listen for group typing indicators
       this.socket.on('group-user-typing', (typingData) => {
-        console.log('Group user typing:', typingData);
         this.groupTypingListeners.forEach(listener => {
           try {
             listener(typingData);
           } catch (error) {
-            console.error('Error in group typing listener:', error);
           }
         });
       });
 
       // Authentication error
       this.socket.on('auth-error', (error) => {
-        console.error('Socket authentication error:', error);
+        console.error('SocketService: Authentication error received:', error);
         this.disconnect();
         reject(error);
+      });
+      
+      // Generic error handling
+      this.socket.on('error', (error) => {
+        console.error('SocketService: Socket error:', error);
       });
     });
   }
@@ -350,7 +346,6 @@ class SocketService {
           try {
             listener({ type: 'click', messageData });
           } catch (error) {
-            console.error('Error in notification listener:', error);
           }
         });
       };
@@ -386,6 +381,25 @@ class SocketService {
     this.disconnect();
     return this.connect();
   }
+  
+  // Test WebSocket connection manually (for debugging)
+  testConnection() {
+    console.log('SocketService: Testing WebSocket connection...');
+    console.log('SocketService: Socket exists?', !!this.socket);
+    console.log('SocketService: Socket connected?', this.socket?.connected);
+    console.log('SocketService: Socket ID:', this.socket?.id);
+    console.log('SocketService: Is connected flag:', this.isConnected);
+    console.log('SocketService: Connected users:', this.connectedUsers.size);
+    console.log('SocketService: Message listeners:', this.messageListeners.size);
+    console.log('SocketService: Group message listeners:', this.groupMessageListeners.size);
+    
+    if (this.socket?.connected) {
+      console.log('SocketService: Emitting test ping...');
+      this.socket.emit('ping-activity');
+    } else {
+      console.warn('SocketService: Cannot test - socket not connected');
+    }
+  }
 }
 
 // Create singleton instance
@@ -394,8 +408,13 @@ const socketService = new SocketService();
 // Auto-connect when user is authenticated
 if (authService.isAuthenticated()) {
   socketService.connect().catch(error => {
-    console.warn('Failed to auto-connect socket:', error);
+    console.error('SocketService: Auto-connection failed:', error);
   });
+}
+
+// Make socketService available globally for debugging
+if (typeof window !== 'undefined') {
+  window.socketService = socketService;
 }
 
 export default socketService;

@@ -44,7 +44,6 @@ export default function ImageUpload({
         setUploadError(result.errors?.[0] || 'Upload failed');
       }
     } catch (error) {
-      console.error('Upload error:', error);
       setUploadError('Failed to upload image');
     } finally {
       setUploading(false);

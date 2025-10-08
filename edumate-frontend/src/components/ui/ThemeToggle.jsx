@@ -11,7 +11,6 @@ const ThemeToggle = ({
   const themeContext = useTheme();
   
   if (!themeContext) {
-    console.error('ThemeToggle: useTheme returned null/undefined');
     return <div>Theme not available</div>;
   }
   

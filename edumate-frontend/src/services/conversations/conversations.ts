@@ -21,7 +21,6 @@ export const getConversations = async (): Promise<ConversationsResponse> => {
   try {
     authService.setAuthHeader();
     
-    console.log('Fetching conversations...');
     
     const response = await axios.get<Conversation[]>(`${API_URL}/conversations`);
     if (response.data) {
@@ -36,7 +35,6 @@ export const getConversations = async (): Promise<ConversationsResponse> => {
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error fetching conversations:', error);
     
     if (error.response && error.response.data) {
       return {
@@ -59,7 +57,6 @@ export const getConversation = async (conversationId: number): Promise<Conversat
   try {
     authService.setAuthHeader();
     
-    console.log(`Fetching conversation ${conversationId}...`);
     
     const response = await axios.get<Conversation>(`${API_URL}/conversations/${conversationId}`);
     if (response.data) {
@@ -74,7 +71,6 @@ export const getConversation = async (conversationId: number): Promise<Conversat
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error fetching conversation:', error);
     
     if (error.response && error.response.data) {
       return {
@@ -97,7 +93,6 @@ export const getMessages = async (conversationId: number): Promise<MessagesRespo
   try {
     authService.setAuthHeader();
     
-    console.log(`Fetching messages for conversation ${conversationId}...`);
     
     const response = await axios.get<Message[]>(`${API_URL}/conversations/${conversationId}/messages`);
     if (response.data) {
@@ -112,7 +107,6 @@ export const getMessages = async (conversationId: number): Promise<MessagesRespo
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error fetching messages:', error);
     
     if (error.response && error.response.data) {
       return {
@@ -135,7 +129,6 @@ export const sendMessage = async (conversationId: number, content: string): Prom
   try {
     authService.setAuthHeader();
     
-    console.log(`Sending message to conversation ${conversationId}...`);
     
     const requestData: SendMessageRequest = { content };
     
@@ -152,7 +145,44 @@ export const sendMessage = async (conversationId: number, content: string): Prom
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error sending message:', error);
+    
+    if (error.response && error.response.data) {
+      return {
+        success: false,
+        error: error.response.data.message || error.response.data.error || 'Server error'
+      };
+    }
+    
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'An unknown error occurred'
+    };
+  }
+};
+
+/**
+ * Mark a conversation as read for the current user
+ */
+export const markAsRead = async (conversationId: number): Promise<{ success: boolean; error?: string }> => {
+  try {
+    authService.setAuthHeader();
+    
+    
+    const response = await axios.post(`${API_URL}/conversations/${conversationId}/mark-read`, {
+      conversationId
+    });
+    
+    if (response.data && response.data.success !== false) {
+      return {
+        success: true
+      };
+    }
+    
+    return {
+      success: false,
+      error: response.data?.error || 'Failed to mark conversation as read'
+    };
+  } catch (error: any) {
     
     if (error.response && error.response.data) {
       return {
@@ -181,7 +211,6 @@ export const createOrGetConversation = async (participantId: number) => {
     }
     return { success: false, error: 'No data received from the server' };
   } catch (error: any) {
-    console.error('Error creating conversation:', error);
     if (error.response && error.response.data) {
       return { success: false, error: error.response.data.message || error.response.data.error || 'Server error' };
     }
@@ -195,7 +224,8 @@ const conversationsService = {
   getConversation,
   getMessages,
   sendMessage,
-  createOrGetConversation
+  createOrGetConversation,
+  markAsRead
 };
 
 export default conversationsService;

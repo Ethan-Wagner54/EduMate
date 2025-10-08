@@ -44,6 +44,7 @@ export interface CreateSessionParams {
   endTime: string;
   location?: string;
   capacity?: number;
+  status?: string;
 }
 
 /**

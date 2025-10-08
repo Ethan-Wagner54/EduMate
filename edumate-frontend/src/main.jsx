@@ -4,8 +4,12 @@ import AppRoutes from "./routes/AppRoutes.jsx"; // point to your routes file
 import { BrowserRouter } from "react-router-dom";
 import { ToastContainer } from 'react-toastify';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
+import { initializeServices } from './services/init.js';
 import "./index.css";
 import 'react-toastify/dist/ReactToastify.css';
+
+// Initialize services on app startup
+initializeServices();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

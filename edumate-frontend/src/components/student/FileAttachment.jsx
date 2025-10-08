@@ -55,7 +55,6 @@ const FileAttachment = ({ onAttachmentSelect, onAttachmentRemove, attachments = 
           }
         } catch (error) {
           onAttachmentRemove(tempAttachment.id);
-          console.error('Upload error:', error);
           alert(`Failed to upload "${file.name}"`);
         }
       }

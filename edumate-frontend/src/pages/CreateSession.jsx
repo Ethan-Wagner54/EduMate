@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {Calendar, Clock, MapPin, User, BookOpen, DollarSign, FileText, AlertCircle, CheckCircle, Loader} from "lucide-react";
 import { Button } from "../components/ui/button"; 
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
-import {Select, SelectContent, SelectItem, SelectTrigger,SelectValue} from "../components/ui/select";
+import { Switch } from "../components/ui/switch";
 import { Link, useNavigate } from "react-router-dom";
 import sessionService from '../services/sessions/session';
 import moduleService from '../services/modules/modules';
@@ -14,6 +14,7 @@ import authService from '../services/auth/auth';
 export default function CreateSession()
 {
     const navigate = useNavigate();
+    const formRef = useRef(null);
     const [modules, setModules] = useState([]);
     const [loading, setLoading] = useState(false);
     const [modulesLoading, setModulesLoading] = useState(true);
@@ -27,22 +28,27 @@ export default function CreateSession()
         endTime: "",
         location: "",
         capacity: "",
-        description: ""
+        description: "",
+        makeVisible: true // Default to making sessions visible
     });
 
-    // Load modules on component mount
+    // Load tutor-specific modules on component mount
     useEffect(() => {
         const fetchModules = async () => {
             try {
                 setModulesLoading(true);
-                const response = await moduleService.getModules();
+                const response = await moduleService.getTutorModules();
                 if (response.success && response.data) {
-                    setModules(response.data);
+                    if (response.data.length === 0) {
+                        setError('You have no approved teaching modules. Please contact the administrator to get modules approved for you.');
+                    } else {
+                        setModules(response.data);
+                    }
                 } else {
-                    setError('Failed to load modules');
+                    setError('Failed to load your teaching modules. Please contact admin if you should have access to modules.');
                 }
             } catch (err) {
-                setError('Failed to load modules');
+                setError('Failed to load your teaching modules. Please try refreshing the page.');
             } finally {
                 setModulesLoading(false);
             }
@@ -65,24 +71,70 @@ export default function CreateSession()
         // Clear error when user starts typing
         if (error) setError('');
     };
+    
+    // Clear form function
+    const clearForm = () => {
+        if (formRef.current) {
+            formRef.current.reset();
+        }
+        setFormData({
+            moduleId: "",
+            date: "",
+            startTime: "",
+            endTime: "",
+            location: "",
+            capacity: "",
+            description: "",
+            makeVisible: true
+        });
+        setError('');
+    };
 
     //Form submission handler
     const handleSubmit = async (e) => {
         e.preventDefault();
         
         // Validation
-        if (!formData.moduleId || !formData.date || !formData.startTime || !formData.endTime) {
+        if (!formData.moduleId || !formData.date || !formData.startTime || !formData.endTime || !formData.description?.trim()) {
             setError('Please fill in all required fields');
             return;
         }
 
+        // Debug logging (removed for cleaner console)
+        
         // Combine date and time
-        const startDateTime = new Date(`${formData.date}T${formData.startTime}`);
-        const endDateTime = new Date(`${formData.date}T${formData.endTime}`);
+        let startDateTime, endDateTime;
+        try {
+            // Ensure time format includes seconds for proper parsing
+            const startTimeWithSeconds = formData.startTime.includes(':') && formData.startTime.split(':').length === 2 
+                ? `${formData.startTime}:00` 
+                : formData.startTime;
+            const endTimeWithSeconds = formData.endTime.includes(':') && formData.endTime.split(':').length === 2 
+                ? `${formData.endTime}:00` 
+                : formData.endTime;
+            
+            startDateTime = new Date(`${formData.date}T${startTimeWithSeconds}`);
+            endDateTime = new Date(`${formData.date}T${endTimeWithSeconds}`);
+            
+            // Check if dates are valid
+            if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+                throw new Error('Invalid date/time combination');
+            }
+        } catch (err) {
+            setError('Invalid date or time format. Please check your inputs.');
+            return;
+        }
         
         // Validate times
         if (endDateTime <= startDateTime) {
             setError('End time must be after start time');
+            return;
+        }
+        
+        // Validate that session is not in the past
+        const now = new Date();
+        if (startDateTime <= now) {
+            setError('Session cannot be scheduled in the past');
             return;
         }
 
@@ -95,7 +147,9 @@ export default function CreateSession()
                 startTime: startDateTime.toISOString(),
                 endTime: endDateTime.toISOString(),
                 location: formData.location || null,
-                capacity: formData.capacity ? parseInt(formData.capacity) : null
+                capacity: formData.capacity ? parseInt(formData.capacity) : null,
+                description: formData.description.trim(),
+                status: formData.makeVisible ? 'published' : 'draft' // Set status based on visibility toggle
             };
 
             const response = await sessionService.createSession(sessionData);
@@ -103,6 +157,9 @@ export default function CreateSession()
             if (response.success) {
                 setSuccess('Session created successfully!');
                 // Reset form
+                if (formRef.current) {
+                    formRef.current.reset();
+                }
                 setFormData({
                     moduleId: "",
                     date: "",
@@ -110,12 +167,13 @@ export default function CreateSession()
                     endTime: "",
                     location: "",
                     capacity: "",
-                    description: ""
+                    description: "",
+                    makeVisible: true
                 });
                 
                 // Redirect after a delay
                 setTimeout(() => {
-                    navigate('/tutor-sessions');
+                    navigate('/tutor/sessions');
                 }, 2000);
             } else {
                 setError(response.error || 'Failed to create session');
@@ -132,7 +190,7 @@ export default function CreateSession()
             <div className="flex items-center justify-center min-h-screen bg-background">
                 <div className="text-center">
                     <Loader className="animate-spin h-8 w-8 mx-auto mb-4" />
-                    <p className="text-muted-foreground">Loading modules...</p>
+                    <p className="text-muted-foreground">Loading your teaching modules...</p>
                 </div>
             </div>
         );
@@ -159,36 +217,37 @@ export default function CreateSession()
                     </div>
                 )}
                 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
                     {/* Module Selection */}
                     <div>
                         <Label htmlFor="module">Module *</Label>
-                        <Select
+                        <select
+                            id="module"
                             value={formData.moduleId}
-                            onValueChange={(value) => handleInputChange("moduleId", value)}
+                            onChange={(e) => handleInputChange("moduleId", e.target.value)}
+                            className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                            required
                         >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a module" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {modules.map((module) => (
-                                    <SelectItem key={module.id} value={module.id.toString()}>
-                                        {module.code} - {module.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                            <option value="">Select a module...</option>
+                            {modules.map((module) => (
+                                <option key={module.id} value={module.id.toString()}>
+                                    {module.code} - {module.name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     {/* Date */}
                     <div>
                         <Label htmlFor="date">Date *</Label>
-                        <Input
+                        <input
                             id="date"
                             type="date"
                             value={formData.date}
                             min={new Date().toISOString().split('T')[0]}
                             onChange={(e) => handleInputChange("date", e.target.value)}
+                            className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                            required
                         />
                     </div>
 
@@ -196,20 +255,26 @@ export default function CreateSession()
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <Label htmlFor="startTime">Start Time *</Label>
-                            <Input
+                            <input
                                 id="startTime"
+                                name="startTime"
                                 type="time"
-                                value={formData.startTime}
+                                value={formData.startTime || ""}
                                 onChange={(e) => handleInputChange("startTime", e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                required
                             />
                         </div>
                         <div>
                             <Label htmlFor="endTime">End Time *</Label>
-                            <Input
+                            <input
                                 id="endTime"
+                                name="endTime"
                                 type="time"
-                                value={formData.endTime}
+                                value={formData.endTime || ""}
                                 onChange={(e) => handleInputChange("endTime", e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                required
                             />
                         </div>
                     </div>
@@ -238,17 +303,53 @@ export default function CreateSession()
                         />
                     </div>
 
-                    {/* Submit Button */}
-                    <Button type="submit" className="w-full mt-6" disabled={loading}>
-                        {loading ? (
-                            <>
-                                <Loader className="animate-spin h-4 w-4 mr-2" />
-                                Creating Session...
-                            </>
-                        ) : (
-                            'Create Session'
-                        )}
-                    </Button>
+                    {/* Description */}
+                    <div>
+                        <Label htmlFor="description">Session Description *</Label>
+                        <Textarea
+                            id="description"
+                            placeholder="Describe what will be covered in this session (e.g., 'Introduction to React hooks and state management')"
+                            value={formData.description}
+                            onChange={(e) => handleInputChange("description", e.target.value)}
+                            rows={3}
+                            className="resize-none"
+                            required
+                        />
+                    </div>
+
+                    {/* Session Visibility */}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <Label>Make visible to students</Label>
+                            <p className="text-sm text-muted-foreground">When enabled, students can see and join this session immediately</p>
+                        </div>
+                        <Switch
+                            defaultChecked={formData.makeVisible}
+                            onChange={(checked) => handleInputChange("makeVisible", checked)}
+                        />
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-4 mt-6">
+                        <Button 
+                            type="button" 
+                            onClick={clearForm}
+                            className="flex-1"
+                            variant="outline"
+                        >
+                            Clear Form
+                        </Button>
+                        <Button type="submit" className="flex-1" disabled={loading}>
+                            {loading ? (
+                                <>
+                                    <Loader className="animate-spin h-4 w-4 mr-2" />
+                                    Creating Session...
+                                </>
+                            ) : (
+                                'Create Session'
+                            )}
+                        </Button>
+                    </div>
                 </form>
             </CardContent>
         </Card>

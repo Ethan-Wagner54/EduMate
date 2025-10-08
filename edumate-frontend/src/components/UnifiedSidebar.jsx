@@ -67,8 +67,8 @@ const navigationConfig = {
     },
     {
       to: '/tutor/create-session',
-      icon: PlusCircle,
-      label: 'Create Session'
+      icon: Calendar,
+      label: 'Session Management'
     },
     {
       to: '/tutor/sessions',
@@ -99,6 +99,11 @@ const navigationConfig = {
       label: 'Session Management'
     },
     {
+      to: '/admin/chats',
+      icon: MessageSquare,
+      label: 'Chat Moderation'
+    },
+    {
       to: '/admin/analytics',
       icon: Star,
       label: 'Analytics'
@@ -116,40 +121,31 @@ export default function UnifiedSidebar({ userType = 'student' }) {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        console.log('UnifiedSidebar: Starting user fetch...');
         setLoading(true);
         setError(null);
         
         // Check authentication first
         if (!authService.isAuthenticated()) {
-          console.log('UnifiedSidebar: User not authenticated, redirecting to login');
           navigate('/login');
           return;
         }
 
         const userId = authService.getUserId();
-        console.log('UnifiedSidebar: User ID from token:', userId);
         
         if (!userId) {
-          console.error('UnifiedSidebar: No user ID found in token');
           setError('No user ID found');
           setLoading(false);
           return;
         }
 
-        console.log('UnifiedSidebar: Fetching user data...');
         const response = await userService.getUser({ id: userId });
-        console.log('UnifiedSidebar: User fetch response:', response);
 
         if (response.success && response.data) {
-          console.log('UnifiedSidebar: User data received:', response.data);
           setUser(response.data);
         } else {
-          console.log('UnifiedSidebar: User fetch failed:', response.error);
           setError(response.error || 'Failed to load user data');
         }
       } catch (err) {
-        console.error("UnifiedSidebar: Error fetching user:", err);
         setError(err.message || 'Failed to load user data');
       } finally {
         setLoading(false);
@@ -203,7 +199,6 @@ export default function UnifiedSidebar({ userType = 'student' }) {
 
   // Show error state but still render sidebar with limited functionality
   if (error) {
-    console.error('UnifiedSidebar: Rendering with error:', error);
   }
 
   return (

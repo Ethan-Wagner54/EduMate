@@ -44,7 +44,6 @@ export default function Registration() //main registration component
             alert("Passwords do not match");
             return;
         }
-        console.log("Registration data:", formData);
 
         // TO DO: Connect to back-end API here
     };
