@@ -3,8 +3,10 @@ import config from '../../config/Config';
 import { 
   LoginCredentials, 
   AuthResponse,
-  JwtPayload
+  JwtPayload,
+  RegisterResponse
 } from './types';
+import { CreateUserDetails, UserRegisterDetails } from '../user/types';
 
 // Get API base URL from configuration
 const API_URL = config.apiUrl;
@@ -193,6 +195,37 @@ export const setAuthHeader = (token: string = getToken() || ''): void => {
   }
 };
 
+ /**
+ * Register function
+ */
+export const register = async (user: UserRegisterDetails): Promise<RegisterResponse> => {
+ try {
+    const userData: CreateUserDetails = {
+      name: user.name,
+      email: user.email,
+      password: user.password,
+      role: user.role,
+      academicYear: user.academicLevel
+    };
+    const response = await axios.post(`${API_URL}/auth/register`, userData)
+    .then(res  => {
+        console.log('Registration successful:', res.data);
+        debugger;
+       return {
+        ...res.data,
+        success: true
+      };
+    });
+   
+  } catch (error) {
+    console.error('Registration error:', error);
+  }
+  return {
+      success: false,
+      error: 'Registration failed'
+    };
+}
+
 // Initialize auth headers on page load if token exists
 if (isAuthenticated()) {
   setAuthHeader();
@@ -202,6 +235,7 @@ if (isAuthenticated()) {
 const authService = {
   login,
   logout,
+  register,
   getToken,
   isAuthenticated,
   getCurrentUser,

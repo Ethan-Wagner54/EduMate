@@ -13,6 +13,31 @@ export interface User {
 }
 
 /**
+ * User interface representing a user in the system
+ */
+export interface CreateUserDetails {
+  name: string;
+  email: string;
+  password: string;
+  role?: string;
+  academicYear?: string; 
+}
+
+
+/**
+ * User interface representing a user in the system
+ */
+export interface UserRegisterDetails {
+  name: string,
+  email: string,
+  password: string,
+  role: string,
+  academicLevel: string,
+  modules: string[]
+}
+
+
+/**
  * Parameters for fetching users
  */
 export interface GetUserQueryParams {
