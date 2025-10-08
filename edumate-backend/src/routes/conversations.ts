@@ -5,7 +5,8 @@ import {
   getConversation,
   getMessages,
   sendMessage,
-  createConversation
+  createConversation,
+  markAsRead
 } from '../controllers/conversations.controller';
 
 const router = Router();
@@ -19,5 +20,6 @@ router.post('/', createConversation);
 router.get('/:id', getConversation);
 router.get('/:id/messages', getMessages);
 router.post('/:id/messages', sendMessage);
+router.post('/:id/mark-read', markAsRead);
 
 export default router;

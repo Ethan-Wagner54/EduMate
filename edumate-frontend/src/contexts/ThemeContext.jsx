@@ -27,10 +27,8 @@ export const ThemeProvider = ({ children }) => {
   });
 
   const toggleTheme = () => {
-    console.log('toggleTheme called, current theme:', theme);
     setTheme(prevTheme => {
       const newTheme = prevTheme === 'light' ? 'dark' : 'light';
-      console.log('Setting new theme:', newTheme);
       localStorage.setItem('edumate-theme', newTheme);
       return newTheme;
     });
@@ -55,8 +53,6 @@ export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     const root = window.document.documentElement;
     
-    console.log('ThemeContext useEffect - applying theme:', theme);
-    console.log('Document classes before:', root.classList.toString());
     
     // Remove previous theme classes
     root.classList.remove('light', 'dark');
@@ -64,7 +60,6 @@ export const ThemeProvider = ({ children }) => {
     // Add current theme class
     root.classList.add(theme);
     
-    console.log('Document classes after:', root.classList.toString());
     
     // Update the theme-color meta tag for mobile browsers
     const themeColorMeta = document.querySelector('meta[name="theme-color"]');

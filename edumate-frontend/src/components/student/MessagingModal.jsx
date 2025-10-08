@@ -84,7 +84,6 @@ export default function MessagingModal({ tutor, isOpen, onClose }) {
         }
       }
     } catch (error) {
-      console.error('Error loading conversation:', error);
       toast.error('Failed to load conversation history');
     } finally {
       setLoading(false);
@@ -205,7 +204,6 @@ export default function MessagingModal({ tutor, isOpen, onClose }) {
             attachments: attachments
           };
         } catch (socketErr) {
-          console.warn('Socket send failed, falling back to HTTP:', socketErr);
         }
       }
 
@@ -241,7 +239,6 @@ export default function MessagingModal({ tutor, isOpen, onClose }) {
       setMessages(prev => prev.map(m => m.id === optimisticMessage.id ? { ...finalDelivered, sending: false } : m));
       
     } catch (error) {
-      console.error('Error sending message:', error);
       toast.error('Failed to send message');
       
       // Remove failed message

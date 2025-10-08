@@ -8,7 +8,6 @@
 export interface LoginCredentials {
   email: string;
   password: string;
-  userType?: string; // Optional user type (student, tutor, admin)
 }
 
 /**

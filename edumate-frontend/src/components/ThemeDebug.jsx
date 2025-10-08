@@ -5,17 +5,10 @@ const ThemeDebug = () => {
   const { theme, toggleTheme, isDark, isLight } = useTheme();
   
   const handleClick = () => {
-    console.log('Theme toggle clicked');
-    console.log('Current theme:', theme);
-    console.log('Is dark:', isDark);
-    console.log('Is light:', isLight);
     
     toggleTheme();
     
     setTimeout(() => {
-      console.log('After toggle - theme:', theme);
-      console.log('After toggle - document classes:', document.documentElement.classList.toString());
-      console.log('After toggle - localStorage:', localStorage.getItem('edumate-theme'));
     }, 100);
   };
 

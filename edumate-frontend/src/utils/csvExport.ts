@@ -101,7 +101,6 @@ export const exportToCSV = (data: any[], options: CSVExportOptions = {}): void =
   const { filename = 'export.csv' } = options;
   
   if (!data || data.length === 0) {
-    console.warn('No data to export');
     return;
   }
   

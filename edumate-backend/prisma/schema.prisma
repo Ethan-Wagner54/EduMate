@@ -21,7 +21,7 @@ enum SessionStatus {
 
 enum EnrollmentStatus {
   joined
-  cancelled
+  left
   waitlisted
 }
 
@@ -63,6 +63,10 @@ model User {
   sessionReviews  SessionReview[]
   activities      Activity[]
   dashboardStats  DashboardStats?
+  
+  // Student-Tutor relationships
+  studentTutorAsStudent StudentTutor[] @relation("StudentTutorStudent")
+  studentTutorAsTutor   StudentTutor[] @relation("StudentTutorTutor")
 }
 
 model Module {
@@ -95,7 +99,9 @@ model Session {
   endTime     DateTime
   location    String?
   capacity    Int?
+  description String?        // Session description
   status      SessionStatus  @default(draft)
+  cancelledAt DateTime?      // Timestamp when tutor cancelled the session
   createdAt   DateTime       @default(now())
 
   tutor       User        @relation("TutorSessions", fields: [tutorId], references: [id])
@@ -112,6 +118,7 @@ model Enrollment {
   studentId Int
   status    EnrollmentStatus @default(joined)
   joinedAt  DateTime         @default(now())
+  leftAt    DateTime?        // Timestamp when student left the session
 
   session   Session @relation(fields: [sessionId], references: [id])
   student   User    @relation(fields: [studentId], references: [id])
@@ -150,7 +157,8 @@ enum ActivityType {
   session_joined
   session_attended
   session_completed
-  session_cancelled
+  session_left
+  session_cancelled_by_tutor
   session_booked
   message_sent
   profile_updated
@@ -262,6 +270,24 @@ model Activity {
   createdAt   DateTime     @default(now())
 
   user        User         @relation(fields: [userId], references: [id])
+}
+
+// Student-Tutor relationships
+model StudentTutor {
+  id            Int      @id @default(autoincrement())
+  studentId     Int
+  tutorId       Int
+  firstSessionDate DateTime // Date of first session together
+  lastSessionDate  DateTime // Date of most recent session
+  totalSessions    Int      @default(1)
+  averageRating    Float?   // Average rating given to this tutor by this student
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  student       User     @relation("StudentTutorStudent", fields: [studentId], references: [id])
+  tutor         User     @relation("StudentTutorTutor", fields: [tutorId], references: [id])
+
+  @@unique([studentId, tutorId])
 }
 
 // Dashboard statistics cache

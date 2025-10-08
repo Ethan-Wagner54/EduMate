@@ -15,7 +15,9 @@ import messageApiRoutes from "./routes/messageRoutes";
 import tutorDashboardRoutes from "./routes/tutorDashboard";
 import progressRoutes from "./routes/progress";
 import fileUploadRoutes from "./routes/fileUpload";
+import studentTutorsRoutes from "./routes/studentTutors";
 import { requestLogger } from "./middleware/requestLogger";
+import { trackUserActivity } from "./middleware/activityTracker";
 
 const app = express();
 
@@ -35,6 +37,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use(requestLogger);
+app.use(trackUserActivity);
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
@@ -53,6 +56,7 @@ app.use("/conversations", conversationRoutes);
 app.use("/session-history", sessionHistoryRoutes);
 app.use("/group-chats", groupChatRoutes);
 app.use("/files", fileUploadRoutes);
+app.use("/student-tutors", studentTutorsRoutes);
 
 // Serve static files (uploaded attachments)
 app.use('/uploads', express.static('uploads'));

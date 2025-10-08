@@ -59,14 +59,12 @@ export default function Settings() {
         const userRole = authService.getUserRole();
         const userId = authService.getUserId();
         
-        console.log('Settings: Loading user data for role:', userRole, 'userId:', userId);
         
         // Get user data from API
         const response = await userService.getUser({ id: userId });
         
         if (response.success && response.data) {
           const user = response.data;
-          console.log('Settings: User data received:', user);
           
           // Map user data based on role
           const mappedData = {
@@ -90,11 +88,9 @@ export default function Settings() {
           
           setProfileData(mappedData);
         } else {
-          console.error('Settings: Failed to load user data:', response.error);
           setError(response.error || 'Failed to load user data');
         }
       } catch (err) {
-        console.error('Settings: Error loading user data:', err);
         setError('Failed to load user data');
       } finally {
         setLoading(false);
@@ -124,7 +120,6 @@ export default function Settings() {
   };
 
   const handleSaveProfile = () => {
-    console.log('Saving profile:', profileData);
     // API call would go here
     alert('Profile updated successfully!');
   };
@@ -138,20 +133,17 @@ export default function Settings() {
       alert('Password must be at least 8 characters long!');
       return;
     }
-    console.log('Changing password...');
     // API call would go here
     alert('Password changed successfully!');
     setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
   };
 
   const handleSaveNotifications = () => {
-    console.log('Saving notification settings:', notificationSettings);
     // API call would go here
     alert('Notification settings updated!');
   };
 
   const handleSavePreferences = () => {
-    console.log('Saving preferences:', preferences);
     // API call would go here
     alert('Preferences updated!');
   };

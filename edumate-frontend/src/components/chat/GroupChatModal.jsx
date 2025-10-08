@@ -70,7 +70,6 @@ export default function GroupChatModal({ groupChat, isOpen, onClose, onGroupChat
         setMessages(formattedMessages);
       }
     } catch (error) {
-      console.error('Error loading group chat messages:', error);
       toast.error('Failed to load conversation history');
     } finally {
       setLoading(false);
@@ -211,7 +210,6 @@ export default function GroupChatModal({ groupChat, isOpen, onClose, onGroupChat
       }
       
     } catch (error) {
-      console.error('Error sending group message:', error);
       toast.error('Failed to send message');
       
       // Remove failed message

@@ -26,10 +26,8 @@ export default function Profile() {
           const savedImage = loadProfilePicture(userId || 1, 'student');
           setProfilePicture(savedImage);
         } else {
-          console.error('No user data available');
         }
       } catch (error) {
-        console.error('Error fetching user:', error);
       } finally {
         setLoading(false);
       }
@@ -55,7 +53,6 @@ export default function Profile() {
         favoriteSubjects: editData.favoriteSubjects || []
       };
       
-      console.log('Saving user data:', updateData);
       
       const response = await userService.updateProfile(updateData);
       
@@ -67,7 +64,6 @@ export default function Profile() {
         alert('Error updating profile: ' + response.error);
       }
     } catch (error) {
-      console.error('Error updating profile:', error);
       alert('Error updating profile. Please try again.');
     }
   };

@@ -45,10 +45,13 @@ class SocketService {
   private io: Server | null = null;
   private connectedUsers = new Map<number, ConnectedUser>();
   private chatRooms = new Map<string, Set<number>>();
+  private lastActivityUpdate = new Map<number, Date>();
 
   constructor() {}
 
   initialize(server: HttpServer): void {
+    // WebSocket server initialization (logging reduced)
+    
     this.io = new Server(server, {
       cors: {
         origin: [
@@ -67,11 +70,14 @@ class SocketService {
       pingTimeout: 60000,
       pingInterval: 25000
     });
-
+    
     this.io.use(this.authenticateSocket.bind(this));
     this.io.on('connection', this.handleConnection.bind(this));
     
-    console.log('Socket.IO initialized');
+    // Setup periodic cleanup of stale online statuses
+    this.setupPeriodicCleanup();
+    
+    console.log('SocketService: WebSocket server ready');
   }
 
   async authenticateSocket(socket: Socket, next: (err?: Error) => void): Promise<void> {
@@ -79,55 +85,55 @@ class SocketService {
       const token = socket.handshake.auth.token;
       
       if (!token) {
-        console.log('Socket connection attempt without token from:', socket.handshake.address);
         return next(new Error('Authentication error: No token provided'));
       }
 
       const decoded = jwt.verify(token, env.JWT_SECRET) as any;
+      
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
         select: { id: true, name: true, email: true, role: true }
       });
 
       if (!user) {
-        console.log('Socket connection attempt with invalid user ID:', decoded.userId);
         return next(new Error('Authentication error: User not found'));
       }
 
       (socket as any).userId = user.id;
       (socket as any).user = user;
-      console.log(`Socket authenticated successfully for user: ${user.name} (${user.id})`);
       next();
     } catch (error) {
-      console.error('Socket authentication error:', error);
-      if (error instanceof jwt.JsonWebTokenError) {
-        console.error('JWT Error:', error.message);
-      }
+      console.log('SocketService: Authentication failed:', error instanceof Error ? error.message : 'Unknown error');
       next(new Error('Authentication error: Invalid token'));
     }
   }
 
   handleConnection(socket: Socket): void {
     const socketAny = socket as any;
-    console.log(`User ${socketAny.user.name} connected: ${socket.id}`);
     
-    // Store connected user
+    // Store connected user (reduced logging)
     this.connectedUsers.set(socketAny.userId, {
       socketId: socket.id,
       user: socketAny.user,
       lastSeen: new Date()
     });
 
+    // Update user's online status in database
+    this.updateUserOnlineStatus(socketAny.userId, true);
+
     // Handle joining user room
     socket.on('join-user-room', (userId) => {
       socket.join(`user-${userId}`);
-      console.log(`User ${socketAny.user.name} joined room: user-${userId}`);
+    });
+
+    // Handle heartbeat/activity pings
+    socket.on('ping-activity', () => {
+      this.updateUserActivity(socketAny.userId);
     });
 
     // Handle joining chat room
     socket.on('join-chat-room', (roomId: string) => {
       socket.join(roomId);
-      console.log(`User ${socketAny.user.name} joined chat room: ${roomId}`);
       
       // Track room participants
       if (!this.chatRooms.has(roomId)) {
@@ -139,7 +145,6 @@ class SocketService {
     // Handle leaving chat room
     socket.on('leave-chat-room', (roomId: string) => {
       socket.leave(roomId);
-      console.log(`User ${socketAny.user.name} left chat room: ${roomId}`);
       
       if (this.chatRooms.has(roomId)) {
         this.chatRooms.get(roomId)!.delete(socketAny.userId);
@@ -152,6 +157,9 @@ class SocketService {
     // Handle sending messages (direct messages)
     socket.on('send-message', async (messageData: MessageData, callback?: (response: any) => void) => {
       try {
+        // Update user activity
+        this.updateUserActivity(socketAny.userId);
+        
         const message = await this.saveMessage({
           senderId: socketAny.userId,
           recipientId: messageData.recipientId,
@@ -165,6 +173,7 @@ class SocketService {
           id: message.id,
           senderId: message.senderId,
           senderName: socketAny.user.name,
+          senderRole: socketAny.user.role,
           content: message.content,
           messageType: message.messageType,
           attachments: message.attachments,
@@ -188,9 +197,7 @@ class SocketService {
           });
         }
 
-        console.log(`Message sent from ${socketAny.user.name} to user ${messageData.recipientId}`);
       } catch (error) {
-        console.error('Error sending message:', error);
         if (callback) {
           callback({
             success: false,
@@ -201,13 +208,17 @@ class SocketService {
     });
 
     // Handle sending group messages
-    socket.on('send-group-message', async (messageData: { conversationId: number; content: string; messageType?: string }, callback?: (response: any) => void) => {
+    socket.on('send-group-message', async (messageData: { conversationId: number; content: string; messageType?: string; attachments?: any[] }, callback?: (response: any) => void) => {
       try {
+        // Update user activity
+        this.updateUserActivity(socketAny.userId);
+        
         const message = await this.saveGroupMessage({
           conversationId: messageData.conversationId,
           senderId: socketAny.userId,
           content: messageData.content,
-          messageType: messageData.messageType || 'text'
+          messageType: messageData.messageType || 'text',
+          attachments: messageData.attachments || []
         });
 
         // Broadcast to all users in the group chat room
@@ -219,6 +230,7 @@ class SocketService {
           senderRole: socketAny.user.role,
           content: message.content,
           messageType: message.messageType,
+          attachments: message.attachments,
           timestamp: message.createdAt,
           isRead: false
         });
@@ -235,15 +247,14 @@ class SocketService {
               senderRole: socketAny.user.role,
               content: message.content,
               messageType: message.messageType,
+              attachments: message.attachments,
               timestamp: message.createdAt,
               isRead: false
             }
           });
         }
 
-        console.log(`Group message sent from ${socketAny.user.name} to conversation ${messageData.conversationId}`);
       } catch (error) {
-        console.error('Error sending group message:', error);
         if (callback) {
           callback({
             success: false,
@@ -256,21 +267,21 @@ class SocketService {
     // Handle joining group chat rooms
     socket.on('join-group-chat', (conversationId: number) => {
       const roomId = `group-${conversationId}`;
+      console.log(`SocketService: User ${socketAny.userId} joining group chat room: ${roomId}`);
       socket.join(roomId);
-      console.log(`User ${socketAny.user.name} joined group chat room: ${roomId}`);
       
       // Track room participants
       if (!this.chatRooms.has(roomId)) {
         this.chatRooms.set(roomId, new Set());
       }
       this.chatRooms.get(roomId)!.add(socketAny.userId);
+      console.log(`SocketService: User ${socketAny.userId} joined group chat room. Room participants:`, this.chatRooms.get(roomId)?.size);
     });
 
     // Handle leaving group chat rooms
     socket.on('leave-group-chat', (conversationId: number) => {
       const roomId = `group-${conversationId}`;
       socket.leave(roomId);
-      console.log(`User ${socketAny.user.name} left group chat room: ${roomId}`);
       
       if (this.chatRooms.has(roomId)) {
         this.chatRooms.get(roomId)!.delete(socketAny.userId);
@@ -290,29 +301,51 @@ class SocketService {
     });
 
     // Handle marking messages as read
-    socket.on('mark-messages-read', async (messageIds: number[]) => {
+    socket.on('mark-messages-read', async (data: { messageIds?: number[]; conversationId?: number }) => {
       try {
-        // Since we're using ConversationMessage model, update that instead
-        await prisma.conversationMessage.updateMany({
-          where: {
-            id: { in: messageIds },
-            // Only update messages not sent by the current user
-            NOT: {
-              senderId: socketAny.userId
+        // Update individual messages as read if messageIds provided
+        if (data.messageIds && data.messageIds.length > 0) {
+          await prisma.conversationMessage.updateMany({
+            where: {
+              id: { in: data.messageIds },
+              // Only update messages not sent by the current user
+              NOT: {
+                senderId: socketAny.userId
+              }
+            },
+            data: { isRead: true }
+          });
+        }
+        
+        // Update conversation participant unread count if conversationId provided
+        if (data.conversationId) {
+          await prisma.conversationParticipant.updateMany({
+            where: {
+              conversationId: data.conversationId,
+              userId: socketAny.userId
+            },
+            data: {
+              unreadCount: 0,
+              lastRead: new Date()
             }
-          },
-          data: { isRead: true }
-        });
+          });
+        }
 
-        console.log(`Messages ${messageIds} marked as read by user ${socketAny.userId}`);
       } catch (error) {
-        console.error('Error marking messages as read:', error);
+        console.error('Failed to mark messages as read:', error);
       }
     });
 
     // Handle disconnection
     socket.on('disconnect', (reason: string) => {
-      console.log(`User ${socketAny.user.name} disconnected: ${reason}`);
+      // Update user's online status in database with grace period
+      setTimeout(() => {
+        // Only set offline if user hasn't reconnected
+        if (!this.connectedUsers.has(socketAny.userId)) {
+          this.updateUserOnlineStatus(socketAny.userId, false);
+        }
+      }, 30000); // 30 second grace period for reconnections
+      
       this.connectedUsers.delete(socketAny.userId);
       
       // Clean up chat rooms
@@ -326,6 +359,25 @@ class SocketService {
   }
 
   async saveMessage(messageData: MessageData & { senderId: number }): Promise<SavedMessage> {
+    // Validate that recipientId is a valid user (not 0 or null)
+    if (!messageData.recipientId || messageData.recipientId <= 0) {
+      throw new Error(`Invalid recipientId: ${messageData.recipientId}`);
+    }
+    
+    // Verify that both sender and recipient exist in the database
+    const [sender, recipient] = await Promise.all([
+      prisma.user.findUnique({ where: { id: messageData.senderId } }),
+      prisma.user.findUnique({ where: { id: messageData.recipientId } })
+    ]);
+    
+    if (!sender) {
+      throw new Error(`Sender with ID ${messageData.senderId} not found`);
+    }
+    
+    if (!recipient) {
+      throw new Error(`Recipient with ID ${messageData.recipientId} not found`);
+    }
+    
     try {
       // Create a direct conversation if it doesn't exist
       let conversation = await prisma.conversation.findFirst({
@@ -407,31 +459,47 @@ class SocketService {
         throw new Error('Failed to create or find conversation');
       }
 
+      // Prepare message data with attachments
+      const messageCreateData: any = {
+        conversationId: conversation.id,
+        senderId: messageData.senderId,
+        content: messageData.content,
+        isRead: false,
+        sentAt: new Date()
+      };
+
+      // Include attachments in metadata if present
+      if (messageData.attachments && messageData.attachments.length > 0) {
+        messageCreateData.metadata = {
+          attachments: messageData.attachments
+        };
+      }
+
       // Save the message
       const message = await prisma.conversationMessage.create({
-        data: {
-          conversationId: conversation.id,
-          senderId: messageData.senderId,
-          content: messageData.content,
-          isRead: false,
-          sentAt: new Date()
-        }
+        data: messageCreateData
       });
 
-      return {
+      // Extract attachments from metadata
+      const attachments = message.metadata && typeof message.metadata === 'object' && 'attachments' in message.metadata
+        ? (message.metadata as any).attachments || []
+        : messageData.attachments || [];
+
+      const result = {
         id: message.id,
         senderId: message.senderId,
         recipientId: messageData.recipientId,
         content: message.content,
-        messageType: 'text',
-        attachments: [],
+        messageType: messageData.messageType || 'text',
+        attachments: attachments,
         createdAt: message.sentAt,
         isRead: message.isRead
       };
+      
+      return result;
     } catch (error) {
-      console.error('Error saving message:', error);
       // Return mock data if database save fails
-      return {
+      const mockResult = {
         id: Date.now(),
         senderId: messageData.senderId,
         recipientId: messageData.recipientId,
@@ -441,10 +509,11 @@ class SocketService {
         createdAt: new Date(),
         isRead: false
       };
+      return mockResult;
     }
   }
 
-  async saveGroupMessage(messageData: { conversationId: number; senderId: number; content: string; messageType?: string }): Promise<SavedMessage> {
+  async saveGroupMessage(messageData: { conversationId: number; senderId: number; content: string; messageType?: string; attachments?: any[] }): Promise<SavedMessage> {
     try {
       // Verify the conversation exists and user is a participant
       const conversation = await prisma.conversation.findFirst({
@@ -460,15 +529,25 @@ class SocketService {
         throw new Error('Conversation not found or user is not a participant');
       }
 
+      // Prepare message data with attachments
+      const messageCreateData: any = {
+        conversationId: messageData.conversationId,
+        senderId: messageData.senderId,
+        content: messageData.content,
+        isRead: false,
+        sentAt: new Date()
+      };
+
+      // Include attachments in metadata if present
+      if (messageData.attachments && messageData.attachments.length > 0) {
+        messageCreateData.metadata = {
+          attachments: messageData.attachments
+        };
+      }
+
       // Save the message
       const message = await prisma.conversationMessage.create({
-        data: {
-          conversationId: messageData.conversationId,
-          senderId: messageData.senderId,
-          content: messageData.content,
-          isRead: false,
-          sentAt: new Date()
-        }
+        data: messageCreateData
       });
 
       // Update conversation timestamp
@@ -488,17 +567,21 @@ class SocketService {
         }
       });
 
+      // Extract attachments from metadata
+      const attachments = message.metadata && typeof message.metadata === 'object' && 'attachments' in message.metadata
+        ? (message.metadata as any).attachments || []
+        : messageData.attachments || [];
+
       return {
         id: message.id,
         senderId: message.senderId,
         content: message.content,
         messageType: messageData.messageType || 'text',
-        attachments: [],
+        attachments: attachments,
         createdAt: message.sentAt,
         isRead: message.isRead
       };
     } catch (error) {
-      console.error('Error saving group message:', error);
       throw error;
     }
   }
@@ -530,6 +613,110 @@ class SocketService {
   // Check if user is online
   isUserOnline(userId: number): boolean {
     return this.connectedUsers.has(userId);
+  }
+
+  // Update user's online status in database
+  async updateUserOnlineStatus(userId: number, isOnline: boolean): Promise<void> {
+    try {
+      await prisma.userProfile.upsert({
+        where: { userId },
+        update: {
+          isOnline,
+          lastSeen: new Date()
+        },
+        create: {
+          userId,
+          isOnline,
+          lastSeen: new Date()
+        }
+      });
+    } catch (error) {
+      console.error(`Failed to update online status for user ${userId}:`, error);
+    }
+  }
+
+  // Update last seen for activity tracking
+  async updateUserActivity(userId: number): Promise<void> {
+    try {
+      const now = new Date();
+      
+      // Update in-memory tracking
+      const connectedUser = this.connectedUsers.get(userId);
+      if (connectedUser) {
+        connectedUser.lastSeen = now;
+      }
+
+      // Throttle database updates to once per minute per user
+      const lastUpdate = this.lastActivityUpdate.get(userId);
+      const shouldUpdate = !lastUpdate || (now.getTime() - lastUpdate.getTime()) > 60000; // 1 minute
+      
+      if (shouldUpdate) {
+        this.lastActivityUpdate.set(userId, now);
+        
+        // Update database
+        await prisma.userProfile.upsert({
+          where: { userId },
+          update: {
+            lastSeen: now,
+            isOnline: true
+          },
+          create: {
+            userId,
+            isOnline: true,
+            lastSeen: now
+          }
+        });
+      }
+    } catch (error) {
+      console.error(`Failed to update activity for user ${userId}:`, error);
+    }
+  }
+
+  // Get online status from database
+  async getUserOnlineStatus(userId: number): Promise<{ isOnline: boolean; lastSeen: Date | null }> {
+    try {
+      const profile = await prisma.userProfile.findUnique({
+        where: { userId },
+        select: { isOnline: true, lastSeen: true }
+      });
+
+      if (!profile) {
+        return { isOnline: false, lastSeen: null };
+      }
+
+      return {
+        isOnline: profile.isOnline,
+        lastSeen: profile.lastSeen
+      };
+    } catch (error) {
+      console.error(`Failed to get online status for user ${userId}:`, error);
+      return { isOnline: false, lastSeen: null };
+    }
+  }
+
+  // Cleanup stale online statuses (run periodically)
+  async cleanupStaleOnlineStatuses(): Promise<void> {
+    try {
+      const staleThreshold = new Date(Date.now() - 5 * 60 * 1000); // 5 minutes
+      
+      await prisma.userProfile.updateMany({
+        where: {
+          isOnline: true,
+          lastSeen: { lt: staleThreshold }
+        },
+        data: { isOnline: false }
+      });
+    } catch (error) {
+      console.error('Failed to cleanup stale online statuses:', error);
+    }
+  }
+
+  // Setup periodic cleanup
+  private setupPeriodicCleanup(): void {
+    // Run cleanup every 2 minutes
+    setInterval(() => {
+      this.cleanupStaleOnlineStatuses();
+    }, 2 * 60 * 1000);
   }
 }
 

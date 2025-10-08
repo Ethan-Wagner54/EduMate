@@ -28,7 +28,6 @@ const TutorNavigation = () => {
         const userId = authService.getUserId();
         
         if (!userId) {
-          console.error('TutorNavigation: No user ID found in token');
           setLoading(false);
           return;
         }
@@ -38,10 +37,8 @@ const TutorNavigation = () => {
         if (response.success && response.data) {
           setUser(response.data);
         } else {
-          console.error('TutorNavigation: Failed to load user data:', response.error);
         }
       } catch (err) {
-        console.error("TutorNavigation: Error fetching user:", err);
       } finally {
         setLoading(false);
       }

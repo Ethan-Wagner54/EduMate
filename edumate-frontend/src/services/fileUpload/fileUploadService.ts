@@ -81,7 +81,6 @@ class FileUploadService {
       };
 
     } catch (error: any) {
-      console.error('Error uploading files:', error);
       
       if (error.response && error.response.data) {
         return {
@@ -129,7 +128,6 @@ class FileUploadService {
       };
 
     } catch (error: any) {
-      console.error('Error sending message with attachments:', error);
       
       if (error.response && error.response.data) {
         return {

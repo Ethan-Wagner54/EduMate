@@ -16,20 +16,16 @@ export default function Progress() {
         setLoading(true);
         setError(null);
         
-        console.log('Progress: Fetching student progress data...');
         const response = await progressService.getStudentProgress();
         
         if (response.success && response.data) {
-          console.log('Progress: Data received:', response.data);
           setStats(response.data.stats);
           setModuleProgress(response.data.moduleProgress);
           setRecentActivity(response.data.recentActivity);
         } else {
-          console.error('Progress: Failed to load data:', response.error);
           setError(response.error || 'Failed to load progress data');
         }
       } catch (err) {
-        console.error('Progress: Error loading data:', err);
         setError('Failed to load progress data');
       } finally {
         setLoading(false);

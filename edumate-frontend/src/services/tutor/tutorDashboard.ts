@@ -65,7 +65,6 @@ export interface TutorDashboardResponse {
  */
 export const getTutorDashboard = async (): Promise<TutorDashboardResponse> => {
   try {
-    console.log('TutorDashboardService: Fetching tutor dashboard data...');
     
     // Ensure auth header is set
     authService.setAuthHeader();
@@ -73,7 +72,6 @@ export const getTutorDashboard = async (): Promise<TutorDashboardResponse> => {
     const response = await axios.get<TutorDashboardData>(`${API_URL}/tutor-dashboard`);
     
     if (response.data) {
-      console.log('TutorDashboardService: Dashboard data received:', response.data);
       return {
         success: true,
         data: response.data
@@ -85,7 +83,6 @@ export const getTutorDashboard = async (): Promise<TutorDashboardResponse> => {
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('TutorDashboardService: Error fetching dashboard data:', error);
     
     // Check if there's a response with error message
     if (error.response && error.response.data) {

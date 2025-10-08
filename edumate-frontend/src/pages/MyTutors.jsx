@@ -1,25 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Calendar, MessageSquare, BookOpen, User } from 'lucide-react';
+import { Star, Calendar, MessageSquare, BookOpen, User, Clock, AlertCircle } from 'lucide-react';
 import MessagingModal from '../components/student/MessagingModal';
 import { useNavigate } from 'react-router-dom';
 import { AvatarMedium } from '../components/ui/Avatar';
+import studentTutorsService from '../services/tutors/studentTutorsService';
+import { toast } from 'react-toastify';
 
 export default function MyTutors() {
   const [tutors, setTutors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [messagingTutor, setMessagingTutor] = useState(null);
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchMyTutors = async () => {
       try {
-        // TODO: Implement API call to get tutors for the current student
-        // const response = await tutorService.getMyTutors();
-        // setTutors(response.data);
-        setTutors([]);
+        setLoading(true);
+        setError(null);
+        
+        const response = await studentTutorsService.getMyTutors();
+        
+        if (response.success) {
+          const formattedTutors = response.data.tutors.map(tutor => 
+            studentTutorsService.formatTutorForDisplay(tutor)
+          );
+          setTutors(formattedTutors);
+        } else {
+          setError(response.error);
+          toast.error(response.error || 'Failed to load tutors');
+        }
       } catch (error) {
-        console.error('Error fetching tutors:', error);
+        setError('Failed to load tutors');
+        toast.error('Failed to load tutors');
       } finally {
         setLoading(false);
       }
@@ -38,7 +52,8 @@ export default function MyTutors() {
   };
 
   const handleViewTutorSessions = (tutor) => {
-    navigate(`/student/tutor-sessions/${tutor.id}`);
+    // Navigate to browse sessions with tutor name as search parameter
+    navigate(`/student/browse-sessions?tutor=${encodeURIComponent(tutor.name)}`);
   };
 
   const handleCloseMessaging = () => {
@@ -65,11 +80,31 @@ export default function MyTutors() {
           <p className="text-muted-foreground">Manage your tutoring relationships and track progress</p>
         </div>
 
-        {tutors.length === 0 ? (
+        {tutors.length === 0 && !loading && !error ? (
           <div className="bg-card rounded-xl p-8 shadow-sm border border-border text-center">
             <User className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">No tutors yet</h3>
-            <p className="text-muted-foreground">Start by browsing and joining sessions to connect with tutors.</p>
+            <p className="text-muted-foreground mb-4">Join sessions to start building relationships with tutors. They'll appear here automatically!</p>
+            <button 
+              onClick={() => navigate('/student/browse-sessions')}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Browse Sessions
+            </button>
+          </div>
+        ) : error ? (
+          <div className="bg-card rounded-xl p-8 shadow-sm border border-border text-center">
+            <div className="text-red-500 mb-4">
+              <AlertCircle className="mx-auto h-12 w-12" />
+            </div>
+            <h3 className="text-lg font-medium text-foreground mb-2">Error loading tutors</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Try Again
+            </button>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -94,34 +129,55 @@ export default function MyTutors() {
                   </div>
                 </div>
 
+                {/* Bio */}
+                {tutor.bio && (
+                  <div className="mb-4">
+                    <p className="text-sm text-muted-foreground line-clamp-2">{tutor.bio}</p>
+                  </div>
+                )}
+
                 {/* Modules */}
                 <div className="mb-4">
                   <div className="flex flex-wrap gap-2">
                     {tutor.modules.map((module, index) => (
                       <span key={index} className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-medium">
-                        {module}
+                        {module.code}
                       </span>
                     ))}
                   </div>
                 </div>
 
                 {/* Specialties */}
+                {tutor.specialties.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium text-card-foreground mb-2">Specialties:</h4>
+                    <p className="text-sm text-muted-foreground">{tutor.specialties.join(', ')}</p>
+                  </div>
+                )}
+
+                {/* Session History */}
                 <div className="mb-4">
-                  <h4 className="text-sm font-medium text-card-foreground mb-2">Specialties:</h4>
-                  <p className="text-sm text-muted-foreground">{tutor.specialties.join(', ')}</p>
+                  <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                    <span>Sessions Together</span>
+                    <span>{tutor.totalSessionsTogether}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>First Session</span>
+                    <span>{new Date(tutor.firstSessionDate).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Last Session</span>
+                    <span>{new Date(tutor.lastSessionDate).toLocaleDateString()}</span>
+                  </div>
                 </div>
 
-                {/* Progress */}
+                {/* Online Status */}
                 <div className="mb-4">
-                  <div className="flex justify-between text-sm text-muted-foreground mb-1">
-                    <span>Progress</span>
-                    <span>{tutor.completedSessions}/{tutor.totalSessions} sessions</span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div
-                      className="bg-primary h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${(tutor.completedSessions / tutor.totalSessions) * 100}%` }}
-                    ></div>
+                  <div className="flex items-center text-sm">
+                    <div className={`w-2 h-2 rounded-full mr-2 ${tutor.isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                    <span className={tutor.isOnline ? 'text-green-600' : 'text-muted-foreground'}>
+                      {tutor.isOnline ? 'Online now' : `Last seen ${new Date(tutor.lastSeen).toLocaleDateString()}`}
+                    </span>
                   </div>
                 </div>
 

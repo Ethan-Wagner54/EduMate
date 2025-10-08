@@ -25,7 +25,6 @@ export default function SessionHistory() {
           setError(response.error || 'Failed to load session history');
         }
       } catch (err) {
-        console.error('Error fetching session history:', err);
         setError('Failed to load session history');
       } finally {
         setLoading(false);
@@ -61,14 +60,12 @@ export default function SessionHistory() {
         dateFormat: 'short'
       });
       
-      console.log(`Exported ${sessions.length} sessions to ${filename}`);
       
       // Show success message
       const filterText = filter !== 'all' ? ` (${filter} only)` : '';
       alert(`Successfully exported ${sessions.length} session records${filterText} to ${filename}`);
       
     } catch (error) {
-      console.error('Error exporting session history:', error);
       alert('Failed to export session history. Please try again.');
     } finally {
       setExporting(false);

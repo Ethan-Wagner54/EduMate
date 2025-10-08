@@ -33,7 +33,6 @@ export const getSessionHistory = async (params?: SessionHistoryQueryParams): Pro
     // Construct URL with query parameters
     const url = `${API_URL}/session-history${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
     
-    console.log(`Fetching session history from: ${url}`);
     
     const response = await axios.get<SessionHistoryItem[]>(url);
     if (response.data) {
@@ -48,7 +47,6 @@ export const getSessionHistory = async (params?: SessionHistoryQueryParams): Pro
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error fetching session history:', error);
     
     if (error.response && error.response.data) {
       return {
@@ -71,7 +69,6 @@ export const submitSessionReview = async (sessionId: number, rating: number, fee
   try {
     authService.setAuthHeader();
     
-    console.log(`Submitting review for session ${sessionId}...`);
     
     const requestData: SessionReviewRequest = { rating, feedback };
     
@@ -88,7 +85,6 @@ export const submitSessionReview = async (sessionId: number, rating: number, fee
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error submitting review:', error);
     
     if (error.response && error.response.data) {
       return {
@@ -111,7 +107,6 @@ export const getTutorSessions = async (tutorId: number): Promise<TutorSessionsRe
   try {
     authService.setAuthHeader();
     
-    console.log(`Fetching sessions for tutor ${tutorId}...`);
     
     const response = await axios.get(`${API_URL}/session-history/tutors/${tutorId}/sessions`);
     if (response.data) {
@@ -126,7 +121,6 @@ export const getTutorSessions = async (tutorId: number): Promise<TutorSessionsRe
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error fetching tutor sessions:', error);
     
     if (error.response && error.response.data) {
       return {
@@ -147,7 +141,6 @@ export const getTutorSessions = async (tutorId: number): Promise<TutorSessionsRe
  */
 export const exportSessionHistoryToCSV = async (params?: SessionHistoryQueryParams): Promise<void> => {
   try {
-    console.log('Fetching session history for CSV export...');
     
     const response = await getSessionHistory(params);
     
@@ -176,9 +169,7 @@ export const exportSessionHistoryToCSV = async (params?: SessionHistoryQueryPara
       dateFormat: 'short'
     });
     
-    console.log(`Exported ${sessions.length} sessions to ${filename}`);
   } catch (error: any) {
-    console.error('Error exporting session history:', error);
     throw new Error(error.message || 'Failed to export session history');
   }
 };

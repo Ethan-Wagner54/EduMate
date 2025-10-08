@@ -117,9 +117,26 @@ router.post('/send', protect, (req, res) => {
   res.json({ success: true, message: 'Message sent' });
 });
 
-// Mark messages as read (no-op placeholder)
-router.post('/mark-read', protect, (req, res) => {
-  res.json({ success: true });
+// Mark messages as read
+router.post('/mark-read', protect, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    const { conversationId } = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+    
+    if (!conversationId) {
+      return res.status(400).json({ success: false, error: 'conversationId is required' });
+    }
+    
+    // For now, just return success since this is a mock endpoint
+    // In a real implementation, you'd update the database here
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to mark messages as read' });
+  }
 });
 
 // Unread count (placeholder)

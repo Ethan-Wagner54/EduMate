@@ -69,6 +69,7 @@ export const getConversations = async (req: Request, res: Response) => {
         unreadCount,
         isOnline: other?.profile?.isOnline || false,
         userType: other?.role || 'student',
+        userId: other?.id || null, // Include other participant's user ID for private messaging
         isGroup: conv.isGroup, // Include isGroup flag
         participantCount: conv.participants.length // Include participant count
       };
@@ -243,13 +244,57 @@ export const getConversation = async (req: Request, res: Response) => {
       id: conversation.id,
       name: conversation.name || otherParticipant?.name || 'Conversation',
       isOnline: otherParticipant?.profile?.isOnline || false,
-      userType: otherParticipant?.role || 'student'
+      userType: otherParticipant?.role || 'student',
+      userId: otherParticipant?.id || null // Include other participant's user ID
     };
 
     res.json(formattedConversation);
   } catch (e) {
     logger.error('conversation_get_failed', { error: (e as any)?.message || String(e) });
     return res.status(500).json({ error: 'Failed to get conversation' });
+  }
+};
+
+export const markAsRead = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { conversationId } = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    if (!conversationId) {
+      return res.status(400).json({ error: 'conversationId is required' });
+    }
+    
+    // Check if user is participant in conversation
+    const participation = await prisma.conversationParticipant.findFirst({
+      where: {
+        conversationId: parseInt(conversationId),
+        userId
+      }
+    });
+    
+    if (!participation) {
+      return res.status(403).json({ error: 'Not authorized to access this conversation' });
+    }
+    
+    // Update the participant's unread count and last read time
+    await prisma.conversationParticipant.update({
+      where: {
+        id: participation.id
+      },
+      data: {
+        unreadCount: 0,
+        lastRead: new Date()
+      }
+    });
+    
+    res.json({ success: true });
+  } catch (e) {
+    logger.error('mark_as_read_failed', { error: (e as any)?.message || String(e) });
+    return res.status(500).json({ error: 'Failed to mark messages as read' });
   }
 };
 
@@ -367,7 +412,8 @@ export const createConversation = async (req: Request, res: Response) => {
       id: conversation.id,
       name: conversation.name || otherParticipant?.name || 'Conversation',
       isOnline: false, // We'll implement online status later
-      userType: otherParticipant?.role || 'student'
+      userType: otherParticipant?.role || 'student',
+      userId: otherParticipant?.id || null // Include other participant's user ID
     };
 
     res.status(conversation.id === conversation.id ? 200 : 201).json(formattedConversation);

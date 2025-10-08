@@ -1,6 +1,5 @@
-import axios from 'axios';
+import axiosInstance from '../../config/axios';
 import config from '../../config/Config';
-import authService from '../auth/auth';
 import socketService from '../websocket/socketService';
 import {
   GroupChat,
@@ -28,8 +27,6 @@ class GroupChatService {
    */
   async getGroupChats(options: { page?: number; limit?: number } = {}): Promise<GroupChatListResponse> {
     try {
-      authService.setAuthHeader();
-      
       const { page = 1, limit = 20 } = options;
       
       const params = new URLSearchParams({
@@ -37,7 +34,7 @@ class GroupChatService {
         limit: limit.toString()
       });
 
-      const response = await axios.get(`${API_URL}/group-chats/groups?${params}`);
+      const response = await axiosInstance.get(`/group-chats/groups?${params}`);
       
       if (response.data && response.data.success) {
         return response.data;
@@ -49,7 +46,6 @@ class GroupChatService {
       };
 
     } catch (error: any) {
-      console.error('Error fetching group chats:', error);
       
       return {
         success: false,
@@ -63,9 +59,7 @@ class GroupChatService {
    */
   async getGroupChatBySession(sessionId: number): Promise<GroupChatResponse> {
     try {
-      authService.setAuthHeader();
-      
-      const response = await axios.get(`${API_URL}/group-chats/session/${sessionId}`);
+      const response = await axiosInstance.get(`/group-chats/session/${sessionId}`);
       
       if (response.data && response.data.success) {
         return response.data;
@@ -77,7 +71,6 @@ class GroupChatService {
       };
 
     } catch (error: any) {
-      console.error('Error fetching session group chat:', error);
       
       return {
         success: false,
@@ -91,9 +84,7 @@ class GroupChatService {
    */
   async createGroupChat(request: CreateGroupChatRequest): Promise<GroupChatResponse> {
     try {
-      authService.setAuthHeader();
-      
-      const response = await axios.post(`${API_URL}/group-chats/groups`, request);
+      const response = await axiosInstance.post(`/group-chats/groups`, request);
       
       if (response.data && response.data.success) {
         // Clear cache
@@ -107,7 +98,6 @@ class GroupChatService {
       };
 
     } catch (error: any) {
-      console.error('Error creating group chat:', error);
       
       if (error.response && error.response.data) {
         return {
@@ -131,8 +121,6 @@ class GroupChatService {
     options: { page?: number; limit?: number; before?: string; after?: string } = {}
   ): Promise<GroupChatMessagesResponse> {
     try {
-      authService.setAuthHeader();
-      
       const { page = 1, limit = 50, before, after } = options;
       
       // Check cache first
@@ -149,7 +137,7 @@ class GroupChatService {
       if (before) params.append('before', before);
       if (after) params.append('after', after);
 
-      const response = await axios.get(`${API_URL}/group-chats/${conversationId}/messages?${params}`);
+      const response = await axiosInstance.get(`/group-chats/${conversationId}/messages?${params}`);
       
       if (response.data && response.data.success) {
         // Cache the result
@@ -163,7 +151,6 @@ class GroupChatService {
       };
 
     } catch (error: any) {
-      console.error('Error fetching group chat messages:', error);
       
       return {
         success: false,
@@ -177,8 +164,6 @@ class GroupChatService {
    */
   async sendGroupMessage(request: SendGroupMessageRequest): Promise<SendGroupMessageResponse> {
     try {
-      authService.setAuthHeader();
-      
       // Try to send via WebSocket first for real-time delivery
       if (socketService.isSocketConnected()) {
         try {
@@ -188,12 +173,11 @@ class GroupChatService {
             data: socketResponse
           };
         } catch (socketError) {
-          console.warn('Socket send failed, falling back to HTTP:', socketError);
         }
       }
 
       // Fallback to HTTP API
-      const response = await axios.post(`${API_URL}/group-chats/${request.conversationId}/messages`, {
+      const response = await axiosInstance.post(`/group-chats/${request.conversationId}/messages`, {
         content: request.content,
         messageType: request.messageType || 'text',
         attachments: request.attachments || []
@@ -211,7 +195,6 @@ class GroupChatService {
       };
 
     } catch (error: any) {
-      console.error('Error sending group message:', error);
       
       if (error.response && error.response.data) {
         return {
@@ -248,22 +231,19 @@ class GroupChatService {
    */
   async markGroupMessagesAsRead(conversationId: number, messageIds: number[]): Promise<{ success: boolean; error?: string }> {
     try {
-      authService.setAuthHeader();
-      
       // Try WebSocket first
       if (socketService.isSocketConnected()) {
         socketService.markGroupMessagesAsRead(conversationId, messageIds);
       }
 
       // Also update via API
-      await axios.post(`${API_URL}/group-chats/${conversationId}/mark-read`, {
+      await axiosInstance.post(`/group-chats/${conversationId}/mark-read`, {
         messageIds
       });
 
       return { success: true };
 
     } catch (error: any) {
-      console.error('Error marking group messages as read:', error);
       return { success: false, error: 'Failed to mark messages as read' };
     }
   }
@@ -277,8 +257,6 @@ class GroupChatService {
     messageId?: string
   ): Promise<{ success: boolean; data?: MessageAttachment; error?: string }> {
     try {
-      authService.setAuthHeader();
-      
       // Validate file size (10MB max)
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
@@ -293,7 +271,7 @@ class GroupChatService {
       formData.append('conversationId', conversationId.toString());
       if (messageId) formData.append('messageId', messageId);
 
-      const response = await axios.post(`${API_URL}/group-chats/upload`, formData, {
+      const response = await axiosInstance.post(`/group-chats/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -309,10 +287,81 @@ class GroupChatService {
       };
 
     } catch (error: any) {
-      console.error('Error uploading group chat attachment:', error);
       return {
         success: false,
         error: 'Upload failed'
+      };
+    }
+  }
+
+  /**
+   * Delete a group chat
+   */
+  async deleteGroupChat(conversationId: number): Promise<{ success: boolean; error?: string; message?: string }> {
+    try {
+      const response = await axiosInstance.delete(`/group-chats/${conversationId}`);
+      
+      if (response.data && response.data.success) {
+        // Clear caches
+        this.clearGroupChatCache();
+        this.clearMessagesCache(conversationId);
+        
+        return response.data;
+      }
+
+      return {
+        success: false,
+        error: response.data?.error || 'Failed to delete group chat'
+      };
+
+    } catch (error: any) {
+      
+      if (error.response && error.response.data) {
+        return {
+          success: false,
+          error: error.response.data.error || 'Failed to delete group chat'
+        };
+      }
+
+      return {
+        success: false,
+        error: 'Network error occurred'
+      };
+    }
+  }
+
+  /**
+   * Leave a group chat
+   */
+  async leaveGroupChat(conversationId: number): Promise<{ success: boolean; error?: string; message?: string }> {
+    try {
+      const response = await axiosInstance.post(`/group-chats/${conversationId}/leave`);
+      
+      if (response.data && response.data.success) {
+        // Clear caches
+        this.clearGroupChatCache();
+        this.clearMessagesCache(conversationId);
+        
+        return response.data;
+      }
+
+      return {
+        success: false,
+        error: response.data?.error || 'Failed to leave group chat'
+      };
+
+    } catch (error: any) {
+      
+      if (error.response && error.response.data) {
+        return {
+          success: false,
+          error: error.response.data.error || 'Failed to leave group chat'
+        };
+      }
+
+      return {
+        success: false,
+        error: 'Network error occurred'
       };
     }
   }

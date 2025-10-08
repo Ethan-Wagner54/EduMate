@@ -16,21 +16,17 @@ export default function TutorDashboard() {
         setLoading(true);
         setError(null);
         
-        console.log('TutorDashboard: Fetching real dashboard data from API...');
         
         // Get tutor dashboard data from the new API endpoint
         const response = await tutorDashboardService.getTutorDashboard();
         
         if (response.success && response.data) {
-          console.log('TutorDashboard: Real dashboard data received:', response.data);
           setTutor(response.data);
         } else {
-          console.error('TutorDashboard: Failed to load dashboard data:', response.error);
           setError(response.error || 'Failed to load tutor dashboard data');
         }
         
       } catch (err) {
-        console.error('TutorDashboard: Error loading dashboard data:', err);
         setError('Failed to load tutor dashboard data');
       } finally {
         setLoading(false);
@@ -88,7 +84,6 @@ export default function TutorDashboard() {
           </h1>
           <Button
             variant="secondary"
-            onClick={() => console.log("Logout logic here")}
           >
             Logout
           </Button>

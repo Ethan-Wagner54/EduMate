@@ -11,7 +11,6 @@ import authService from '../services/auth/auth'; // Import our new auth service
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
-  const [userType, setUserType] = useState("student"); // student or tutor
   const [formData, setFormData] = useState({ email: '', password: '' });
   const navigate = useNavigate();
 
@@ -29,24 +28,12 @@ export default function Login() {
       const response = await authService.login(loginData);
       
       if (response.success) {
-        const userTypeFromResponse = authService.getUserRole();
+        const userRole = authService.getUserRole();
         
-        // Check if the user type matches the selected tab
-        if (userType === "student" && userTypeFromResponse !== "student") {
-          alert("This account is not a student account. Please select the correct user type.");
-          localStorage.removeItem('token'); // Clear the token
-          return;
-        }
-        if (userType === "tutor" && userTypeFromResponse !== "tutor") {
-          alert("This account is not a tutor account. Please select the correct user type.");
-          localStorage.removeItem('token'); // Clear the token
-          return;
-        }
-        
-        // Navigate based on actual user role
-        if (userTypeFromResponse === "admin") {
+        // Navigate based on user role from token
+        if (userRole === "admin") {
           navigate("/admin");
-        } else if (userTypeFromResponse === "tutor") {
+        } else if (userRole === "tutor") {
           navigate("/tutor");
         } else {
           navigate("/student");
@@ -74,21 +61,6 @@ export default function Login() {
             Sign in to your EduMate account
           </CardDescription>
 
-          {/* Toggle Tutor / Student */}
-          <div className="flex justify-center gap-4 mt-2">
-            <Button
-              variant={userType === "student" ? "default" : "outline"}
-              onClick={() => setUserType("student")}
-            >
-              Student
-            </Button>
-            <Button
-              variant={userType === "tutor" ? "default" : "outline"}
-              onClick={() => setUserType("tutor")}
-            >
-              Tutor
-            </Button>
-          </div>
         </CardHeader>
 
         <CardContent className="space-y-6">

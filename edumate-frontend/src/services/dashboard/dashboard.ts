@@ -22,7 +22,6 @@ export const getDashboardStats = async (): Promise<DashboardResponse<DashboardSt
   try {
     authService.setAuthHeader();
     
-    console.log('Fetching dashboard stats...');
     
     const response = await axios.get<DashboardStats>(`${API_URL}/dashboard/stats`);
     if (response.data) {
@@ -37,7 +36,6 @@ export const getDashboardStats = async (): Promise<DashboardResponse<DashboardSt
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error fetching dashboard stats:', error);
     
     if (error.response && error.response.data) {
       return {
@@ -60,7 +58,6 @@ export const getRecentActivities = async (): Promise<ActivitiesResponse> => {
   try {
     authService.setAuthHeader();
     
-    console.log('Fetching recent activities...');
     
     const response = await axios.get<Activity[]>(`${API_URL}/dashboard/activities`);
     if (response.data) {
@@ -75,7 +72,6 @@ export const getRecentActivities = async (): Promise<ActivitiesResponse> => {
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error fetching activities:', error);
     
     if (error.response && error.response.data) {
       return {
@@ -98,7 +94,6 @@ export const getUpcomingSessions = async (): Promise<UpcomingSessionsResponse> =
   try {
     authService.setAuthHeader();
     
-    console.log('Fetching upcoming sessions...');
     
     const response = await axios.get<UpcomingSession[]>(`${API_URL}/dashboard/upcoming-sessions`);
     if (response.data) {
@@ -113,7 +108,6 @@ export const getUpcomingSessions = async (): Promise<UpcomingSessionsResponse> =
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error fetching upcoming sessions:', error);
     
     if (error.response && error.response.data) {
       return {
@@ -136,7 +130,6 @@ export const getTutorProgress = async (): Promise<TutorProgressResponse> => {
   try {
     authService.setAuthHeader();
     
-    console.log('Fetching tutor progress...');
     
     const response = await axios.get<TutorProgress[]>(`${API_URL}/dashboard/tutor-progress`);
     if (response.data) {
@@ -151,7 +144,6 @@ export const getTutorProgress = async (): Promise<TutorProgressResponse> => {
       error: 'No data received from the server'
     };
   } catch (error: any) {
-    console.error('Error fetching tutor progress:', error);
     
     if (error.response && error.response.data) {
       return {

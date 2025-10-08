@@ -3,7 +3,8 @@ import { PrismaClient } from '@prisma/client';
 import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
+import socketService from '../services/socketService';
 
 // Interface for file attachments
 interface FileAttachment {
@@ -31,7 +32,7 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
-    const uniqueId = uuidv4();
+    const uniqueId = randomUUID();
     const extension = path.extname(file.originalname);
     const filename = `${uniqueId}${extension}`;
     cb(null, filename);
@@ -124,7 +125,7 @@ export const uploadFiles = async (req: Request, res: Response) => {
 
     // Process uploaded files
     const attachments: FileAttachment[] = files.map((file: Express.Multer.File) => ({
-      id: uuidv4(),
+      id: randomUUID(),
       filename: file.filename,
       originalName: file.originalname,
       mimeType: file.mimetype,
@@ -142,7 +143,6 @@ export const uploadFiles = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error uploading files:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to upload files'
@@ -195,7 +195,7 @@ export const sendMessageWithAttachments = async (req: Request, res: Response) =>
       data: messageData,
       include: {
         sender: {
-          select: { id: true, name: true }
+          select: { id: true, name: true, role: true }
         }
       }
     });
@@ -217,6 +217,27 @@ export const sendMessageWithAttachments = async (req: Request, res: Response) =>
       }
     });
 
+    // Emit WebSocket event for real-time delivery
+    try {
+      const messageForSocket = {
+        id: message.id,
+        conversationId: conversationId,
+        senderId: userId,
+        senderName: message.sender.name,
+        senderRole: message.sender.role,
+        content: message.content,
+        messageType: 'text',
+        attachments: attachments || [],
+        timestamp: message.sentAt,
+        isRead: false
+      };
+
+      // Emit to group chat room
+      socketService.sendToRoom(`group-${conversationId}`, 'new-group-message', messageForSocket);
+    } catch (socketError) {
+      // Log socket error but don't fail the request
+    }
+
     const formattedMessage = {
       id: message.id,
       sender: message.sender.name,
@@ -229,7 +250,6 @@ export const sendMessageWithAttachments = async (req: Request, res: Response) =>
     res.status(201).json(formattedMessage);
 
   } catch (error) {
-    console.error('Error sending message with attachments:', error);
     res.status(500).json({ error: 'Failed to send message' });
   }
 };
@@ -263,7 +283,6 @@ export const serveFile = async (req: Request, res: Response) => {
     fileStream.pipe(res);
 
   } catch (error) {
-    console.error('Error serving file:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to serve file'

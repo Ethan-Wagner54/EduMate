@@ -1,47 +1,137 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Calendar, Clock, MapPin, Users, BookOpen, ArrowLeft, Star, AlertTriangle } from 'lucide-react';
-import sessionHistoryService from '../services/sessionHistory/sessionHistory';
+import { useNavigate, Link } from 'react-router-dom';
+import { Calendar, Clock, MapPin, Users, BookOpen, Star, AlertTriangle, Plus, Edit, Trash2, Loader, CheckCircle, Eye } from 'lucide-react';
+import sessionService from '../services/sessions/session';
+import authService from '../services/auth/auth';
 
 export default function TutorSessions() {
-  const { tutorId } = useParams();
   const navigate = useNavigate();
   const [sessions, setSessions] = useState([]);
-  const [tutor, setTutor] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all'); // all, upcoming, completed
+  const [deleteLoading, setDeleteLoading] = useState({});
+  const [cancelLoading, setCancelLoading] = useState({});
+  const [publishLoading, setPublishLoading] = useState({});
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [filter, setFilter] = useState('all'); // all, upcoming, completed, cancelled
 
   useEffect(() => {
-    const fetchTutorAndSessions = async () => {
+    // Check if user is a tutor
+    const userRole = authService.getUserRole();
+    if (userRole !== 'tutor') {
+      navigate('/');
+      return;
+    }
+
+    const fetchTutorSessions = async () => {
       try {
         setLoading(true);
-        setError(null);
+        setError('');
         
-        const response = await sessionHistoryService.getTutorSessions(parseInt(tutorId));
+        const response = await sessionService.getUserSessions();
         if (response.success && response.data) {
-          setTutor(response.data.tutor);
-          setSessions(response.data.sessions || []);
+          setSessions(response.data);
         } else {
-          setError(response.error || 'Failed to load tutor sessions');
-          // If tutor not found, redirect back
-          if (response.error && response.error.includes('not found')) {
-            navigate('/student/my-tutors');
-            return;
-          }
+          setError(response.error || 'Failed to load sessions');
         }
       } catch (err) {
-        console.error('Error fetching tutor sessions:', err);
-        setError('Failed to load tutor sessions');
+        setError('Failed to load sessions');
       } finally {
         setLoading(false);
       }
     };
 
-    if (tutorId) {
-      fetchTutorAndSessions();
+    fetchTutorSessions();
+  }, [navigate]);
+
+  const handleDeleteSession = async (sessionId) => {
+    try {
+      setDeleteLoading(prev => ({ ...prev, [sessionId]: true }));
+      setError('');
+      setSuccess('');
+
+      const response = await sessionService.deleteSession(sessionId);
+      
+      if (response.success) {
+        setSuccess('Session deleted successfully!');
+        // Refresh sessions
+        const updatedResponse = await sessionService.getUserSessions();
+        if (updatedResponse.success && updatedResponse.data) {
+          setSessions(updatedResponse.data);
+        }
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(response.error || 'Failed to delete session');
+      }
+    } catch (error) {
+      setError('Failed to delete session');
+    } finally {
+      setDeleteLoading(prev => ({ ...prev, [sessionId]: false }));
     }
-  }, [tutorId, navigate]);
+  };
+
+  const handleCancelSession = async (sessionId) => {
+    const reason = prompt('Please provide a reason for cancelling this session (optional):');
+    
+    // If user clicks cancel, don't proceed
+    if (reason === null) return;
+    
+    try {
+      setCancelLoading(prev => ({ ...prev, [sessionId]: true }));
+      setError('');
+      setSuccess('');
+
+      const response = await sessionService.cancelSession(sessionId, reason);
+      
+      if (response.success) {
+        setSuccess('Session successfully cancelled. All enrolled students have been notified.');
+        // Refresh sessions
+        const updatedResponse = await sessionService.getUserSessions();
+        if (updatedResponse.success && updatedResponse.data) {
+          setSessions(updatedResponse.data);
+        }
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => setSuccess(''), 5000);
+      } else {
+        setError(response.error || 'Failed to cancel session');
+      }
+    } catch (error) {
+      setError('Failed to cancel session');
+    } finally {
+      setCancelLoading(prev => ({ ...prev, [sessionId]: false }));
+    }
+  };
+
+  const handlePublishSession = async (sessionId) => {
+    try {
+      setPublishLoading(prev => ({ ...prev, [sessionId]: true }));
+      setError('');
+      setSuccess('');
+
+      const response = await sessionService.updateSessionStatus(sessionId, 'published');
+      
+      if (response.success) {
+        setSuccess('Session published successfully! It is now visible to students.');
+        // Refresh sessions
+        const updatedResponse = await sessionService.getUserSessions();
+        if (updatedResponse.success && updatedResponse.data) {
+          setSessions(updatedResponse.data);
+        }
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(response.error || 'Failed to publish session');
+      }
+    } catch (error) {
+      setError('Failed to publish session');
+    } finally {
+      setPublishLoading(prev => ({ ...prev, [sessionId]: false }));
+    }
+  };
 
   const filteredSessions = sessions.filter(session => {
     const now = new Date();
@@ -50,9 +140,11 @@ export default function TutorSessions() {
 
     switch (filter) {
       case 'upcoming':
-        return sessionStart > now;
+        return sessionStart > now && session.status !== 'cancelled';
       case 'completed':
-        return sessionEnd < now;
+        return sessionEnd < now && session.status !== 'cancelled';
+      case 'cancelled':
+        return session.status === 'cancelled';
       default:
         return true;
     }
@@ -66,32 +158,8 @@ export default function TutorSessions() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading tutor sessions...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-center">
-          <AlertTriangle className="mx-auto h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">Error Loading Tutor</h3>
-          <p className="text-muted-foreground">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!tutor) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-center">
-          <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">Tutor not found</h3>
-          <p className="text-muted-foreground">The tutor you're looking for doesn't exist.</p>
+          <Loader className="animate-spin h-8 w-8 mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your sessions...</p>
         </div>
       </div>
     );
@@ -102,46 +170,35 @@ export default function TutorSessions() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Link
-            to="/student/my-tutors"
-            className="inline-flex items-center text-primary hover:text-primary/80 mb-4 transition-colors"
-          >
-            <ArrowLeft size={20} className="mr-2" />
-            Back to My Tutors
-          </Link>
-          
-          <div className="bg-card border border-border rounded-xl p-6 shadow-sm mb-6 transition-colors duration-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="bg-primary rounded-full w-16 h-16 flex items-center justify-center font-bold text-primary-foreground text-2xl mr-6">
-                  {getInitials(tutor.name)}
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-foreground mb-2">{tutor.name}'s Sessions</h1>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center">
-                      <Star size={14} className="text-yellow-400 fill-current mr-1" />
-                      <span>{tutor.rating} rating</span>
-                    </div>
-                    <span>•</span>
-                    <span>{tutor.totalSessions} total sessions</span>
-                    <span>•</span>
-                    <span>{tutor.specialties.join(', ')}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="text-right">
-                <div className="flex flex-wrap gap-2">
-                  {tutor.modules.map((module, index) => (
-                    <span key={index} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
-                      {module}
-                    </span>
-                  ))}
-                </div>
-              </div>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">My Sessions</h1>
+              <p className="text-muted-foreground">Manage your tutoring sessions</p>
             </div>
+            
+            <Link
+              to="/tutor/create-session"
+              className="inline-flex items-center px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
+            >
+              <Plus size={20} className="mr-2" />
+              Create New Session
+            </Link>
           </div>
+          
+          {/* Success/Error Messages */}
+          {error && (
+            <div className="mb-6 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center">
+              <AlertTriangle className="h-4 w-4 text-destructive mr-2" />
+              <span className="text-destructive text-sm">{error}</span>
+            </div>
+          )}
+          
+          {success && (
+            <div className="mb-6 p-3 bg-green-100 border border-green-200 rounded-lg flex items-center">
+              <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+              <span className="text-green-700 text-sm">{success}</span>
+            </div>
+          )}
         </div>
 
         {/* Filter tabs */}
@@ -150,7 +207,8 @@ export default function TutorSessions() {
             {[
               { key: 'all', label: 'All Sessions' },
               { key: 'upcoming', label: 'Upcoming' },
-              { key: 'completed', label: 'Completed' }
+              { key: 'completed', label: 'Completed' },
+              { key: 'cancelled', label: 'Cancelled' }
             ].map(({ key, label }) => (
               <button
                 key={key}
@@ -172,11 +230,18 @@ export default function TutorSessions() {
           <div className="bg-card border border-border rounded-xl p-8 shadow-sm text-center transition-colors duration-200">
             <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">No sessions found</h3>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-4">
               {filter === 'all' 
-                ? "This tutor hasn't scheduled any sessions yet." 
+                ? "You haven't created any sessions yet." 
                 : `No ${filter} sessions found.`}
             </p>
+            <Link
+              to="/tutor/create-session"
+              className="inline-flex items-center px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
+            >
+              <Plus size={20} className="mr-2" />
+              Create Your First Session
+            </Link>
           </div>
         ) : (
           <div className="grid gap-6">
@@ -190,11 +255,11 @@ export default function TutorSessions() {
                     <div className="flex-1">
                       <div className="flex items-center mb-3">
                         <div className="bg-primary rounded-full w-10 h-10 flex items-center justify-center font-bold text-primary-foreground text-lg mr-4">
-                          {getInitials(session.tutor.name)}
+                          {session.module?.code?.substring(0, 2) || 'S'}
                         </div>
                         <div>
-                          <h3 className="text-lg font-semibold text-foreground">{session.module.name}</h3>
-                          <p className="text-sm text-muted-foreground">with {session.tutor.name}</p>
+                          <h3 className="text-lg font-semibold text-foreground">{session.module?.name || session.title}</h3>
+                          <p className="text-sm text-muted-foreground">Your tutoring session</p>
                         </div>
                       </div>
                       
@@ -209,21 +274,17 @@ export default function TutorSessions() {
                         </div>
                         <div className="flex items-center">
                           <MapPin size={16} className="mr-2" />
-                          <span>{session.location}</span>
+                          <span>{session.location || 'TBA'}</span>
                         </div>
                         <div className="flex items-center">
                           <Users size={16} className="mr-2" />
-                          <span>{session.enrolled}/{session.capacity} enrolled</span>
+                          <span>{session.enrolledCount || 0}/{session.capacity || '∞'} enrolled</span>
                         </div>
                       </div>
 
-                      {session.description && (
-                        <p className="text-sm text-muted-foreground mb-4">{session.description}</p>
-                      )}
-
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-medium">
-                          {session.module.code}
+                          {session.module?.code || session.course}
                         </span>
                         <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
                           isCompleted 
@@ -234,22 +295,53 @@ export default function TutorSessions() {
                         }`}>
                           {isCompleted ? 'completed' : isUpcoming ? 'upcoming' : session.status}
                         </span>
+                        {session.status === 'draft' && (
+                          <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Not visible to students
+                          </span>
+                        )}
                       </div>
                     </div>
                     
-                    <div className="ml-6">
-                      {isUpcoming && session.enrolled < session.capacity && (
-                        <button className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium">
-                          Join Session
+                    <div className="ml-6 flex gap-2">
+                      {session.status === 'draft' && isUpcoming && (
+                        <button 
+                          onClick={() => handlePublishSession(session.id)}
+                          disabled={publishLoading[session.id]}
+                          className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center"
+                        >
+                          {publishLoading[session.id] ? (
+                            <Loader className="animate-spin h-4 w-4 mr-1" />
+                          ) : (
+                            <Eye className="h-4 w-4 mr-1" />
+                          )}
+                          {publishLoading[session.id] ? 'Publishing...' : 'Publish'}
                         </button>
                       )}
-                      {isUpcoming && session.enrolled >= session.capacity && (
-                        <button disabled className="px-6 py-2 bg-muted text-muted-foreground rounded-lg font-medium cursor-not-allowed">
-                          Session Full
-                        </button>
+                      {isUpcoming && (
+                        <>
+                          <button className="p-2 border border-border text-muted-foreground rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors">
+                            <Edit size={16} />
+                          </button>
+                          <button 
+                            onClick={() => {
+                              if (window.confirm('Are you sure you want to delete this session? This action cannot be undone.')) {
+                                handleDeleteSession(session.id);
+                              }
+                            }}
+                            disabled={deleteLoading[session.id]}
+                            className="p-2 border border-destructive text-destructive rounded-lg hover:bg-destructive hover:text-destructive-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {deleteLoading[session.id] ? (
+                              <Loader className="animate-spin" size={16} />
+                            ) : (
+                              <Trash2 size={16} />
+                            )}
+                          </button>
+                        </>
                       )}
                       {isCompleted && (
-                        <button className="px-6 py-2 bg-success text-success-foreground rounded-lg hover:bg-success/90 transition-colors font-medium">
+                        <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium">
                           View Details
                         </button>
                       )}

@@ -16,21 +16,17 @@ const API_URL = config.apiUrl;
  */
 export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
   try {
-    console.log("Logging in with credentials:", credentials);
     const response = await axios.post<any>(`${API_URL}/auth/login`, credentials);
-    
-    console.log("Login response:", response.data);
     
     // If login is successful, store only the JWT token in localStorage 
     if (response.data && response.data.token) {
       // Only store the token in localStorage
       localStorage.setItem('token', response.data.token);
       
+      // Auth headers will be set automatically by axios interceptor
+      
       // Log decoded token for debugging but don't store sensitive parts
       const decodedToken = decodeToken(response.data.token);
-      if (decodedToken) {
-        console.log("Token successfully validated");
-      }
       
       // Return the response data with success flag
       return {
@@ -100,7 +96,7 @@ export const isAuthenticated = (): boolean => {
 /**
  * Get the current user information by decoding the JWT token
  */
-export const getCurrentUser = (): { userId?: string; userType?: string; role?: string; email?: string } | null => {
+export const getCurrentUser = (): { userId?: number; userType?: string; role?: string; email?: string } | null => {
   const token = getToken();
   if (!token) {
     return null;
@@ -115,10 +111,15 @@ export const getCurrentUser = (): { userId?: string; userType?: string; role?: s
   
   // Return relevant user information from the token
   return {
-    userId: decoded.userId?.toString(), // sub is the standard JWT claim for subject (usually userId)
+    userId: decoded.userId, // Keep as number for WebSocket compatibility
     role: decoded.role
   };
 };
+
+/**
+ * Get user info for WebSocket (alias for compatibility)
+ */
+export const getUser = getCurrentUser;
 
 /**
  * Get user role from JWT token
@@ -238,6 +239,7 @@ const authService = {
   getToken,
   isAuthenticated,
   getCurrentUser,
+  getUser,
   getUserRole,
   getUserId,
   hasRole,
