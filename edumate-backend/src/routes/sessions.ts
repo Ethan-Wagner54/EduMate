@@ -8,6 +8,7 @@ import {
   leaveSession,
   editSession,
   deleteSession,
+  cancelSession,
   getUserSessions,
   getSessionDetails,
 } from '../controllers/sessions.controller';
@@ -35,5 +36,8 @@ router.delete('/:id', protect, requireRole('tutor', 'admin'), deleteSession);
 // Only logged-in students can join or leave a session
 router.post('/:id/join', protect, requireRole('student'), joinSession);
 router.post('/:id/leave', protect, requireRole('student'), leaveSession);
+
+// Only logged-in tutors can cancel their own sessions
+router.post('/:id/cancel', protect, requireRole('tutor'), cancelSession);
 
 export default router;

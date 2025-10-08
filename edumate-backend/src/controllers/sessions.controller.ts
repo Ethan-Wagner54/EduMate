@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
 import { PrismaClient, SessionStatus } from '@prisma/client';
-import { logAudit } from '../utils/audit';
+import { Request, Response } from 'express';
 import { logger } from '../utils/logger';
+import { logAudit } from '../utils/audit';
 
 const prisma = new PrismaClient();
 
@@ -242,7 +242,7 @@ export const listSessions = async (req: Request, res: Response) => {
         time: formatSessionTime(session.startTime, session.endTime),
         location: session.location || 'TBA',
         enrolled: `${session._count.enrollments}/${session.capacity || 'unlimited'} students enrolled`,
-        description: `Comprehensive session covering ${session.module.name} concepts`,
+        description: session.description || `Session covering ${session.module.name} concepts`,
         startTime: session.startTime,
         endTime: session.endTime,
         capacity: session.capacity,
@@ -263,10 +263,23 @@ export const listSessions = async (req: Request, res: Response) => {
 export const createSession = async (req: Request, res: Response) => {
   try {
     const user = req.user!;
-    const { moduleId, startTime, endTime, location, capacity } = req.body;
+    const { moduleId, startTime, endTime, location, capacity, description } = req.body;
 
-    if (!moduleId || !startTime || !endTime) {
+    if (!moduleId || !startTime || !endTime || !description?.trim()) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Validate that the tutor is authorized to teach this module
+    const tutorModule = await prisma.tutorModule.findFirst({
+      where: {
+        tutorId: user.userId,
+        moduleId: Number(moduleId),
+        approvedByAdmin: true
+      }
+    });
+    
+    if (!tutorModule) {
+      return res.status(403).json({ error: 'You are not authorized to create sessions for this module' });
     }
 
     const sTime = new Date(startTime);
@@ -292,6 +305,7 @@ export const createSession = async (req: Request, res: Response) => {
         endTime: eTime,
         location,
         capacity: capacity ? Number(capacity) : null,
+        description: description.trim(),
         // Corrected to lowercase 'published'
         status: SessionStatus.published,
       },
@@ -317,8 +331,103 @@ export const createSession = async (req: Request, res: Response) => {
     res.status(201).json(session);
     await logAudit(user.userId, 'Session', session.id, 'CREATE');
   } catch (e) {
-    logger.error('sessions_create_failed', { error: (e as any)?.message || String(e) });
+    logger.error('sessions_create_failed', { 
+      error: (e as any)?.message || String(e), 
+      userId: req.user?.userId,
+      requestBody: req.body,
+      stack: (e as any)?.stack
+    });
     return res.status(500).json({ error: 'Failed to create session' });
+  }
+};
+
+export const leaveSession = async (req: Request, res: Response) => {
+  try {
+    const user = req.user!;
+    const sessionId = Number(req.params.id);
+
+    if (user.role !== 'student') {
+      return res.status(403).json({ error: 'Only students can leave sessions' });
+    }
+
+    // Check if student is enrolled in the session
+    const enrollment = await prisma.enrollment.findFirst({
+      where: {
+        sessionId,
+        studentId: user.userId,
+        status: 'joined'
+      },
+      include: {
+        session: {
+          include: {
+            module: { select: { name: true } },
+            tutor: { select: { name: true } }
+          }
+        }
+      }
+    });
+
+    if (!enrollment) {
+      return res.status(404).json({ error: 'You are not enrolled in this session or have already left' });
+    }
+
+    // Update enrollment status to 'left'
+    await prisma.enrollment.update({
+      where: { id: enrollment.id },
+      data: {
+        status: 'left',
+        leftAt: new Date()
+      }
+    });
+
+    // Log activity
+    await prisma.activity.create({
+      data: {
+        userId: user.userId,
+        type: 'session_left',
+        description: `Left ${enrollment.session.module.name} session with ${enrollment.session.tutor.name}`,
+        entityType: 'session',
+        entityId: sessionId
+      }
+    });
+
+    // Send notification message to tutor in session group chat
+    try {
+      const conversation = await prisma.conversation.findFirst({
+        where: {
+          name: `Session ${sessionId} Group Chat`
+        }
+      });
+
+      if (conversation) {
+        // Get user name for notification
+        const userData = await prisma.user.findUnique({
+          where: { id: user.userId },
+          select: { name: true }
+        });
+        
+        await prisma.conversationMessage.create({
+          data: {
+            conversationId: conversation.id,
+            senderId: enrollment.session.tutorId,
+            content: `${userData?.name || 'A student'} has left the session.`
+          }
+        });
+      }
+    } catch (chatError) {
+      // Don't fail the leave operation if chat notification fails
+      logger.error('leave_session_chat_notification_failed', { 
+        sessionId, 
+        userId: user.userId, 
+        error: (chatError as any)?.message || String(chatError) 
+      });
+    }
+
+    res.json({ message: 'Successfully left the session' });
+    await logAudit(user.userId, 'Enrollment', enrollment.id, 'LEAVE_SESSION');
+  } catch (e) {
+    logger.error('sessions_leave_failed', { error: (e as any)?.message || String(e) });
+    return res.status(500).json({ error: 'Failed to leave session' });
   }
 };
 
@@ -438,80 +547,6 @@ export const joinSession = async (req: Request, res: Response) => {
   }
 };
 
-export const leaveSession = async (req: Request, res: Response) => {
-  try {
-    const user = req.user!;
-    const sessionId = Number(req.params.id);
-
-    const enrollment = await prisma.enrollment.update({
-      where: { sessionId_studentId: { sessionId, studentId: user.userId } },
-      data: { status: 'cancelled' },
-    });
-
-    // Remove student from session group chat
-    try {
-      const session = await prisma.session.findUnique({
-        where: { id: sessionId },
-        include: { module: true }
-      });
-
-      if (session) {
-        // Find the conversation for this session
-        const conversation = await prisma.conversation.findFirst({
-          where: {
-            type: 'session_chat',
-            name: `${session.module.code} - ${session.module.name} Session ${sessionId}`
-          }
-        });
-
-        if (conversation) {
-          // Remove the user from the conversation
-          await prisma.conversationParticipant.deleteMany({
-            where: {
-              conversationId: conversation.id,
-              userId: user.userId
-            }
-          });
-
-          // Send notification message about member leaving
-          const leavingUser = await prisma.user.findUnique({
-            where: { id: user.userId },
-            select: { name: true }
-          });
-
-          if (leavingUser) {
-            await prisma.conversationMessage.create({
-              data: {
-                conversationId: conversation.id,
-                senderId: session.tutorId,
-                content: `${leavingUser.name} has left the session. 👋`
-              }
-            });
-          }
-
-          logger.info('student_removed_from_group_chat', {
-            sessionId,
-            userId: user.userId,
-            conversationId: conversation.id
-          });
-        }
-      }
-    } catch (chatError) {
-      // Log error but don't fail the leave operation
-      logger.error('session_group_chat_leave_failed', {
-        sessionId,
-        userId: user.userId,
-        error: (chatError as any)?.message || String(chatError)
-      });
-    }
-
-    res.json({ ok: true });
-    await logAudit(user.userId, 'Enrollment', enrollment.id, 'LEAVE');
-  } catch (e) {
-    logger.error('sessions_leave_failed', { error: (e as any)?.message || String(e) });
-    res.status(500).json({ error: 'Failed to leave session' });
-  }
-};
 
 export const editSession = async (req: Request, res: Response) => {
   try {
@@ -573,6 +608,124 @@ export const editSession = async (req: Request, res: Response) => {
   }
 };
 
+export const cancelSession = async (req: Request, res: Response) => {
+  try {
+    const user = req.user!;
+    const sessionId = Number(req.params.id);
+    const { reason } = req.body;
+
+    if (user.role !== 'tutor') {
+      return res.status(403).json({ error: 'Only tutors can cancel sessions' });
+    }
+
+    // Check if session exists and belongs to the user
+    const session = await prisma.session.findFirst({
+      where: { id: sessionId, tutorId: user.userId },
+      include: {
+        module: { select: { name: true } },
+        enrollments: {
+          where: { status: 'joined' },
+          include: { student: { select: { name: true } } }
+        }
+      }
+    });
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found or unauthorized' });
+    }
+
+    if (session.status === 'cancelled') {
+      return res.status(400).json({ error: 'Session is already cancelled' });
+    }
+
+    // Update session status to cancelled
+    await prisma.session.update({
+      where: { id: sessionId },
+      data: {
+        status: 'cancelled',
+        cancelledAt: new Date()
+      }
+    });
+
+    // Log activity for tutor
+    await prisma.activity.create({
+      data: {
+        userId: user.userId,
+        type: 'session_cancelled_by_tutor',
+        description: `Cancelled ${session.module.name} session${reason ? ` - Reason: ${reason}` : ''}`,
+        entityType: 'session',
+        entityId: sessionId
+      }
+    });
+
+    // Send notification messages to all enrolled students
+    try {
+      const conversation = await prisma.conversation.findFirst({
+        where: {
+          name: `Session ${sessionId} Group Chat`
+        }
+      });
+
+      if (conversation) {
+        // Get tutor name for notification
+        const tutorData = await prisma.user.findUnique({
+          where: { id: user.userId },
+          select: { name: true }
+        });
+        
+        const tutorName = tutorData?.name || 'The tutor';
+        const cancelMessage = reason 
+          ? `This session has been cancelled by ${tutorName}. Reason: ${reason}`
+          : `This session has been cancelled by ${tutorName}.`;
+        
+        await prisma.conversationMessage.create({
+          data: {
+            conversationId: conversation.id,
+            senderId: user.userId,
+            content: cancelMessage
+          }
+        });
+      }
+
+      // Create individual activities for each enrolled student
+      const tutorData = await prisma.user.findUnique({
+        where: { id: user.userId },
+        select: { name: true }
+      });
+      const tutorName = tutorData?.name || 'The tutor';
+      
+      for (const enrollment of session.enrollments) {
+        await prisma.activity.create({
+          data: {
+            userId: enrollment.studentId,
+            type: 'session_cancelled_by_tutor',
+            description: `${session.module.name} session was cancelled by ${tutorName}${reason ? ` - Reason: ${reason}` : ''}`,
+            entityType: 'session',
+            entityId: sessionId
+          }
+        });
+      }
+
+    } catch (notificationError) {
+      // Don't fail the cancellation if notifications fail
+      logger.error('cancel_session_notification_failed', { 
+        sessionId, 
+        userId: user.userId, 
+        error: (notificationError as any)?.message || String(notificationError) 
+      });
+    }
+
+    res.json({ 
+      message: 'Session successfully cancelled', 
+      notifiedStudents: session.enrollments.length 
+    });
+    await logAudit(user.userId, 'Session', sessionId, 'CANCEL');
+  } catch (e) {
+    logger.error('sessions_cancel_failed', { error: (e as any)?.message || String(e) });
+    return res.status(500).json({ error: 'Failed to cancel session' });
+  }
+};
+
 export const deleteSession = async (req: Request, res: Response) => {
   try {
     const user = req.user!;
@@ -604,7 +757,7 @@ export const getUserSessions = async (req: Request, res: Response) => {
   try {
     const user = req.user!;
     const role = user.role || 'student';
-
+    
     if (role === 'tutor') {
       // Return sessions created by the tutor
       const sessions = await prisma.session.findMany({
@@ -640,16 +793,19 @@ export const getUserSessions = async (req: Request, res: Response) => {
         module: session.module,
         tutorId: session.tutor.id,
         status: session.status,
-        description: `Comprehensive session covering ${session.module.name} concepts`,
+        description: session.description || `Session covering ${session.module.name} concepts`,
       }));
 
       return res.json(formattedSessions);
     } else {
-      // Return sessions the student is enrolled in
+      // Return sessions the student is enrolled in (including left sessions for filtering)
       const enrollments = await prisma.enrollment.findMany({
         where: {
           studentId: user.userId,
-          status: 'joined',
+          status: { in: ['joined', 'left'] },  // Include both joined and left sessions
+          session: {
+            status: 'published'  // Only include published sessions
+          }
         },
         include: {
           session: {
@@ -669,6 +825,20 @@ export const getUserSessions = async (req: Request, res: Response) => {
         orderBy: { session: { startTime: 'asc' } },
       });
 
+      // Debug logging for getUserSessions
+      logger.info('getUserSessions_debug', {
+        userId: user.userId,
+        totalEnrollments: enrollments.length,
+        enrollmentDetails: enrollments.map(e => ({
+          sessionId: e.session.id,
+          startTime: e.session.startTime,
+          endTime: e.session.endTime,
+          moduleCode: e.session.module.code,
+          sessionStatus: e.session.status,
+          enrollmentStatus: e.status
+        }))
+      });
+      
       // Format sessions
       const formattedSessions = enrollments.map(enrollment => {
         const session = enrollment.session;
@@ -688,7 +858,7 @@ export const getUserSessions = async (req: Request, res: Response) => {
           module: session.module,
           tutorId: session.tutor.id,
           status: session.status,
-          description: `Comprehensive session covering ${session.module.name} concepts`,
+          description: session.description || `Session covering ${session.module.name} concepts`,
           enrollmentStatus: enrollment.status,
         };
       });
@@ -749,7 +919,7 @@ export const getSessionDetails = async (req: Request, res: Response) => {
       module: session.module,
       tutorId: session.tutor.id,
       status: session.status,
-      description: `Comprehensive session covering ${session.module.name} concepts`,
+      description: session.description || `Session covering ${session.module.name} concepts`,
       isEnrolled,
       canJoin,
     };

@@ -77,7 +77,7 @@ export const getMyTutors = async (req: Request, res: Response) => {
         bio: tutor.profile?.bio || '',
         profilePicture: tutor.profile?.profilePicture,
         specialties: tutor.profile?.specialties || [],
-        averageRating: tutor.profile?.averageRating || 0,
+        averageRating: tutor.profile?.averageRating ? parseFloat(tutor.profile.averageRating.toFixed(1)) : 0,
         totalSessions: tutor.profile?.totalSessions || 0,
         isOnline: tutor.profile?.isOnline || false,
         lastSeen: tutor.profile?.lastSeen,
@@ -106,7 +106,6 @@ export const getMyTutors = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error fetching my tutors:', error);
     logger.error('get_my_tutors_failed', { 
       userId: req.user?.userId,
       error: (error as any)?.message || String(error) 
@@ -201,7 +200,7 @@ export const getTutorProfile = async (req: Request, res: Response) => {
       bio: tutor.profile?.bio || '',
       profilePicture: tutor.profile?.profilePicture,
       specialties: tutor.profile?.specialties || [],
-      averageRating: tutor.profile?.averageRating || 0,
+      averageRating: tutor.profile?.averageRating ? parseFloat(tutor.profile.averageRating.toFixed(1)) : 0,
       totalSessions: tutor.profile?.totalSessions || 0,
       isOnline: tutor.profile?.isOnline || false,
       lastSeen: tutor.profile?.lastSeen,
@@ -239,7 +238,6 @@ export const getTutorProfile = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error fetching tutor profile:', error);
     logger.error('get_tutor_profile_failed', { 
       userId: req.user?.userId,
       tutorId: req.params.tutorId,
@@ -313,7 +311,6 @@ export const rateTutor = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error rating tutor:', error);
     logger.error('rate_tutor_failed', { 
       userId: req.user?.userId,
       tutorId: req.params.tutorId,

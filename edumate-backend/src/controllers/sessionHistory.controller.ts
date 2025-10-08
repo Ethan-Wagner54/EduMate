@@ -24,8 +24,12 @@ export const getSessionHistory = async (req: Request, res: Response) => {
         whereClause.session = {
           endTime: { lt: new Date() }
         };
+      } else if (status === 'left') {
+        whereClause.status = 'left';
       } else if (status === 'cancelled') {
-        whereClause.status = 'cancelled';
+        whereClause.session = {
+          status: 'cancelled'
+        };
       }
     }
 
@@ -58,7 +62,9 @@ export const getSessionHistory = async (req: Request, res: Response) => {
       const startTime = new Date(session.startTime);
 
       let sessionStatus = 'scheduled';
-      if (enrollment.status === 'cancelled') {
+      if (enrollment.status === 'left') {
+        sessionStatus = 'left';
+      } else if (session.status === 'cancelled') {
         sessionStatus = 'cancelled';
       } else if (endTime < now) {
         sessionStatus = 'completed';
@@ -77,7 +83,7 @@ export const getSessionHistory = async (req: Request, res: Response) => {
         status: sessionStatus,
         rating: review?.rating || null,
         feedback: review?.feedback || null,
-        attendance: enrollment.status === 'cancelled' ? 'absent' : 'present'
+        attendance: enrollment.status === 'left' ? 'left' : 'present'
       };
     });
 

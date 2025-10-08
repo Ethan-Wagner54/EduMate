@@ -21,7 +21,7 @@ enum SessionStatus {
 
 enum EnrollmentStatus {
   joined
-  cancelled
+  left
   waitlisted
 }
 
@@ -99,7 +99,9 @@ model Session {
   endTime     DateTime
   location    String?
   capacity    Int?
+  description String?        // Session description
   status      SessionStatus  @default(draft)
+  cancelledAt DateTime?      // Timestamp when tutor cancelled the session
   createdAt   DateTime       @default(now())
 
   tutor       User        @relation("TutorSessions", fields: [tutorId], references: [id])
@@ -116,6 +118,7 @@ model Enrollment {
   studentId Int
   status    EnrollmentStatus @default(joined)
   joinedAt  DateTime         @default(now())
+  leftAt    DateTime?        // Timestamp when student left the session
 
   session   Session @relation(fields: [sessionId], references: [id])
   student   User    @relation(fields: [studentId], references: [id])
@@ -154,7 +157,8 @@ enum ActivityType {
   session_joined
   session_attended
   session_completed
-  session_cancelled
+  session_left
+  session_cancelled_by_tutor
   session_booked
   message_sent
   profile_updated

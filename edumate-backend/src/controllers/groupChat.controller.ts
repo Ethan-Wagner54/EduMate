@@ -186,7 +186,6 @@ export const getGroupChats = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error fetching group chats:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch group chats' 
@@ -368,7 +367,6 @@ export const getGroupChatBySession = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error fetching session group chat:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch session group chat' 
@@ -466,7 +464,6 @@ export const createGroupChat = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error creating group chat:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to create group chat' 
@@ -554,7 +551,6 @@ export const getGroupChatMessages = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error fetching group chat messages:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch messages' 
@@ -644,7 +640,6 @@ export const sendGroupMessage = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error sending group message:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to send message' 
@@ -691,7 +686,6 @@ export const markGroupMessagesAsRead = async (req: Request, res: Response) => {
     res.json({ success: true });
 
   } catch (error) {
-    console.error('Error marking messages as read:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to mark messages as read' 
@@ -792,7 +786,6 @@ export const deleteGroupChat = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error deleting group chat:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to delete conversation' 
@@ -878,7 +871,6 @@ export const leaveGroupChat = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error leaving group chat:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to leave conversation' 

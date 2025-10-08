@@ -263,8 +263,7 @@ async function main() {
       specialties: ['System Administration', 'User Management', 'Platform Oversight'],
       totalSessions: 0,
       completedSessions: 0,
-      averageRating: 0,
-      isOnline: true
+      averageRating: 0
     }
   });
 
@@ -280,7 +279,6 @@ async function main() {
         totalSessions: Math.floor(Math.random() * 50) + 20, // 20-70 sessions
         completedSessions: Math.floor(Math.random() * 45) + 18, // 18-63 sessions
         averageRating: 4.0 + Math.random() * 0.9, // 4.0-4.9 rating
-        isOnline: Math.random() > 0.3, // 70% chance of being online
       }
     });
   }
@@ -299,7 +297,6 @@ async function main() {
         totalSessions: 0, // Will be updated as they attend sessions
         completedSessions: 0, // Will be updated as they complete sessions
         averageRating: 0, // Will be calculated from future reviews
-        isOnline: Math.random() > 0.4, // 60% chance of being online
       }
     });
   }
@@ -397,299 +394,11 @@ async function main() {
     }
   }
 
-  // 9. Create group chat conversations for sessions
-  console.log('Creating group chat conversations...');
-  const groupChats = [];
-  
-  // Create group chats for the first few sessions
-  for (let i = 0; i < Math.min(sampleSessions.length, 4); i++) {
-    const session = sampleSessions[i];
-    
-    // Find the tutor and get their module info
-    const sessionWithDetails = await prisma.session.findUnique({
-      where: { id: session.id },
-      include: {
-        tutor: true,
-        module: true,
-        enrollments: {
-          include: {
-            student: true
-          }
-        }
-      }
-    });
 
-    if (sessionWithDetails && sessionWithDetails.enrollments.length > 0) {
-      // Create group conversation with session-specific name
-      const groupChat = await prisma.conversation.create({
-        data: {
-          name: `${sessionWithDetails.module.code} - ${sessionWithDetails.module.name} Session ${session.id}`,
-          type: 'session_chat',
-          isGroup: true,
-          createdBy: sessionWithDetails.tutor.id,
-        }
-      });
 
-      // Add participants (tutor + enrolled students)
-      const participantsToAdd = [
-        {
-          userId: sessionWithDetails.tutor.id,
-          joinedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Joined 7 days ago
-          unreadCount: 0
-        },
-        ...sessionWithDetails.enrollments.map((enrollment, index) => ({
-          userId: enrollment.student.id,
-          joinedAt: new Date(Date.now() - (6 - index) * 24 * 60 * 60 * 1000), // Joined 6-1 days ago
-          unreadCount: Math.floor(Math.random() * 3)
-        }))
-      ];
-
-      await prisma.conversationParticipant.createMany({
-        data: participantsToAdd.map(participant => ({
-          conversationId: groupChat.id,
-          ...participant
-        }))
-      });
-
-      groupChats.push({ ...groupChat, session: sessionWithDetails });
-    }
-  }
-
-  // 10. Add sample messages to group chats
-  console.log('Adding sample messages to group chats...');
-  for (const groupChat of groupChats) {
-    const messageTemplates = [
-      {
-        content: `Welcome everyone to our ${groupChat.session.module.name} study group! I'm excited to help you all succeed in this module.`,
-        senderId: groupChat.session.tutor.id,
-        hoursAgo: 72
-      },
-      {
-        content: 'Thank you! Looking forward to learning with everyone.',
-        senderId: groupChat.session.enrollments[0]?.student.id,
-        hoursAgo: 70
-      },
-      {
-        content: `I have some questions about the topics we'll be covering. Can't wait for the session!`,
-        senderId: groupChat.session.enrollments[1]?.student.id,
-        hoursAgo: 68
-      },
-      {
-        content: `Great questions! I've prepared some practice problems that will help. Feel free to ask anything here.`,
-        senderId: groupChat.session.tutor.id,
-        hoursAgo: 48
-      },
-      {
-        content: `Don't forget our session is scheduled for ${groupChat.session.startTime.toLocaleDateString()} at ${groupChat.session.location}. Bring your textbooks!`,
-        senderId: groupChat.session.tutor.id,
-        hoursAgo: 12
-      }
-    ];
-
-    for (const template of messageTemplates) {
-      if (template.senderId) {
-        await prisma.conversationMessage.create({
-          data: {
-            conversationId: groupChat.id,
-            senderId: template.senderId,
-            content: template.content,
-            sentAt: new Date(Date.now() - template.hoursAgo * 60 * 60 * 1000)
-          }
-        });
-      }
-    }
-  }
-
-  // 11. Create additional direct conversations for testing private messaging
-  console.log('Creating direct conversations...');
-  const directConversations = [];
   
-  // Create some direct conversations between students and tutors
-  const conversationPairs = [
-    { studentIndex: 0, tutorIndex: 0 }, // John Smith <-> Dr. Sarah Mitchell
-    { studentIndex: 1, tutorIndex: 2 }, // Alice Johnson <-> Dr. Emma Thompson
-    { studentIndex: 2, tutorIndex: 3 }, // Mohammed Al-Hassan <-> Mr. David Rodriguez
-    { studentIndex: 3, tutorIndex: 1 }, // Priya Patel <-> Prof. Michael Chen
-    { studentIndex: 4, tutorIndex: 4 }  // James Wilson <-> Dr. Lisa van der Merwe
-  ];
   
-  for (const pair of conversationPairs) {
-    const student = students[pair.studentIndex];
-    const tutor = tutors[pair.tutorIndex];
-    
-    const directConv = await prisma.conversation.create({
-      data: {
-        type: 'direct',
-        isGroup: false,
-        createdAt: new Date(Date.now() - Math.random() * 5 * 24 * 60 * 60 * 1000), // Created 0-5 days ago
-      }
-    });
-    
-    // Add participants
-    await prisma.conversationParticipant.createMany({
-      data: [
-        {
-          conversationId: directConv.id,
-          userId: student.id,
-          joinedAt: directConv.createdAt,
-          unreadCount: Math.floor(Math.random() * 3)
-        },
-        {
-          conversationId: directConv.id,
-          userId: tutor.id,
-          joinedAt: directConv.createdAt,
-          unreadCount: Math.floor(Math.random() * 2)
-        }
-      ]
-    });
-    
-    directConversations.push({ ...directConv, student, tutor });
-  }
   
-  // 12. Add sample messages to direct conversations
-  console.log('Adding messages to direct conversations...');
-  for (const directConv of directConversations) {
-    const messages = [
-      {
-        content: `Hi ${directConv.tutor.name}, I have a question about the assignment.`,
-        senderId: directConv.student.id,
-        hoursAgo: 24
-      },
-      {
-        content: `Hello ${directConv.student.name}! I'd be happy to help. What specific part are you struggling with?`,
-        senderId: directConv.tutor.id,
-        hoursAgo: 23.5
-      },
-      {
-        content: "I'm having trouble understanding the concept we covered in the last session. Could you explain it again?",
-        senderId: directConv.student.id,
-        hoursAgo: 23
-      },
-      {
-        content: "Of course! Let me break it down step by step. First, let's look at the fundamental principles...",
-        senderId: directConv.tutor.id,
-        hoursAgo: 22.5
-      },
-      {
-        content: "That makes so much more sense now! Thank you for the detailed explanation.",
-        senderId: directConv.student.id,
-        hoursAgo: 22
-      }
-    ];
-    
-    for (const msg of messages) {
-      await prisma.conversationMessage.create({
-        data: {
-          conversationId: directConv.id,
-          senderId: msg.senderId,
-          content: msg.content,
-          sentAt: new Date(Date.now() - msg.hoursAgo * 60 * 60 * 1000)
-        }
-      });
-    }
-    
-    // Update conversation timestamp
-    await prisma.conversation.update({
-      where: { id: directConv.id },
-      data: { updatedAt: new Date(Date.now() - 22 * 60 * 60 * 1000) }
-    });
-  }
-  
-  // 13. Create additional general study groups (not session-specific)
-  console.log('Creating general study groups...');
-  const generalGroups = [
-    {
-      name: 'Computer Science Study Group',
-      participants: [tutors[0].id, students[0].id, students[2].id], // Dr. Sarah, John, Mohammed
-      createdBy: tutors[0].id
-    },
-    {
-      name: 'Math Help Circle',
-      participants: [tutors[1].id, students[0].id, students[2].id, students[3].id], // Prof. Chen, John, Mohammed, Priya
-      createdBy: tutors[1].id
-    },
-    {
-      name: 'Business Students Network',
-      participants: [tutors[2].id, students[1].id, students[4].id], // Dr. Emma, Alice, James
-      createdBy: tutors[2].id
-    }
-  ];
-  
-  const createdGeneralGroups = [];
-  for (const group of generalGroups) {
-    const generalGroup = await prisma.conversation.create({
-      data: {
-        name: group.name,
-        type: 'group',
-        isGroup: true,
-        createdBy: group.createdBy,
-        createdAt: new Date(Date.now() - Math.random() * 10 * 24 * 60 * 60 * 1000) // Created 0-10 days ago
-      }
-    });
-    
-    // Add participants
-    await prisma.conversationParticipant.createMany({
-      data: group.participants.map((userId, index) => ({
-        conversationId: generalGroup.id,
-        userId,
-        joinedAt: new Date(generalGroup.createdAt.getTime() + index * 60 * 60 * 1000), // Joined at different times
-        unreadCount: Math.floor(Math.random() * 5)
-      }))
-    });
-    
-    createdGeneralGroups.push({ ...generalGroup, participants: group.participants });
-  }
-  
-  // 14. Add messages to general study groups
-  console.log('Adding messages to general study groups...');
-  for (let i = 0; i < createdGeneralGroups.length; i++) {
-    const group = createdGeneralGroups[i];
-    const messagesByGroup = [
-      // Computer Science Study Group messages
-      [
-        { content: 'Welcome to our Computer Science study group! Let\'s help each other succeed.', senderId: group.participants[0], hoursAgo: 120 },
-        { content: 'Thanks for creating this group! I\'m excited to collaborate.', senderId: group.participants[1], hoursAgo: 118 },
-        { content: 'This is great! I have some questions about data structures.', senderId: group.participants[2], hoursAgo: 115 },
-        { content: 'Perfect timing! I just finished reviewing that topic. Happy to help.', senderId: group.participants[0], hoursAgo: 110 },
-        { content: 'Could someone explain the difference between stacks and queues?', senderId: group.participants[1], hoursAgo: 8 },
-      ],
-      // Math Help Circle messages
-      [
-        { content: 'Welcome to our Math Help Circle! No question is too basic here.', senderId: group.participants[0], hoursAgo: 96 },
-        { content: 'Thank you! I really need help with calculus.', senderId: group.participants[1], hoursAgo: 94 },
-        { content: 'I can help with calculus! What specific topics?', senderId: group.participants[2], hoursAgo: 92 },
-        { content: 'I\'m also struggling with derivatives. Can we work through some examples?', senderId: group.participants[3], hoursAgo: 90 },
-        { content: 'Absolutely! Let\'s schedule a group study session this week.', senderId: group.participants[0], hoursAgo: 6 },
-      ],
-      // Business Students Network messages
-      [
-        { content: 'Welcome to the Business Students Network! Let\'s share resources and insights.', senderId: group.participants[0], hoursAgo: 72 },
-        { content: 'This is perfect! I\'m working on a marketing project and could use some feedback.', senderId: group.participants[1], hoursAgo: 70 },
-        { content: 'I\'d be happy to look at it! I\'m focusing on digital marketing this semester.', senderId: group.participants[2], hoursAgo: 68 },
-        { content: 'Great! I\'ll share the draft with you both tomorrow.', senderId: group.participants[1], hoursAgo: 4 },
-      ]
-    ];
-    
-    for (const msg of messagesByGroup[i] || []) {
-      await prisma.conversationMessage.create({
-        data: {
-          conversationId: group.id,
-          senderId: msg.senderId,
-          content: msg.content,
-          sentAt: new Date(Date.now() - msg.hoursAgo * 60 * 60 * 1000)
-        }
-      });
-    }
-    
-    // Update conversation timestamp
-    const lastMessage = messagesByGroup[i]?.slice(-1)[0];
-    if (lastMessage) {
-      await prisma.conversation.update({
-        where: { id: group.id },
-        data: { updatedAt: new Date(Date.now() - lastMessage.hoursAgo * 60 * 60 * 1000) }
-      });
-    }
-  }
   
   // 15. Create dashboard stats for users
   for (const tutor of tutors) {
@@ -731,11 +440,6 @@ async function main() {
   console.log(`🎓 Sample Sessions: ${sampleSessions.length}`);
   console.log(`🔗 Tutor-Module Links: ${tutorModuleAssignments.reduce((sum, assignment) => sum + assignment.moduleIndexes.length, 0)}`);
   console.log(`👤 User Profiles: ${1 + tutors.length + students.length}`);
-  console.log(`💬 Session Group Chats: ${groupChats.length}`);
-  console.log(`💬 General Study Groups: ${createdGeneralGroups.length}`);
-  console.log(`💬 Direct Conversations: ${directConversations.length}`);
-  console.log(`💬 Total Conversations: ${groupChats.length + createdGeneralGroups.length + directConversations.length}`);
-  console.log(`📝 Total Messages: ${(groupChats.length + createdGeneralGroups.length) * 5 + directConversations.length * 5}`);
   
   console.log('\n=== 🔐 TEST ACCOUNTS ===');
   console.log('\n🔧 ADMIN:');

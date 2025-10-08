@@ -17,6 +17,7 @@ import progressRoutes from "./routes/progress";
 import fileUploadRoutes from "./routes/fileUpload";
 import studentTutorsRoutes from "./routes/studentTutors";
 import { requestLogger } from "./middleware/requestLogger";
+import { trackUserActivity } from "./middleware/activityTracker";
 
 const app = express();
 
@@ -36,6 +37,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use(requestLogger);
+app.use(trackUserActivity);
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 

@@ -4,6 +4,7 @@ import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { randomUUID } from 'crypto';
+import socketService from '../services/socketService';
 
 // Interface for file attachments
 interface FileAttachment {
@@ -142,7 +143,6 @@ export const uploadFiles = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error uploading files:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to upload files'
@@ -195,7 +195,7 @@ export const sendMessageWithAttachments = async (req: Request, res: Response) =>
       data: messageData,
       include: {
         sender: {
-          select: { id: true, name: true }
+          select: { id: true, name: true, role: true }
         }
       }
     });
@@ -217,6 +217,27 @@ export const sendMessageWithAttachments = async (req: Request, res: Response) =>
       }
     });
 
+    // Emit WebSocket event for real-time delivery
+    try {
+      const messageForSocket = {
+        id: message.id,
+        conversationId: conversationId,
+        senderId: userId,
+        senderName: message.sender.name,
+        senderRole: message.sender.role,
+        content: message.content,
+        messageType: 'text',
+        attachments: attachments || [],
+        timestamp: message.sentAt,
+        isRead: false
+      };
+
+      // Emit to group chat room
+      socketService.sendToRoom(`group-${conversationId}`, 'new-group-message', messageForSocket);
+    } catch (socketError) {
+      // Log socket error but don't fail the request
+    }
+
     const formattedMessage = {
       id: message.id,
       sender: message.sender.name,
@@ -229,7 +250,6 @@ export const sendMessageWithAttachments = async (req: Request, res: Response) =>
     res.status(201).json(formattedMessage);
 
   } catch (error) {
-    console.error('Error sending message with attachments:', error);
     res.status(500).json({ error: 'Failed to send message' });
   }
 };
@@ -263,7 +283,6 @@ export const serveFile = async (req: Request, res: Response) => {
     fileStream.pipe(res);
 
   } catch (error) {
-    console.error('Error serving file:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to serve file'
