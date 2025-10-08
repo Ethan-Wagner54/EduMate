@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { PrismaClient, Role } from "@prisma/client";
 import { hashPassword, comparePassword } from "../utils/password";
-import { generateToken } from "../utils/jwt";
+import { generateToken, verifyToken } from "../utils/jwt";
 import { logAudit } from "../utils/audit";
 import { logger } from "../utils/logger";
 
@@ -9,13 +9,42 @@ const prisma = new PrismaClient();
 
 export async function register(req: Request, res: Response) {
   try {
-    const { name, email, password, role } = req.body as {
+    const authHeader = req.headers.authorization;
+    let tokenUser = null;
+    
+    // If a token exists, verify it
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      try {
+        tokenUser = verifyToken(token);
+        logger.info('register_with_token', { userId: tokenUser?.userId });
+      } catch (tokenError) {
+        logger.warn('register_invalid_token', { error: String(tokenError) });
+        return res.status(401).json({ error: "Invalid token provided" });
+      }
+    }
+    else {
+      logger.info('register_without_token');
+    }
+
+    const { name, email, password, role, academicYear } = req.body as {
       name: string;
       email: string;
       password: string;
-      role?: Role;
+      role?: string;
+      academicYear: string;
     };
 
+    var enumRole: Role;
+
+    if (tokenUser && tokenUser.role === 'admin') {
+      enumRole = 'tutor';
+    }
+    else {
+      enumRole = "student";
+    }
+
+    
     if (!name || !email || !password) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -27,7 +56,13 @@ export async function register(req: Request, res: Response) {
 
     const passwordHash = await hashPassword(password);
     const user = await prisma.user.create({
-      data: { name, email, passwordHash, role: role ?? "student" },
+      data: { 
+        name, 
+        email, 
+        passwordHash, 
+        role: enumRole,
+        academicYear
+      },
     });
 
     // Use the corrected function name: generateToken
