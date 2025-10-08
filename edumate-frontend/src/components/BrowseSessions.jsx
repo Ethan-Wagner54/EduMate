@@ -1,7 +1,8 @@
 // src/components/BrowseSessions.jsx
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, MapPin, Star, Users, Filter, SlidersHorizontal, ChevronDown, Hourglass } from 'lucide-react';
+import { Search, Calendar, MapPin, Star, Users, Filter, SlidersHorizontal, ChevronDown, Hourglass, AlertTriangle, CheckCircle, Loader } from 'lucide-react';
 import sessionService from '../services/sessions/session';
+import authService from '../services/auth/auth';
 import { AvatarSmall } from './ui/Avatar';
 
 export default function BrowseSessions() {
@@ -89,11 +90,43 @@ export default function BrowseSessions() {
     setFilteredSessions(filtered);
   }, [sessions, searchQuery, moduleFilter, timeFilter]);
 
+  const [joinLoading, setJoinLoading] = useState({});
+  const [joinError, setJoinError] = useState('');
+  const [joinSuccess, setJoinSuccess] = useState('');
+
   const handleJoinSession = async (sessionId) => {
-    // This would typically call a join session API
-    console.log('Joining session:', sessionId);
-    // For now, just show an alert
-    alert('Join session functionality will be implemented soon!');
+    try {
+      setJoinLoading(prev => ({ ...prev, [sessionId]: true }));
+      setJoinError('');
+      setJoinSuccess('');
+
+      const response = await sessionService.joinSession(sessionId);
+      
+      if (response.success) {
+        setJoinSuccess('Successfully joined session!');
+        // Refresh sessions to update enrollment count
+        const updatedSessions = await sessionService.getSessions();
+        if (updatedSessions.success) {
+          setSessions(updatedSessions.data || []);
+          setFilteredSessions(updatedSessions.data || []);
+        }
+        
+        // Refresh MySessions if the function is available
+        if (typeof window.refreshMySessions === 'function') {
+          await window.refreshMySessions();
+        }
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setJoinSuccess(''), 3000);
+      } else {
+        setJoinError(response.error || 'Failed to join session');
+      }
+    } catch (error) {
+      console.error('Error joining session:', error);
+      setJoinError('Failed to join session');
+    } finally {
+      setJoinLoading(prev => ({ ...prev, [sessionId]: false }));
+    }
   };
 
   if (loading) {
@@ -128,8 +161,26 @@ export default function BrowseSessions() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground flex items-center">
             <Search className="mr-3 text-muted-foreground" size={24}/>
-            Find Tutoring Sessions
+            Browse Upcoming Sessions
         </h1>
+        <p className="text-muted-foreground mt-2">
+          Discover and join upcoming tutoring sessions that you can participate in.
+        </p>
+        
+        {/* Success/Error Messages */}
+        {joinError && (
+          <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center">
+            <AlertTriangle className="h-4 w-4 text-destructive mr-2" />
+            <span className="text-destructive text-sm">{joinError}</span>
+          </div>
+        )}
+        
+        {joinSuccess && (
+          <div className="mt-4 p-3 bg-green-100 border border-green-200 rounded-lg flex items-center">
+            <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+            <span className="text-green-700 text-sm">{joinSuccess}</span>
+          </div>
+        )}
       </div>
 
       {/* Search and Filters */}
@@ -138,7 +189,7 @@ export default function BrowseSessions() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
           <input
             type="text"
-            placeholder="Search sessions, modules, or tutors"
+            placeholder="Search upcoming sessions, modules, or tutors"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
@@ -168,14 +219,14 @@ export default function BrowseSessions() {
             <option value="any">Any time</option>
             <option value="today">Today</option>
             <option value="tomorrow">Tomorrow</option>
-            <option value="this_week">This Week</option>
+            <option value="this_week">Next 7 Days</option>
           </select>
           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
         </div>
       </div>
 
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold text-foreground">{filteredSessions.length} Available Sessions</h2>
+        <h2 className="text-lg font-semibold text-foreground">{filteredSessions.length} Upcoming Sessions</h2>
         <button className="flex items-center text-primary hover:text-primary/80 font-medium transition-colors">
           <SlidersHorizontal className="mr-2" size={18} />
           More Filters
@@ -189,8 +240,8 @@ export default function BrowseSessions() {
           <h3 className="text-lg font-medium text-foreground mb-2">No sessions found</h3>
           <p className="text-muted-foreground">
             {searchQuery || moduleFilter !== 'all' || timeFilter !== 'any' 
-              ? 'Try adjusting your search criteria'
-              : 'No tutoring sessions are currently available'}
+              ? 'No upcoming sessions match your search criteria. Try adjusting your filters.'
+              : 'No upcoming tutoring sessions are currently available. Check back later for new sessions!'}
           </p>
         </div>
       ) : (
@@ -239,12 +290,24 @@ export default function BrowseSessions() {
               </div>
 
               <div className="flex justify-between items-center mt-auto">
-                <button 
-                  onClick={() => handleJoinSession(session.id)}
-                  className="px-5 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
-                >
-                  Join Session
-                </button>
+                {authService.getUserRole() === 'student' ? (
+                  <button 
+                    onClick={() => handleJoinSession(session.id)}
+                    disabled={joinLoading[session.id]}
+                    className="px-5 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  >
+                    {joinLoading[session.id] ? (
+                      <>
+                        <Loader className="animate-spin h-4 w-4 mr-2" />
+                        Joining...
+                      </>
+                    ) : (
+                      'Join Session'
+                    )}
+                  </button>
+                ) : (
+                  <span className="text-muted-foreground text-sm">Login as student to join</span>
+                )}
                 <button className="p-2 border border-border rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
                   <Hourglass size={20} />
                 </button>

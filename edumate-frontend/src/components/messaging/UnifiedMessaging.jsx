@@ -16,7 +16,10 @@ import {
   ArrowLeft,
   AlertCircle,
   Wifi,
-  WifiOff
+  WifiOff,
+  LogOut,
+  Trash2,
+  ChevronDown
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import authService from '../../services/auth/auth';
@@ -59,9 +62,15 @@ export default function UnifiedMessaging({
   const [showMobileConversationList, setShowMobileConversationList] = useState(true);
   const [error, setError] = useState(null);
   
+  // Dropdown & modals state
+  const [showOptionsDropdown, setShowOptionsDropdown] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  
   // Refs
   const messagesEndRef = useRef(null);
   const messageInputRef = useRef(null);
+  const dropdownRef = useRef(null);
   
   // User info
   const currentUserId = authService.getUserId();
@@ -160,36 +169,62 @@ export default function UnifiedMessaging({
 
   const loadGroupChats = async () => {
     try {
-      // Use conversations API to get group conversations
-      const response = await conversationsService.getConversations();
+      // Use group chat service to get group conversations including session chats
+      const response = await groupChatService.getGroupChats();
       if (response.success && response.data) {
-        // Filter for group conversations only
-        const groupConversations = response.data.filter(conv => 
-          (conv.type === 'group' || conv.type === 'session_chat') || conv.isGroup
-        );
-        
-        const formattedGroupChats = groupConversations.map(chat => ({
+        const formattedGroupChats = response.data.conversations.map(chat => ({
           id: chat.id,
-          type: 'group',
+          type: chat.type === 'session_chat' ? 'session' : 'group',
           name: chat.name,
-          sessionId: null,
-          session: null,
-          participants: [],
+          sessionId: chat.sessionId || null,
+          session: chat.session || null,
+          participants: chat.participants || [],
           lastMessage: chat.lastMessage ? {
-            content: chat.lastMessage,
-            timestamp: chat.timestamp,
-            senderName: 'Member',
+            content: chat.lastMessage.content,
+            timestamp: chat.lastMessage.sentAt,
+            senderName: chat.lastMessage.senderName,
             isOwn: false
           } : null,
           unreadCount: chat.unreadCount || 0,
-          totalMessages: 0,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          totalMessages: chat.totalMessages || 0,
+          createdAt: chat.createdAt,
+          updatedAt: chat.updatedAt
         }));
         setGroupChats(formattedGroupChats);
       }
     } catch (error) {
       console.error('Error loading group chats:', error);
+      // Fallback to conversations service if group chat service fails
+      try {
+        const fallbackResponse = await conversationsService.getConversations();
+        if (fallbackResponse.success && fallbackResponse.data) {
+          const groupConversations = fallbackResponse.data.filter(conv => 
+            (conv.type === 'group' || conv.type === 'session_chat') || conv.isGroup
+          );
+          
+          const formattedGroupChats = groupConversations.map(chat => ({
+            id: chat.id,
+            type: 'group',
+            name: chat.name,
+            sessionId: null,
+            session: null,
+            participants: [],
+            lastMessage: chat.lastMessage ? {
+              content: chat.lastMessage,
+              timestamp: chat.timestamp,
+              senderName: 'Member',
+              isOwn: false
+            } : null,
+            unreadCount: chat.unreadCount || 0,
+            totalMessages: 0,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }));
+          setGroupChats(formattedGroupChats);
+        }
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+      }
     }
   };
 
@@ -509,6 +544,95 @@ export default function UnifiedMessaging({
     }
   };
 
+  // Chat management functions
+  const handleDeleteChat = async () => {
+    if (!activeConversation) return;
+    
+    try {
+      const response = await groupChatService.deleteGroupChat(activeConversation.id);
+      
+      if (response.success) {
+        toast.success('Chat deleted successfully');
+        
+        // Remove from local state
+        setGroupChats(prev => prev.filter(chat => chat.id !== activeConversation.id));
+        setConversations(prev => prev.filter(conv => conv.id !== activeConversation.id));
+        
+        // Clear active conversation
+        setActiveConversation(null);
+        setMessages([]);
+        setShowMobileConversationList(true);
+        
+        // Close modals
+        setShowDeleteConfirm(false);
+        setShowOptionsDropdown(false);
+      } else {
+        throw new Error(response.error || 'Failed to delete chat');
+      }
+    } catch (error) {
+      console.error('Error deleting chat:', error);
+      toast.error('Failed to delete chat: ' + error.message);
+    }
+  };
+  
+  const handleLeaveChat = async () => {
+    if (!activeConversation) return;
+    
+    try {
+      const response = await groupChatService.leaveGroupChat(activeConversation.id);
+      
+      if (response.success) {
+        toast.success('Left chat successfully');
+        
+        // Remove from local state
+        setGroupChats(prev => prev.filter(chat => chat.id !== activeConversation.id));
+        setConversations(prev => prev.filter(conv => conv.id !== activeConversation.id));
+        
+        // Clear active conversation
+        setActiveConversation(null);
+        setMessages([]);
+        setShowMobileConversationList(true);
+        
+        // Close modals
+        setShowLeaveConfirm(false);
+        setShowOptionsDropdown(false);
+      } else {
+        throw new Error(response.error || 'Failed to leave chat');
+      }
+    } catch (error) {
+      console.error('Error leaving chat:', error);
+      toast.error('Failed to leave chat: ' + error.message);
+    }
+  };
+  
+  // Check permissions for chat actions
+  const canDeleteChat = () => {
+    if (!activeConversation || !currentUser) return false;
+    
+    // For session chats, only tutor (creator) or admin can delete
+    if (activeConversation.type === 'session') {
+      return currentUser.role === 'admin' || 
+             (currentUser.role === 'tutor' && activeConversation.session?.tutor?.id === currentUser.id);
+    }
+    
+    // For group chats, only creator or admin can delete
+    if (activeConversation.type === 'group') {
+      const userParticipant = activeConversation.participants?.find(p => p.userId === currentUserId);
+      return currentUser.role === 'admin' || 
+             (userParticipant && activeConversation.createdBy === currentUserId);
+    }
+    
+    // Direct conversations cannot be deleted, only left
+    return false;
+  };
+  
+  const canLeaveChat = () => {
+    if (!activeConversation) return false;
+    
+    // Can leave group chats and session chats
+    return activeConversation.type === 'group' || activeConversation.type === 'session';
+  };
+
   // Helper functions
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
@@ -533,6 +657,20 @@ export default function UnifiedMessaging({
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowOptionsDropdown(false);
+      }
+    };
+
+    if (showOptionsDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showOptionsDropdown]);
 
   // Filter conversations based on search
   const filteredConversations = conversations.filter(conv =>
@@ -658,18 +796,37 @@ export default function UnifiedMessaging({
                   activeConversation?.id === conversation.id ? 'bg-accent' : ''
                 }`}
               >
-                {conversation.type === 'group' ? (
+                {conversation.type === 'group' || conversation.type === 'session' ? (
                   // Group Chat Item
                   <div className="flex items-start gap-3">
-                    <div className="bg-primary/10 rounded-full w-12 h-12 flex items-center justify-center font-bold text-primary">
-                      <Users size={20} />
-                    </div>
+                    {/* Group Avatar with module code or group icon */}
+                    {conversation.session ? (
+                      // Session chat avatar with module code
+                      <div className="bg-primary/10 rounded-full w-12 h-12 flex items-center justify-center">
+                        <span className="text-xs font-bold text-primary">
+                          {conversation.session.module.code.split('-')[0]}
+                        </span>
+                      </div>
+                    ) : (
+                      // Regular group chat avatar
+                      <div className="bg-green-100 rounded-full w-12 h-12 flex items-center justify-center">
+                        <Users size={20} className="text-green-600" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-foreground truncate">{conversation.name}</h3>
+                        {/* Show full chat name */}
+                        <h3 className="font-semibold text-foreground truncate" title={conversation.name}>
+                          {conversation.session ? (
+                            // For session chats, show a cleaner format
+                            `${conversation.session.module.code} Study Group`
+                          ) : (
+                            conversation.name
+                          )}
+                        </h3>
                         {conversation.session && (
                           <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-medium">
-                            {conversation.session.module.code}
+                            Session
                           </span>
                         )}
                         {conversation.unreadCount > 0 && (
@@ -678,6 +835,14 @@ export default function UnifiedMessaging({
                           </span>
                         )}
                       </div>
+                      
+                      {/* Show module name as subtitle for session chats */}
+                      {conversation.session && (
+                        <p className="text-xs text-muted-foreground truncate mb-1" title={conversation.session.module.name}>
+                          {conversation.session.module.name}
+                        </p>
+                      )}
+                      
                       {conversation.lastMessage && (
                         <p className="text-sm text-muted-foreground truncate">
                           <span className="font-medium">{conversation.lastMessage.senderName}:</span>{' '}
@@ -757,10 +922,20 @@ export default function UnifiedMessaging({
                     <ArrowLeft size={18} />
                   </button>
                   
-                  {activeConversation.type === 'group' ? (
-                    <div className="bg-primary/10 rounded-full w-12 h-12 flex items-center justify-center font-bold text-primary">
-                      <Users size={24} />
-                    </div>
+                  {activeConversation.type === 'group' || activeConversation.type === 'session' ? (
+                    activeConversation.session ? (
+                      // Session chat avatar with module code
+                      <div className="bg-primary/10 rounded-full w-12 h-12 flex items-center justify-center">
+                        <span className="text-sm font-bold text-primary">
+                          {activeConversation.session.module.code.split('-')[0]}
+                        </span>
+                      </div>
+                    ) : (
+                      // Regular group chat avatar
+                      <div className="bg-green-100 rounded-full w-12 h-12 flex items-center justify-center">
+                        <Users size={24} className="text-green-600" />
+                      </div>
+                    )
                   ) : (
                     <AvatarMedium
                       userId={activeConversation.participantId}
@@ -773,13 +948,21 @@ export default function UnifiedMessaging({
                   )}
                   
                   <div>
-                    <h2 className="font-semibold text-foreground">{activeConversation.name}</h2>
-                    {activeConversation.type === 'group' ? (
+                    <h2 className="font-semibold text-foreground">
+                      {activeConversation.session ? (
+                        `${activeConversation.session.module.code} Study Group`
+                      ) : (
+                        activeConversation.name
+                      )}
+                    </h2>
+                    {activeConversation.type === 'group' || activeConversation.type === 'session' ? (
                       <div className="text-sm text-muted-foreground">
-                        {activeConversation.participants?.length || 0} participants
                         {activeConversation.session && (
-                          <span className="ml-2">• {activeConversation.session.module.code}</span>
+                          <span className="block">{activeConversation.session.module.name}</span>
                         )}
+                        <span>
+                          {activeConversation.participants?.length || 0} participants
+                        </span>
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground capitalize">
@@ -803,14 +986,56 @@ export default function UnifiedMessaging({
                       </button>
                     </>
                   )}
-                  <button className="p-2 rounded-lg hover:bg-accent transition-colors">
-                    <MoreVertical size={18} className="text-muted-foreground" />
-                  </button>
+                  <div className="relative" ref={dropdownRef}>
+                    <button 
+                      onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
+                      className="p-2 rounded-lg hover:bg-accent transition-colors"
+                    >
+                      <MoreVertical size={18} className="text-muted-foreground" />
+                    </button>
+                    
+                    {/* Dropdown Menu */}
+                    {showOptionsDropdown && (
+                      <div className="absolute right-0 top-full mt-2 w-48 bg-popover border border-border rounded-lg shadow-lg z-50">
+                        <div className="py-1">
+                          {canLeaveChat() && (
+                            <button
+                              onClick={() => {
+                                setShowLeaveConfirm(true);
+                                setShowOptionsDropdown(false);
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm hover:bg-accent flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                            >
+                              <LogOut size={16} />
+                              Leave Chat
+                            </button>
+                          )}
+                          {canDeleteChat() && (
+                            <button
+                              onClick={() => {
+                                setShowDeleteConfirm(true);
+                                setShowOptionsDropdown(false);
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm hover:bg-accent flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 size={16} />
+                              Delete Chat
+                            </button>
+                          )}
+                          {!canLeaveChat() && !canDeleteChat() && (
+                            <div className="px-4 py-2 text-sm text-muted-foreground italic">
+                              No actions available
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               
               {/* Session Info for Group Chats */}
-              {activeConversation.type === 'group' && activeConversation.session && (
+              {(activeConversation.type === 'group' || activeConversation.type === 'session') && activeConversation.session && (
                 <div className="mt-3 p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center text-sm text-muted-foreground mb-1">
                     <Calendar size={14} className="mr-2" />
@@ -1110,6 +1335,72 @@ export default function UnifiedMessaging({
           </div>
         )}
       </div>
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-100 rounded-full">
+                <Trash2 size={20} className="text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground">Delete Chat</h3>
+            </div>
+            
+            <p className="text-muted-foreground mb-6">
+              Are you sure you want to delete this chat? This action cannot be undone and all messages will be permanently removed.
+            </p>
+            
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 text-sm border border-input rounded-lg hover:bg-accent transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteChat}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete Chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Leave Confirmation Modal */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-yellow-100 rounded-full">
+                <LogOut size={20} className="text-yellow-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground">Leave Chat</h3>
+            </div>
+            
+            <p className="text-muted-foreground mb-6">
+              Are you sure you want to leave this chat? You will no longer receive messages and will need to be re-added to participate again.
+            </p>
+            
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowLeaveConfirm(false)}
+                className="px-4 py-2 text-sm border border-input rounded-lg hover:bg-accent transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLeaveChat}
+                className="px-4 py-2 text-sm bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+              >
+                Leave Chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

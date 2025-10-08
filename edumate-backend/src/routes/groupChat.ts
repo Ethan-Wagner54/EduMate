@@ -6,7 +6,9 @@ import {
   createGroupChat,
   getGroupChatMessages,
   sendGroupMessage,
-  markGroupMessagesAsRead
+  markGroupMessagesAsRead,
+  deleteGroupChat,
+  leaveGroupChat
 } from '../controllers/groupChat.controller';
 
 const router = express.Router();
@@ -31,5 +33,11 @@ router.post('/:conversationId/messages', sendGroupMessage);
 
 // Mark messages as read
 router.post('/:conversationId/mark-read', markGroupMessagesAsRead);
+
+// Delete a group chat
+router.delete('/:conversationId', deleteGroupChat);
+
+// Leave a group chat
+router.post('/:conversationId/leave', leaveGroupChat);
 
 export default router;

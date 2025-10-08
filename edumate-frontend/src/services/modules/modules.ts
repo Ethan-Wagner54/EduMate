@@ -1,6 +1,5 @@
-import axios from 'axios';
+import axiosInstance from '../../config/axios';
 import config from '../../config/Config';
-import authService from '../auth/auth';
 import { ModulesResponse } from './types';
 
 // Get API base URL from configuration
@@ -11,12 +10,9 @@ const API_URL = config.apiUrl;
  */
 export const getModules = async (): Promise<ModulesResponse> => {
   try {
-    // Ensure auth header is set
-    authService.setAuthHeader();
+    console.log(`Fetching modules from: /modules`);
     
-    console.log(`Fetching modules from: ${API_URL}/modules`);
-    
-    const response = await axios.get<any>(`${API_URL}/modules`);
+    const response = await axiosInstance.get<any>(`/modules`);
     if (response.data) {
       return {
         success: true,

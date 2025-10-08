@@ -285,29 +285,10 @@ async function main() {
     });
   }
 
-  // Update student profile statistics after creating sessions
-  console.log('Updating student profile statistics...');
+  // Create student profiles with placeholder statistics
+  console.log('Creating student profiles...');
   for (let i = 0; i < students.length; i++) {
-    // Calculate actual stats from database
-    const enrollmentCount = await prisma.enrollment.count({
-      where: { studentId: students[i].id }
-    });
-    
-    const attendanceCount = await prisma.attendance.count({
-      where: { 
-        studentId: students[i].id,
-        attended: true
-      }
-    });
-    
-    const reviews = await prisma.sessionReview.findMany({
-      where: { studentId: students[i].id }
-    });
-    
-    const avgRating = reviews.length > 0 
-      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
-      : 0;
-    
+    // Use placeholder values since we'll only have future sessions without attendance records
     await prisma.userProfile.upsert({
       where: { userId: students[i].id },
       update: {},
@@ -315,9 +296,9 @@ async function main() {
         userId: students[i].id,
         bio: students[i].bio,
         favoriteSubjects: students[i].favoriteSubjects,
-        totalSessions: enrollmentCount,
-        completedSessions: attendanceCount,
-        averageRating: Math.round(avgRating * 10) / 10,
+        totalSessions: 0, // Will be updated as they attend sessions
+        completedSessions: 0, // Will be updated as they complete sessions
+        averageRating: 0, // Will be calculated from future reviews
         isOnline: Math.random() > 0.4, // 60% chance of being online
       }
     });
@@ -327,8 +308,8 @@ async function main() {
   console.log('Creating sample sessions...');
   const sampleSessions = [];
   
-  // Create historical sessions (past 3 months)
-  for (let monthOffset = 3; monthOffset > 0; monthOffset--) {
+  // Create additional future sessions (spread over next 3 months)
+  for (let monthOffset = 0; monthOffset < 3; monthOffset++) {
     for (let i = 0; i < 5; i++) {
       const tutorIndex = Math.floor(Math.random() * tutors.length);
       const tutor = tutors[tutorIndex];
@@ -342,10 +323,10 @@ async function main() {
       if (tutorModules.length > 0) {
         const randomModule = tutorModules[Math.floor(Math.random() * tutorModules.length)];
         
-        // Create sessions in the past
+        // Create sessions in the future
         const baseDate = new Date();
-        baseDate.setMonth(baseDate.getMonth() - monthOffset);
-        const startTime = new Date(baseDate.getTime() + i * 7 * 24 * 60 * 60 * 1000 + Math.random() * 6 * 60 * 60 * 1000 + 9 * 60 * 60 * 1000); // 9am-3pm
+        baseDate.setMonth(baseDate.getMonth() + monthOffset);
+        const startTime = new Date(baseDate.getTime() + (i + 7) * 24 * 60 * 60 * 1000 + Math.random() * 6 * 60 * 60 * 1000 + 9 * 60 * 60 * 1000); // 9am-3pm, starting from next week
         const endTime = new Date(startTime.getTime() + (1 + Math.random() * 0.5) * 60 * 60 * 1000); // 1-1.5 hour sessions
         
         const session = await prisma.session.create({
@@ -364,8 +345,8 @@ async function main() {
     }
   }
   
-  // Create upcoming sessions
-  for (let i = 0; i < 8; i++) {
+  // Create immediate upcoming sessions
+  for (let i = 0; i < 10; i++) {
     const tutorIndex = Math.floor(Math.random() * tutors.length);
     const tutor = tutors[tutorIndex];
     
@@ -396,7 +377,7 @@ async function main() {
     }
   }
 
-  // 8. Enroll students in some sessions and add attendances/reviews
+  // 8. Enroll students in some future sessions
   console.log('Enrolling students in sessions...');
   for (const session of sampleSessions) {
     const numberOfStudents = Math.floor(Math.random() * Math.min(students.length, 3)) + 1; // 1-3 students per session
@@ -411,49 +392,8 @@ async function main() {
         },
       });
 
-      // Add attendance (80% chance of attending)
-      const attended = Math.random() > 0.2;
-      await prisma.attendance.create({
-        data: {
-          studentId: student.id,
-          sessionId: session.id,
-          attended,
-          timestamp: session.startTime
-        }
-      });
-
-      // Add session review if attended
-      if (attended) {
-        const rating = Math.floor(Math.random() * 2) + 4; // 4 or 5 stars
-        const feedbacks = [
-          'Great session! Very helpful and informative.',
-          'Excellent explanation of complex concepts.',
-          'Really enjoyed the interactive approach.',
-          'Perfect pacing and clear examples.',
-          'Helped me understand the material much better.'
-        ];
-        
-        await prisma.sessionReview.create({
-          data: {
-            studentId: student.id,
-            sessionId: session.id,
-            rating,
-            feedback: feedbacks[Math.floor(Math.random() * feedbacks.length)]
-          }
-        });
-
-        // Add activity for completed session
-        await prisma.activity.create({
-          data: {
-            userId: student.id,
-            type: 'session_completed',
-            description: `Completed session: ${session.id}`,
-            entityType: 'session',
-            entityId: session.id,
-            createdAt: session.endTime
-          }
-        });
-      }
+      // Note: No attendance records or reviews for future sessions
+      // These will be created after the sessions actually occur
     }
   }
 
@@ -480,10 +420,10 @@ async function main() {
     });
 
     if (sessionWithDetails && sessionWithDetails.enrollments.length > 0) {
-      // Create group conversation
+      // Create group conversation with session-specific name
       const groupChat = await prisma.conversation.create({
         data: {
-          name: `${sessionWithDetails.module.code} - ${sessionWithDetails.module.name} Study Group`,
+          name: `${sessionWithDetails.module.code} - ${sessionWithDetails.module.name} Session ${session.id}`,
           type: 'session_chat',
           isGroup: true,
           createdBy: sessionWithDetails.tutor.id,

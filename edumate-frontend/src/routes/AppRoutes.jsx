@@ -19,7 +19,6 @@ import SessionHistory from "../pages/SessionHistory";
 import Settings from "../pages/Settings";
 import Profile from "../pages/Profile";
 import TutorSessions from "../pages/TutorSessions";
-import GroupChatList from "../components/chat/GroupChatList";
 import TutorMessages from "../pages/TutorMessages";
 import Messages from "../pages/Messages";
 
@@ -42,7 +41,6 @@ export default function AppRoutes() {
         <Route path="create-session" element={<SessionManagement />} />
         <Route path="sessions" element={<TutorSessions />} />
         <Route path="messages" element={<TutorMessages />} />
-        <Route path="group-chats" element={<GroupChatList />} />
         <Route path="profile" element={<TutorProfilePage />} />
         <Route path="settings" element={<Settings />} />
       </Route>
@@ -57,7 +55,6 @@ export default function AppRoutes() {
         <Route path="my-sessions" element={<MySessions />} />
         <Route path="my-tutors" element={<MyTutors />} />
         <Route path="messages" element={<Messages />} />
-        <Route path="group-chats" element={<GroupChatList />} />
         <Route path="progress" element={<Progress />} />
         <Route path="session-history" element={<SessionHistory />} />
         <Route path="settings" element={<Settings />} />

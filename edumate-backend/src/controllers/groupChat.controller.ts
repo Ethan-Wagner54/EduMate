@@ -698,3 +698,190 @@ export const markGroupMessagesAsRead = async (req: Request, res: Response) => {
     });
   }
 };
+
+/**
+ * Delete a group chat
+ */
+export const deleteGroupChat = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const conversationId = parseInt(req.params.conversationId);
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    // First, check if the conversation exists and get its details
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: {
+        participants: {
+          include: {
+            user: {
+              select: { id: true, role: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!conversation) {
+      return res.status(404).json({ success: false, error: 'Conversation not found' });
+    }
+
+    // Check if user is a participant in the conversation
+    const userParticipant = conversation.participants.find(p => p.userId === userId);
+    if (!userParticipant) {
+      return res.status(403).json({ success: false, error: 'Not authorized to delete this conversation' });
+    }
+
+    // For session chats, only allow deletion if:
+    // 1. User is the creator (tutor) of the conversation, OR
+    // 2. User is an admin
+    if (conversation.type === 'session_chat') {
+      const userRole = userParticipant.user.role;
+      const isCreator = conversation.createdBy === userId;
+      const isAdmin = userRole === 'admin';
+      
+      if (!isCreator && !isAdmin) {
+        return res.status(403).json({ 
+          success: false, 
+          error: 'Only the session tutor or admin can delete session chats' 
+        });
+      }
+    }
+    // For regular group chats, allow deletion if user is creator or admin
+    else if (conversation.type === 'group') {
+      const userRole = userParticipant.user.role;
+      const isCreator = conversation.createdBy === userId;
+      const isAdmin = userRole === 'admin';
+      
+      if (!isCreator && !isAdmin) {
+        return res.status(403).json({ 
+          success: false, 
+          error: 'Only the group creator or admin can delete group chats' 
+        });
+      }
+    }
+    // For direct conversations, don't allow deletion, only leaving
+    else if (conversation.type === 'direct') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Direct conversations cannot be deleted. Use leave instead.' 
+      });
+    }
+
+    // Delete all messages first
+    await prisma.conversationMessage.deleteMany({
+      where: { conversationId }
+    });
+
+    // Delete all participants
+    await prisma.conversationParticipant.deleteMany({
+      where: { conversationId }
+    });
+
+    // Finally delete the conversation
+    await prisma.conversation.delete({
+      where: { id: conversationId }
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'Conversation deleted successfully' 
+    });
+
+  } catch (error) {
+    console.error('Error deleting group chat:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to delete conversation' 
+    });
+  }
+};
+
+/**
+ * Leave a group chat (remove self from participants)
+ */
+export const leaveGroupChat = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const conversationId = parseInt(req.params.conversationId);
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    // Check if user is a participant
+    const participant = await prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId
+        }
+      }
+    });
+
+    if (!participant) {
+      return res.status(404).json({ success: false, error: 'You are not a participant in this conversation' });
+    }
+
+    // Get conversation details
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: {
+        participants: {
+          include: {
+            user: { select: { id: true, name: true } }
+          }
+        }
+      }
+    });
+
+    if (!conversation) {
+      return res.status(404).json({ success: false, error: 'Conversation not found' });
+    }
+
+    // Remove the user from the conversation
+    await prisma.conversationParticipant.delete({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId
+        }
+      }
+    });
+
+    // Send a notification message if it's a group chat
+    if (conversation.isGroup) {
+      const leavingUser = conversation.participants.find(p => p.userId === userId);
+      if (leavingUser) {
+        // Find a remaining participant to send the message as (preferably the creator)
+        const remainingParticipants = conversation.participants.filter(p => p.userId !== userId);
+        const messageSender = remainingParticipants.find(p => p.userId === conversation.createdBy) || remainingParticipants[0];
+        
+        if (messageSender) {
+          await prisma.conversationMessage.create({
+            data: {
+              conversationId,
+              senderId: messageSender.userId,
+              content: `${leavingUser.user.name} has left the chat. 👋`
+            }
+          });
+        }
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Left conversation successfully' 
+    });
+
+  } catch (error) {
+    console.error('Error leaving group chat:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to leave conversation' 
+    });
+  }
+};

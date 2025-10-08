@@ -63,6 +63,10 @@ model User {
   sessionReviews  SessionReview[]
   activities      Activity[]
   dashboardStats  DashboardStats?
+  
+  // Student-Tutor relationships
+  studentTutorAsStudent StudentTutor[] @relation("StudentTutorStudent")
+  studentTutorAsTutor   StudentTutor[] @relation("StudentTutorTutor")
 }
 
 model Module {
@@ -262,6 +266,24 @@ model Activity {
   createdAt   DateTime     @default(now())
 
   user        User         @relation(fields: [userId], references: [id])
+}
+
+// Student-Tutor relationships
+model StudentTutor {
+  id            Int      @id @default(autoincrement())
+  studentId     Int
+  tutorId       Int
+  firstSessionDate DateTime // Date of first session together
+  lastSessionDate  DateTime // Date of most recent session
+  totalSessions    Int      @default(1)
+  averageRating    Float?   // Average rating given to this tutor by this student
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  student       User     @relation("StudentTutorStudent", fields: [studentId], references: [id])
+  tutor         User     @relation("StudentTutorTutor", fields: [tutorId], references: [id])
+
+  @@unique([studentId, tutorId])
 }
 
 // Dashboard statistics cache

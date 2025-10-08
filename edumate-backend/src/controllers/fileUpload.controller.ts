@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 // Interface for file attachments
 interface FileAttachment {
@@ -31,7 +31,7 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
-    const uniqueId = uuidv4();
+    const uniqueId = randomUUID();
     const extension = path.extname(file.originalname);
     const filename = `${uniqueId}${extension}`;
     cb(null, filename);
@@ -124,7 +124,7 @@ export const uploadFiles = async (req: Request, res: Response) => {
 
     // Process uploaded files
     const attachments: FileAttachment[] = files.map((file: Express.Multer.File) => ({
-      id: uuidv4(),
+      id: randomUUID(),
       filename: file.filename,
       originalName: file.originalname,
       mimeType: file.mimetype,

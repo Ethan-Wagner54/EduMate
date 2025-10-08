@@ -15,6 +15,7 @@ import messageApiRoutes from "./routes/messageRoutes";
 import tutorDashboardRoutes from "./routes/tutorDashboard";
 import progressRoutes from "./routes/progress";
 import fileUploadRoutes from "./routes/fileUpload";
+import studentTutorsRoutes from "./routes/studentTutors";
 import { requestLogger } from "./middleware/requestLogger";
 
 const app = express();
@@ -53,6 +54,7 @@ app.use("/conversations", conversationRoutes);
 app.use("/session-history", sessionHistoryRoutes);
 app.use("/group-chats", groupChatRoutes);
 app.use("/files", fileUploadRoutes);
+app.use("/student-tutors", studentTutorsRoutes);
 
 // Serve static files (uploaded attachments)
 app.use('/uploads', express.static('uploads'));

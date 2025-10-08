@@ -24,6 +24,8 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
       // Only store the token in localStorage
       localStorage.setItem('token', response.data.token);
       
+      // Auth headers will be set automatically by axios interceptor
+      
       // Log decoded token for debugging but don't store sensitive parts
       const decodedToken = decodeToken(response.data.token);
       if (decodedToken) {

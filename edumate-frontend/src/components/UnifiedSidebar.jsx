@@ -48,11 +48,6 @@ const navigationConfig = {
       label: 'Messages'
     },
     {
-      to: '/student/group-chats',
-      icon: Users,
-      label: 'Group Chats'
-    },
-    {
       to: '/student/progress',
       icon: Star,
       label: 'Progress'
@@ -84,11 +79,6 @@ const navigationConfig = {
       to: '/tutor/messages',
       icon: MessageSquare,
       label: 'Messages'
-    },
-    {
-      to: '/tutor/group-chats',
-      icon: Users,
-      label: 'Group Chats'
     }
   ],
   admin: [
