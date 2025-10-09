@@ -329,6 +329,82 @@ export const getSessionDetails = async (req: Request, res: Response) => {
   }
 };
 
+export const updateSession = async (req: Request, res: Response) => {
+  try {
+    const adminUser = req.user!;
+    const id = Number(req.params.id);
+    if (!id || Number.isNaN(id)) {
+      return res.status(400).json({ message: 'Valid id param is required' });
+    }
+
+    const { title, location, status, description } = req.body;
+    
+    // Validate status if provided
+    if (status && !['draft', 'published', 'cancelled'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status. Must be: draft, published, or cancelled' });
+    }
+
+    // Check if session exists
+    const existingSession = await prisma.session.findUnique({ where: { id } });
+    if (!existingSession) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+
+    // Build update data object
+    const updateData: any = {};
+    if (description !== undefined) updateData.description = description;
+    if (location !== undefined) updateData.location = location;
+    if (status !== undefined) {
+      updateData.status = status;
+      // Set cancelledAt timestamp if cancelling
+      if (status === 'cancelled' && existingSession.status !== 'cancelled') {
+        updateData.cancelledAt = new Date();
+      } else if (status !== 'cancelled') {
+        updateData.cancelledAt = null;
+      }
+    }
+
+    const updatedSession = await prisma.session.update({
+      where: { id },
+      data: updateData,
+      include: {
+        tutor: { select: { id: true, name: true } },
+        module: { select: { id: true, name: true, code: true } },
+        enrollments: { select: { id: true } },
+      },
+    });
+
+    // Format response similar to other session responses
+    const now = new Date();
+    const formattedSession = {
+      id: updatedSession.id,
+      title: updatedSession.description || `${updatedSession.module?.name || updatedSession.module?.code || 'Session'} with ${updatedSession.tutor?.name || 'Tutor'}`,
+      subject: updatedSession.module?.name || updatedSession.module?.code || 'N/A',
+      tutorName: updatedSession.tutor?.name || 'N/A',
+      scheduledAt: updatedSession.startTime,
+      location: updatedSession.location || 'Online',
+      participants: updatedSession.enrollments || [],
+      status: updatedSession.cancelledAt
+        ? 'cancelled'
+        : (updatedSession.endTime && new Date(updatedSession.endTime) < now)
+          ? 'completed'
+          : (new Date(updatedSession.startTime) > now)
+            ? 'scheduled'
+            : 'active',
+      description: updatedSession.description || null,
+    };
+
+    await logAudit(adminUser.userId, 'Session', id, 'SESSION_UPDATED');
+    return res.json(formattedSession);
+  } catch (error: any) {
+    logger.error('admin_update_session_failed', { error: (error as any)?.message || String(error) });
+    if (error?.code === 'P2025') {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+    return res.status(500).json({ message: 'Error updating session' });
+  }
+};
+
 export const deleteSession = async (req: Request, res: Response) => {
   try {
     const adminUser = req.user!;

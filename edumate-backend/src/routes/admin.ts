@@ -10,6 +10,7 @@ import {
   listAuditLogs,
   listSessions,
   getSessionDetails,
+  updateSession,
   deleteSession,
   deactivateUser,
   reactivateUser,
@@ -43,6 +44,7 @@ router.get('/audit', listAuditLogs);
 // Sessions management (admin)
 router.get('/sessions', listSessions);
 router.get('/sessions/:id', getSessionDetails);
+router.put('/sessions/:id', updateSession);
 router.delete('/sessions/:id', deleteSession);
 
 // Chat moderation
