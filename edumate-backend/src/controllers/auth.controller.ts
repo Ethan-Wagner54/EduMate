@@ -87,6 +87,11 @@ export async function login(req: Request, res: Response) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
+    // Block deactivated accounts
+    if ((user as any).isActive === false) {
+      return res.status(403).json({ error: "Account is deactivated" });
+    }
+
     const isPasswordValid = await comparePassword(password, user.passwordHash);
 
     if (!isPasswordValid) {

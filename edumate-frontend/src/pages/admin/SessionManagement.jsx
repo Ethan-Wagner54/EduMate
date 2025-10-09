@@ -3,7 +3,6 @@ import { Calendar, Clock, Users, MapPin, Edit, Trash2, Eye, Search } from 'lucid
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import adminService from '../../services/admin/adminService';
 
 export default function SessionManagement() {
@@ -243,21 +242,20 @@ export default function SessionManagement() {
                 />
               </div>
             </div>
-            <div className="w-48">
-              <label className="text-sm font-medium mb-2 block">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="w-48">
+                <label className="text-sm font-medium mb-2 block">Status</label>
+                <select
+                  className="block w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
           </div>
         </CardContent>
       </Card>

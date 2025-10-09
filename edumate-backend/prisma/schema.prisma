@@ -36,6 +36,10 @@ model User {
   resetTokenExpiry DateTime?    // Token expiration time
   createdAt       DateTime      @default(now())
   
+  // Account status and moderation
+  isActive        Boolean       @default(true)
+  warningsCount   Int           @default(0)
+  
   // Student-specific fields
   studentId       String?       // Student ID number
   program         String?       // Academic program
@@ -170,6 +174,12 @@ enum ConversationType {
   session_chat
 }
 
+enum ModerationSeverity {
+  low
+  medium
+  high
+}
+
 model AuditLog {
   id        Int      @id @default(autoincrement())
   userId    Int?
@@ -230,17 +240,22 @@ model ConversationParticipant {
 }
 
 model ConversationMessage {
-  id              Int          @id @default(autoincrement())
+  id              Int                  @id @default(autoincrement())
   conversationId  Int
   senderId        Int
   content         String
-  metadata        Json?        // For storing attachments and other message metadata
-  isRead          Boolean      @default(false)
-  sentAt          DateTime     @default(now())
+  metadata        Json?                // For storing attachments and other message metadata
+  isRead          Boolean              @default(false)
+  sentAt          DateTime             @default(now())
   editedAt        DateTime?
 
-  conversation    Conversation @relation(fields: [conversationId], references: [id])
-  sender          User         @relation(fields: [senderId], references: [id])
+  // Moderation fields
+  isFlagged       Boolean              @default(false)
+  flagReason      String?
+  severity        ModerationSeverity?
+
+  conversation    Conversation         @relation(fields: [conversationId], references: [id])
+  sender          User                 @relation(fields: [senderId], references: [id])
 }
 
 // Session reviews and ratings

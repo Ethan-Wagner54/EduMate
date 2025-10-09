@@ -106,7 +106,7 @@ export default function UserManagement() {
                 <h3 className="font-semibold text-lg">{user.name}</h3>
                 <p className="text-muted-foreground text-sm">{user.email}</p>
               </div>
-              {user.status === 'inactive' && (
+              {!user.isActive && (
                 <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
                   Inactive
                 </span>
@@ -170,7 +170,7 @@ export default function UserManagement() {
                   <Eye className="w-4 h-4 mr-1" />
                   View Details
                 </Button>
-                {user.status === 'active' ? (
+                {user.isActive ? (
                   <Button 
                     size="sm" 
                     variant="destructive"
