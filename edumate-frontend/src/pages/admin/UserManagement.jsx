@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Shield, CheckCircle, XCircle, AlertTriangle, Eye } from 'lucide-react';
+import { Users, Shield, CheckCircle, XCircle, AlertTriangle, Eye, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
@@ -12,6 +12,8 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('students');
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -93,6 +95,16 @@ export default function UserManagement() {
     }
   };
 
+  const handleViewDetails = (user, userType) => {
+    setSelectedUser({ ...user, userType });
+    setShowDetailsModal(true);
+  };
+
+  const closeDetailsModal = () => {
+    setSelectedUser(null);
+    setShowDetailsModal(false);
+  };
+
   const UserCard = ({ user, userType, isPending = false }) => (
     <Card className="mb-4">
       <CardContent className="p-6">
@@ -166,7 +178,11 @@ export default function UserManagement() {
               </>
             ) : (
               <>
-                <Button size="sm" variant="outline">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleViewDetails(user, userType)}
+                >
                   <Eye className="w-4 h-4 mr-1" />
                   View Details
                 </Button>
@@ -197,6 +213,116 @@ export default function UserManagement() {
     </Card>
   );
 
+  const DetailsModal = () => {
+    if (!showDetailsModal || !selectedUser) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">User Details</h2>
+            <Button variant="ghost" size="sm" onClick={closeDetailsModal}>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Name</label>
+                <p className="text-lg font-semibold">{selectedUser.name}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Email</label>
+                <p className="text-lg">{selectedUser.email}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">User ID</label>
+                <p className="text-lg">{selectedUser.id}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">User Type</label>
+                <p className="text-lg capitalize">{selectedUser.userType}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Account Status</label>
+                <p className={`text-lg font-semibold ${
+                  selectedUser.isActive ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {selectedUser.isActive ? 'Active' : 'Inactive'}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Joined Date</label>
+                <p className="text-lg">
+                  {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString() : 'N/A'}
+                </p>
+              </div>
+            </div>
+            
+            {selectedUser.userType === 'tutor' && (
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-semibold mb-2">Tutor Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Subjects</label>
+                    <p className="text-lg">{selectedUser.subjects?.join(', ') || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Rating</label>
+                    <p className="text-lg">{selectedUser.rating || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Campus Location</label>
+                    <p className="text-lg">{selectedUser.campusLocation || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Warning Count</label>
+                    <p className="text-lg">{selectedUser.warningsCount || 0}</p>
+                  </div>
+                </div>
+                
+                {selectedUser.tutorModules && selectedUser.tutorModules.length > 0 && (
+                  <div className="mt-4">
+                    <label className="text-sm font-medium text-gray-500">Teaching Modules</label>
+                    <div className="mt-2 space-y-2">
+                      {selectedUser.tutorModules.map((tm, index) => (
+                        <div key={index} className="bg-gray-50 p-2 rounded">
+                          <p className="font-medium">{tm?.module?.name || 'N/A'}</p>
+                          <p className="text-sm text-gray-600">{tm?.module?.code || 'N/A'}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {selectedUser.userType === 'student' && (
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-semibold mb-2">Student Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Student ID</label>
+                    <p className="text-lg">{selectedUser.studentId || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Enrollment Status</label>
+                    <p className="text-lg">{selectedUser.enrollmentStatus || 'Active'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-6 flex justify-end">
+            <Button onClick={closeDetailsModal}>Close</Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="p-6">
@@ -209,6 +335,7 @@ export default function UserManagement() {
 
   return (
     <div className="p-6">
+      <DetailsModal />
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold">User Management</h1>

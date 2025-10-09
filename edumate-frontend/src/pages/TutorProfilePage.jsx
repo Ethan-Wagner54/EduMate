@@ -183,7 +183,7 @@ export default function TutorProfilePage() {
                   <p className="text-primary-foreground/80 text-lg">{tutor.location}</p>
                   <div className="flex items-center justify-center lg:justify-start mt-2">
                     <Star className="w-5 h-5 text-yellow-300 fill-current mr-1" />
-                    <span className="text-primary-foreground/90 font-medium">{tutor.stats.averageRating}/5.0</span>
+                    <span className="text-primary-foreground/90 font-medium">{tutor.stats.averageRating.toFixed(1)}/5.0</span>
                     <span className="text-primary-foreground/60 ml-2">• {tutor.stats.yearsExperience} years experience</span>
                   </div>
                 </div>
@@ -354,7 +354,7 @@ export default function TutorProfilePage() {
                     <div className="bg-muted/50 rounded-xl p-4">
                       <div className="flex items-center justify-between mb-2">
                         <Star size={20} className="text-yellow-500" />
-                        <span className="text-2xl font-bold text-foreground">{tutor.stats.averageRating}</span>
+                        <span className="text-2xl font-bold text-foreground">{tutor.stats.averageRating.toFixed(1)}</span>
                       </div>
                       <p className="text-sm text-muted-foreground">Average Rating</p>
                     </div>

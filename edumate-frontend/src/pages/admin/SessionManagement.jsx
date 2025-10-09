@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, MapPin, Edit, Trash2, Eye, Search } from 'lucide-react';
+import { Calendar, Clock, Users, MapPin, Edit, Trash2, Eye, Search, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -14,6 +14,7 @@ export default function SessionManagement() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedSession, setSelectedSession] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
     fetchSessions();
@@ -82,8 +83,7 @@ export default function SessionManagement() {
       const response = await adminService.getSessionDetails(sessionId);
       if (response.success) {
         setSelectedSession(response.data);
-        // Here you could open a modal or navigate to a detailed view
-        alert(`Session Details:\nTitle: ${response.data.title}\nTutor: ${response.data.tutorName}\nParticipants: ${response.data.participants?.length || 0}`);
+        setShowDetailsModal(true);
       } else {
         alert('Failed to fetch session details: ' + response.error);
       }
@@ -95,6 +95,21 @@ export default function SessionManagement() {
   const handleEditSession = (session) => {
     setSelectedSession(session);
     setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async (updates) => {
+    try {
+      const response = await adminService.updateSession(selectedSession.id, updates);
+      if (response.success) {
+        setShowEditModal(false);
+        fetchSessions(); // Refresh data
+        alert('Session updated successfully!');
+      } else {
+        alert('Failed to update session: ' + response.error);
+      }
+    } catch (error) {
+      alert('Error updating session');
+    }
   };
 
   const SessionCard = ({ session }) => {
@@ -283,36 +298,173 @@ export default function SessionManagement() {
         </CardContent>
       </Card>
 
-      {/* Edit Modal would go here - simplified for now */}
+      {/* Details Modal */}
+      {showDetailsModal && selectedSession && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Session Details</h2>
+              <Button variant="ghost" size="sm" onClick={() => setShowDetailsModal(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Title</label>
+                  <p className="text-lg font-semibold">{selectedSession.title}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Subject</label>
+                  <p className="text-lg">{selectedSession.subject}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Tutor</label>
+                  <p className="text-lg">{selectedSession.tutorName}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Status</label>
+                  <span className={`inline-block px-2 py-1 rounded-full text-sm ${
+                    selectedSession.status === 'active' ? 'bg-green-100 text-green-800' :
+                    selectedSession.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                    selectedSession.status === 'completed' ? 'bg-gray-100 text-gray-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {selectedSession.status?.charAt(0).toUpperCase() + selectedSession.status?.slice(1)}
+                  </span>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Scheduled Time</label>
+                  <p className="text-lg">
+                    {selectedSession.scheduledAt ? new Date(selectedSession.scheduledAt).toLocaleString() : 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Location</label>
+                  <p className="text-lg">{selectedSession.location || 'Online'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Students Enrolled</label>
+                  <p className="text-lg">{selectedSession.participants?.length || 0}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Session ID</label>
+                  <p className="text-lg font-mono text-sm">{selectedSession.id}</p>
+                </div>
+              </div>
+              
+              {selectedSession.description && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Description</label>
+                  <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm">{selectedSession.description}</p>
+                  </div>
+                </div>
+              )}
+              
+              {selectedSession.participants && selectedSession.participants.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Enrolled Students</label>
+                  <div className="mt-2 space-y-2">
+                    {selectedSession.participants.map((participant, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                        <Users className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm">{participant.name || `Student ${index + 1}`}</span>
+                        <span className="text-xs text-gray-500">({participant.email || 'No email'})</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-6 flex justify-end">
+              <Button onClick={() => setShowDetailsModal(false)}>Close</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal with actual functionality */}
       {showEditModal && selectedSession && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-lg">
             <CardHeader>
-              <CardTitle>Edit Session</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Editing: {selectedSession.title}
-              </p>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowEditModal(false)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={() => {
-                    // Here you would implement the actual edit logic
-                    alert('Edit functionality would be implemented here');
-                    setShowEditModal(false);
-                  }}
-                  className="flex-1"
-                >
-                  Save Changes
+              <div className="flex items-center justify-between">
+                <CardTitle>Edit Session</CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setShowEditModal(false)}>
+                  <X className="w-4 h-4" />
                 </Button>
               </div>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const updates = {
+                  title: formData.get('title'),
+                  location: formData.get('location'),
+                  status: formData.get('status'),
+                  description: formData.get('description')
+                };
+                handleSaveEdit(updates);
+              }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Title</label>
+                    <Input 
+                      name="title" 
+                      defaultValue={selectedSession.title} 
+                      required 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Location</label>
+                    <Input 
+                      name="location" 
+                      defaultValue={selectedSession.location || ''} 
+                      placeholder="Online or physical location" 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Status</label>
+                    <select 
+                      name="status"
+                      defaultValue={selectedSession.status}
+                      className="block w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="scheduled">Scheduled</option>
+                      <option value="active">Active</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Description</label>
+                    <textarea 
+                      name="description"
+                      defaultValue={selectedSession.description || ''}
+                      placeholder="Session description..."
+                      rows="3"
+                      className="block w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-6">
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    onClick={() => setShowEditModal(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="flex-1">
+                    Save Changes
+                  </Button>
+                </div>
+              </form>
             </CardContent>
           </Card>
         </div>

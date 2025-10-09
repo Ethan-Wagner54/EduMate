@@ -247,7 +247,7 @@ class AdminService {
     }
   }
 
-  // Analytics and Dashboard (not yet implemented on backend)
+  // Analytics and Dashboard
   async getDashboardStats() {
     try {
       const response = await axiosInstance.get('/admin/dashboard/stats');
@@ -255,6 +255,160 @@ class AdminService {
     } catch (error: any) {
       return { success: false, error: error?.response?.data?.message || error?.message || 'Request failed' };
     }
+  }
+
+  async getAnalyticsData() {
+    try {
+      // Fetch comprehensive analytics data
+      const [usersRes, sessionsRes, studentsRes] = await Promise.all([
+        this.getAllUsers(),
+        this.getAllSessions(),
+        this.getAllStudents()
+      ]);
+
+      const users = usersRes.success ? usersRes.data : [];
+      const sessions = sessionsRes.success ? sessionsRes.data : [];
+      const students = studentsRes.success ? studentsRes.data : [];
+      const tutors = users.filter((u: any) => u.role === 'tutor');
+
+      // Calculate time-based data
+      const now = new Date();
+      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+      
+      // Process users by month for growth chart
+      const usersByMonth = this.groupUsersByMonth(users, 6);
+      const sessionsByMonth = this.groupSessionsByMonth(sessions, 6);
+      
+      // Calculate session status distribution
+      const sessionStatusDistribution = this.calculateSessionStatusDistribution(sessions);
+      
+      // Calculate user engagement metrics
+      const engagementMetrics = this.calculateEngagementMetrics(users, sessions);
+
+      return {
+        success: true,
+        data: {
+          usersByMonth,
+          sessionsByMonth,
+          sessionStatusDistribution,
+          engagementMetrics,
+          totalUsers: users.length,
+          totalStudents: students.length,
+          totalTutors: tutors.length,
+          totalSessions: sessions.length,
+          activeUsers: users.filter((u: any) => u.isActive !== false).length
+        }
+      };
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Failed to fetch analytics data' };
+    }
+  }
+
+  private groupUsersByMonth(users: any[], months: number) {
+    const result = [];
+    const now = new Date();
+    
+    for (let i = months - 1; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const nextDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      
+      const usersInMonth = users.filter((user: any) => {
+        if (!user.createdAt) return false;
+        const userDate = new Date(user.createdAt);
+        return userDate >= date && userDate < nextDate;
+      });
+      
+      const tutorsInMonth = usersInMonth.filter((u: any) => u.role === 'tutor');
+      const studentsInMonth = usersInMonth.filter((u: any) => u.role === 'student');
+      
+      result.push({
+        month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        monthShort: date.toLocaleDateString('en-US', { month: 'short' }),
+        totalUsers: usersInMonth.length,
+        tutors: tutorsInMonth.length,
+        students: studentsInMonth.length,
+        cumulativeUsers: users.filter((u: any) => {
+          if (!u.createdAt) return false;
+          return new Date(u.createdAt) < nextDate;
+        }).length
+      });
+    }
+    
+    return result;
+  }
+  
+  private groupSessionsByMonth(sessions: any[], months: number) {
+    const result = [];
+    const now = new Date();
+    
+    for (let i = months - 1; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const nextDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      
+      const sessionsInMonth = sessions.filter((session: any) => {
+        if (!session.scheduledAt && !session.startTime) return false;
+        const sessionDate = new Date(session.scheduledAt || session.startTime);
+        return sessionDate >= date && sessionDate < nextDate;
+      });
+      
+      const completedSessions = sessionsInMonth.filter((s: any) => s.status === 'completed');
+      const cancelledSessions = sessionsInMonth.filter((s: any) => s.status === 'cancelled');
+      
+      result.push({
+        month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        monthShort: date.toLocaleDateString('en-US', { month: 'short' }),
+        totalSessions: sessionsInMonth.length,
+        completedSessions: completedSessions.length,
+        cancelledSessions: cancelledSessions.length,
+        activeStatus: sessionsInMonth.length - completedSessions.length - cancelledSessions.length
+      });
+    }
+    
+    return result;
+  }
+  
+  private calculateSessionStatusDistribution(sessions: any[]) {
+    const statusCounts = {
+      completed: 0,
+      cancelled: 0,
+      scheduled: 0,
+      active: 0
+    };
+    
+    sessions.forEach((session: any) => {
+      const status = session.status || 'scheduled';
+      if (statusCounts.hasOwnProperty(status)) {
+        statusCounts[status as keyof typeof statusCounts]++;
+      } else {
+        statusCounts.scheduled++; // default fallback
+      }
+    });
+    
+    return [
+      { name: 'Completed', value: statusCounts.completed, color: '#10b981' },
+      { name: 'Scheduled', value: statusCounts.scheduled, color: '#3b82f6' },
+      { name: 'Active', value: statusCounts.active, color: '#f59e0b' },
+      { name: 'Cancelled', value: statusCounts.cancelled, color: '#ef4444' }
+    ];
+  }
+  
+  private calculateEngagementMetrics(users: any[], sessions: any[]) {
+    const activeUsers = users.filter((u: any) => u.isActive !== false).length;
+    const totalUsers = users.length;
+    const engagementRate = totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : 0;
+    
+    const completedSessions = sessions.filter((s: any) => s.status === 'completed').length;
+    const totalSessions = sessions.length;
+    const completionRate = totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0;
+    
+    return {
+      engagementRate,
+      completionRate,
+      activeUsers,
+      totalUsers,
+      completedSessions,
+      totalSessions
+    };
   }
 
   async getSystemHealth() {
