@@ -1,29 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useContext, createContext } from "react";
 import { cn } from "./utils";
 
-export function Tabs({ className, defaultValue, children }) {
-  const [activeTab, setActiveTab] = useState(defaultValue || "");
+const TabsContext = createContext({ activeTab: "", setActiveTab: () => {} });
 
-  // Clone children to pass activeTab state
-  const clonedChildren = React.Children.map(children, (child) => {
-    if (!React.isValidElement(child)) return child;
-    return React.cloneElement(child, { activeTab, setActiveTab });
-  });
+export function Tabs({ className, defaultValue, value, onValueChange, children }) {
+  const isControlled = value !== undefined;
+  const [internal, setInternal] = useState(defaultValue || "");
+  const activeTab = isControlled ? value : internal;
+  const setActiveTab = (v) => {
+    if (onValueChange) onValueChange(v);
+    if (!isControlled) setInternal(v);
+  };
+  const ctx = useMemo(() => ({ activeTab, setActiveTab }), [activeTab]);
 
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
-      {clonedChildren}
-    </div>
+    <TabsContext.Provider value={ctx}>
+      <div className={cn("flex flex-col gap-2", className)}>{children}</div>
+    </TabsContext.Provider>
   );
 }
 
-export function TabsList({ className, children, activeTab, setActiveTab }) {
-  // Clone children to pass activeTab state to TabsTrigger components
-  const clonedChildren = React.Children.map(children, (child) => {
-    if (!React.isValidElement(child)) return child;
-    return React.cloneElement(child, { activeTab, setActiveTab });
-  });
-
+export function TabsList({ className, children }) {
   return (
     <div
       className={cn(
@@ -31,17 +28,18 @@ export function TabsList({ className, children, activeTab, setActiveTab }) {
         className
       )}
     >
-      {clonedChildren}
+      {children}
     </div>
   );
 }
 
-export function TabsTrigger({ className, children, value, activeTab, setActiveTab }) {
+export function TabsTrigger({ className, children, value }) {
+  const { activeTab, setActiveTab } = useContext(TabsContext);
   const isActive = activeTab === value;
 
   return (
     <button
-      onClick={() => setActiveTab && setActiveTab(value)}
+      onClick={() => setActiveTab(value)}
       className={cn(
         "inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-3 py-1.5 text-sm font-medium transition-all duration-200 disabled:opacity-50",
         isActive
@@ -55,7 +53,8 @@ export function TabsTrigger({ className, children, value, activeTab, setActiveTa
   );
 }
 
-export function TabsContent({ children, value, activeTab, className }) {
+export function TabsContent({ children, value, className }) {
+  const { activeTab } = useContext(TabsContext);
   if (activeTab !== value) return null;
 
   return <div className={cn("flex-1 outline-none", className)}>{children}</div>;

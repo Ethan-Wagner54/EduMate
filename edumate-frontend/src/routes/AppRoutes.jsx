@@ -13,6 +13,7 @@ import AdminLayout from "../components/admin/AdminLayout";
 import UserManagement from "../pages/admin/UserManagement";
 import AdminSessionManagement from "../pages/admin/SessionManagement";
 import ChatModeration from "../pages/admin/ChatModeration";
+import Analytics from "../pages/admin/Analytics";
 import StudentDashboard from "../pages/StudentDashboard";
 import StudentLayout from "../components/student/StudentLayout";
 import BrowseSessions from "../pages/BrowseSessions";
@@ -55,6 +56,7 @@ export default function AppRoutes() {
         <Route path="users" element={<UserManagement />} />
         <Route path="sessions" element={<AdminSessionManagement />} />
         <Route path="chats" element={<ChatModeration />} />
+        <Route path="analytics" element={<Analytics />} />
         <Route path="settings" element={<Settings />} />
       </Route>
 

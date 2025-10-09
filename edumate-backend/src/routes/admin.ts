@@ -8,6 +8,18 @@ import {
   approveTutorRequest,
   rejectTutorRequest,
   listAuditLogs,
+  listSessions,
+  getSessionDetails,
+  updateSession,
+  deleteSession,
+  deactivateUser,
+  reactivateUser,
+  warnUser,
+  listChats,
+  listFlaggedMessages,
+  deleteChatMessage,
+  flagMessage,
+  unflagMessage,
 } from '../controllers/admin.controller';
 
 const router = Router();
@@ -17,6 +29,9 @@ router.use(protect, requireRole('admin'));
 
 router.get('/users', listUsers);
 router.post('/users/role', updateUserRole);
+router.put('/users/:id/deactivate', deactivateUser);
+router.put('/users/:id/reactivate', reactivateUser);
+router.post('/users/:id/warn', warnUser);
 
 // Tutor approvals
 router.get('/tutor-requests', listTutorRequests);
@@ -25,5 +40,18 @@ router.post('/tutor-requests/:id/reject', rejectTutorRequest);
 
 // Audit logs
 router.get('/audit', listAuditLogs);
+
+// Sessions management (admin)
+router.get('/sessions', listSessions);
+router.get('/sessions/:id', getSessionDetails);
+router.put('/sessions/:id', updateSession);
+router.delete('/sessions/:id', deleteSession);
+
+// Chat moderation
+router.get('/chats', listChats);
+router.get('/chats/flagged', listFlaggedMessages);
+router.delete('/messages/:id', deleteChatMessage);
+router.put('/messages/:id/flag', flagMessage);
+router.put('/messages/:id/unflag', unflagMessage);
 
 export default router;

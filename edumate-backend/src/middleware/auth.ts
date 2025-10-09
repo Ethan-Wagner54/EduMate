@@ -1,18 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/jwt';
 
-// Extend the Express Request type to include our user payload
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        userId: number;
-        role: string;
-      };
-    }
-  }
-}
-
 export const protect = (req: Request, res: Response, next: NextFunction) => {
   const bearer = req.headers.authorization;
 
@@ -28,6 +16,6 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
   }
 
   // Attach user payload to the request object
-  req.user = payload;
+  req.user = payload as any;
   next();
 };

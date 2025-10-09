@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import SessionManagement from "../components/tutor/SessionManagement";
 import { TutorProfile } from "../components/tutor/TutorProfile";
-import { Button } from "../components/ui/button";
 import authService from "../services/auth/auth";
 import tutorDashboardService from "../services/tutor/tutorDashboard";
 
@@ -78,15 +77,10 @@ export default function TutorDashboard() {
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar is rendered via TutorLayout */}
       <main className="flex-1 p-6 md:p-10 space-y-6">
-        <header className="flex justify-between items-center mb-6">
+        <header className="mb-6">
           <h1 className="text-3xl font-bold text-foreground">
             Welcome, {tutor?.name || 'Tutor'}
           </h1>
-          <Button
-            variant="secondary"
-          >
-            Logout
-          </Button>
         </header>
 
         <section className="space-y-6">
