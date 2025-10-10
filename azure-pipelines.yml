@@ -17,3 +17,18 @@ steps:
     echo Add other tasks to build, test, and deploy your project.
     echo See https://aka.ms/yaml
   displayName: 'Run a multi-line script'
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with: { node-version: 18 }
+    - run: npm ci          # requires package-lock.json to exist
+    - run: npm run build --if-present
+    - uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'edu-api-group'
+        publish-profile: ${{ secrets.AZURE_APISITE_PROFILE }}
+        package: .
