@@ -9,10 +9,12 @@ jobs:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4
       with: { node-version: 18 }
-    - run: npm ci
-    - run: npm run build
+    - run: npm install
+      working-directory: edumate-frontend
+    - run: npm run build --if-present
+      working-directory: edumate-frontend
     - uses: azure/webapps-deploy@v2
       with:
         app-name: 'edu-fe-group'
         publish-profile: ${{ secrets.AZURE_FESITE_PROFILE }}
-        package: build          # upload only the static folder
+        package: .          # upload only the static folder
