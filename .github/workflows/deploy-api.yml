@@ -10,7 +10,7 @@ jobs:
     - uses: actions/setup-node@v4
       with: { node-version: 18 }
     - run: cd edumate-backend
-    - run: npm ci          # requires package-lock.json to exist
+    - run: npm install
     - run: npm run build --if-present
     - uses: azure/webapps-deploy@v2
       with:
