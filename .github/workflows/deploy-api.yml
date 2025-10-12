@@ -2,6 +2,10 @@ name: Build & Deploy API
 on:
   push:
     branches: [ main ]
+env:
+  AZURE_WEBAPP_NAME: MY_WEBAPP_NAME   # set this to your application's name
+  AZURE_WEBAPP_PACKAGE_PATH: 'edumate-backend'      # set this to the path to your web app project, defaults to the repository root
+  NODE_VERSION: '20.2' 
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
