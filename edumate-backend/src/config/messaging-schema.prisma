@@ -1,0 +1,86 @@
+/*
+ * MESSAGING DATABASE SCHEMA - READY FOR FUTURE USE
+ * 
+ * This file contains the Prisma schema additions for messaging functionality.
+ * Currently commented out to maintain compatibility with the current demo.
+ * 
+ * TO ENABLE:
+ * 1. Copy the models below to your main schema.prisma file
+ * 2. Run `npx prisma migrate dev --name add-messaging` to create the migration
+ * 3. Run `npx prisma generate` to update the Prisma client
+ */
+
+/*
+// Add these models to your existing schema.prisma file:
+
+model Conversation {
+  id           String      @id @default(cuid())
+  participants User[]      @relation("ConversationParticipants")
+  messages     Message[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  @@map("conversations")
+}
+
+model Message {
+  id             String          @id @default(cuid())
+  content        String
+  messageType    MessageType     @default(TEXT)
+  senderId       String
+  recipientId    String
+  conversationId String
+  isRead         Boolean         @default(false)
+  readAt         DateTime?
+  attachments    Attachment[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  
+  sender       User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient    User         @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String
+  mimetype     String
+  size         Int
+  url          String
+  messageId    String
+  uploadedAt   DateTime @default(now())
+  
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  
+  @@map("attachments")
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM
+}
+
+// Add these relations to your existing User model:
+model User {
+  // ... existing fields ...
+  
+  // Message relations
+  sentMessages     Message[]      @relation("SentMessages")
+  receivedMessages Message[]      @relation("ReceivedMessages")
+  conversations    Conversation[] @relation("ConversationParticipants")
+  
+  // ... existing relations ...
+}
+*/
+
+// This file serves as a reference and is not executed
+// Copy the models above to your actual schema.prisma file when ready to enable messaging

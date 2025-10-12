@@ -2,7 +2,7 @@
 // Extend Express Request to include authenticated user
 declare namespace Express {
   export interface UserPayload {
-    id: number;
+    userId: number;
     role: "student" | "tutor" | "admin";
   }
   export interface Request {

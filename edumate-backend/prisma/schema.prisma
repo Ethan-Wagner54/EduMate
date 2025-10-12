@@ -1,35 +1,81 @@
-generator client { provider = "prisma-client-js" }
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-enum Role { student tutor admin }
-enum SessionStatus { draft published cancelled }
-enum EnrollmentStatus { joined cancelled waitlisted }
+enum Role {
+  student
+  tutor
+  admin
+}
+
+enum SessionStatus {
+  draft
+  published
+  cancelled
+}
+
+enum EnrollmentStatus {
+  joined
+  left
+  waitlisted
+}
 
 model User {
-  id            Int           @id @default(autoincrement())
-  name          String
-  email         String        @unique
-  phone         String?
-  role          Role          @default(student)
-  passwordHash  String
-  createdAt     DateTime      @default(now())
+  id              Int           @id @default(autoincrement())
+  name            String
+  email           String        @unique
+  phone           String?
+  role            Role          @default(student)
+  passwordHash    String
+  resetToken      String?       // For password reset functionality
+  resetTokenExpiry DateTime?    // Token expiration time
+  createdAt       DateTime      @default(now())
+  
+  // Account status and moderation
+  isActive        Boolean       @default(true)
+  warningsCount   Int           @default(0)
+  
+  // Student-specific fields
+  studentId       String?       // Student ID number
+  program         String?       // Academic program
+  academicYear    String?       // Academic year (1st Year, 2nd Year, etc.)
+  faculty         String?       // Faculty name
+  
+  // Tutor-specific fields  
+  campusLocation  String?       // Campus location for tutors
+  qualifications  Json?         // Array of qualification objects
 
-  tutorModules  TutorModule[]
-  sessions      Session[]     @relation("TutorSessions")
-  messagesSent  Message[]     @relation("messagesSent")
-  messagesReceived Message[]  @relation("messagesReceived")
-  enrollments   Enrollment[]
-  attendances   Attendance[]
-  auditLogs     AuditLog[]
+  // Existing relationships
+  tutorModules    TutorModule[]
+  sessions        Session[]     @relation("TutorSessions")
+  messagesSent    Message[]     @relation("messagesSent")
+  messagesReceived Message[]    @relation("messagesReceived")
+  enrollments     Enrollment[]
+  attendances     Attendance[]
+  auditLogs       AuditLog[]
+  
+  // New relationships
+  profile         UserProfile?
+  conversationsCreated Conversation[]
+  conversationParticipants ConversationParticipant[]
+  conversationMessages ConversationMessage[]
+  sessionReviews  SessionReview[]
+  activities      Activity[]
+  dashboardStats  DashboardStats?
+  
+  // Student-Tutor relationships
+  studentTutorAsStudent StudentTutor[] @relation("StudentTutorStudent")
+  studentTutorAsTutor   StudentTutor[] @relation("StudentTutorTutor")
 }
 
 model Module {
-  id           Int            @id @default(autoincrement())
-  code         String         @unique
+  id           Int           @id @default(autoincrement())
+  code         String        @unique
   name         String
   faculty      String?
   sessions     Session[]
@@ -37,10 +83,10 @@ model Module {
 }
 
 model TutorModule {
-  id              Int     @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   tutorId         Int
   moduleId        Int
-  approvedByAdmin Boolean @default(false)
+  approvedByAdmin Boolean  @default(false)
   createdAt       DateTime @default(now())
 
   tutor  User   @relation(fields: [tutorId], references: [id])
@@ -50,45 +96,49 @@ model TutorModule {
 }
 
 model Session {
-  id         Int            @id @default(autoincrement())
-  tutorId    Int
-  moduleId   Int
-  startTime  DateTime
-  endTime    DateTime
-  location   String?
-  capacity   Int?
-  status     SessionStatus  @default(draft)
-  createdAt  DateTime       @default(now())
+  id          Int            @id @default(autoincrement())
+  tutorId     Int
+  moduleId    Int
+  startTime   DateTime
+  endTime     DateTime
+  location    String?
+  capacity    Int?
+  description String?        // Session description
+  status      SessionStatus  @default(draft)
+  cancelledAt DateTime?      // Timestamp when tutor cancelled the session
+  createdAt   DateTime       @default(now())
 
-  tutor      User    @relation("TutorSessions", fields: [tutorId], references: [id])
-  module     Module  @relation(fields: [moduleId], references: [id])
+  tutor       User        @relation("TutorSessions", fields: [tutorId], references: [id])
+  module      Module      @relation(fields: [moduleId], references: [id])
   enrollments Enrollment[]
   attendances Attendance[]
   messages    Message[]
+  reviews     SessionReview[]
 }
 
 model Enrollment {
-  id         Int               @id @default(autoincrement())
-  sessionId  Int
-  studentId  Int
-  status     EnrollmentStatus  @default(joined)
-  joinedAt   DateTime          @default(now())
+  id        Int              @id @default(autoincrement())
+  sessionId Int
+  studentId Int
+  status    EnrollmentStatus @default(joined)
+  joinedAt  DateTime         @default(now())
+  leftAt    DateTime?        // Timestamp when student left the session
 
-  session    Session @relation(fields: [sessionId], references: [id])
-  student    User    @relation(fields: [studentId], references: [id])
+  session   Session @relation(fields: [sessionId], references: [id])
+  student   User    @relation(fields: [studentId], references: [id])
 
   @@unique([sessionId, studentId])
 }
 
 model Attendance {
-  id         Int       @id @default(autoincrement())
-  sessionId  Int
-  studentId  Int
-  attended   Boolean
-  timestamp  DateTime  @default(now())
+  id        Int      @id @default(autoincrement())
+  sessionId Int
+  studentId Int
+  attended  Boolean
+  timestamp DateTime @default(now())
 
-  session    Session @relation(fields: [sessionId], references: [id])
-  student    User    @relation(fields: [studentId], references: [id])
+  session   Session @relation(fields: [sessionId], references: [id])
+  student   User    @relation(fields: [studentId], references: [id])
 
   @@unique([sessionId, studentId])
 }
@@ -106,13 +156,166 @@ model Message {
   session     Session? @relation(fields: [sessionId], references: [id])
 }
 
+// Additional enums for new models
+enum ActivityType {
+  session_joined
+  session_attended
+  session_completed
+  session_left
+  session_cancelled_by_tutor
+  session_booked
+  message_sent
+  profile_updated
+}
+
+enum ConversationType {
+  direct
+  group
+  session_chat
+}
+
+enum ModerationSeverity {
+  low
+  medium
+  high
+}
+
 model AuditLog {
-  id         Int       @id @default(autoincrement())
-  userId     Int?
+  id        Int      @id @default(autoincrement())
+  userId    Int?
   entityType String
   entityId   Int?
   action     String
-  createdAt  DateTime  @default(now())
+  createdAt  DateTime @default(now())
 
-  user       User?     @relation(fields: [userId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+// Extended user profile information
+model UserProfile {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  bio             String?
+  profilePicture  String?  // URL to profile picture
+  specialties     String[] // Array of specialties for tutors
+  favoriteSubjects String[] // Array of favorite subjects for students
+  totalSessions   Int      @default(0)
+  completedSessions Int    @default(0)
+  averageRating   Float?   @default(0)
+  isOnline        Boolean  @default(false)
+  lastSeen        DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id])
+}
+
+// Conversations for group messaging
+model Conversation {
+  id              Int               @id @default(autoincrement())
+  name            String?
+  type            ConversationType  @default(direct)
+  isGroup         Boolean           @default(false)
+  createdBy       Int?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  creator         User?             @relation(fields: [createdBy], references: [id])
+  participants    ConversationParticipant[]
+  messages        ConversationMessage[]
+}
+
+model ConversationParticipant {
+  id              Int          @id @default(autoincrement())
+  conversationId  Int
+  userId          Int
+  joinedAt        DateTime     @default(now())
+  lastRead        DateTime?    
+  unreadCount     Int          @default(0)
+
+  conversation    Conversation @relation(fields: [conversationId], references: [id])
+  user            User         @relation(fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+}
+
+model ConversationMessage {
+  id              Int                  @id @default(autoincrement())
+  conversationId  Int
+  senderId        Int
+  content         String
+  metadata        Json?                // For storing attachments and other message metadata
+  isRead          Boolean              @default(false)
+  sentAt          DateTime             @default(now())
+  editedAt        DateTime?
+
+  // Moderation fields
+  isFlagged       Boolean              @default(false)
+  flagReason      String?
+  severity        ModerationSeverity?
+
+  conversation    Conversation         @relation(fields: [conversationId], references: [id])
+  sender          User                 @relation(fields: [senderId], references: [id])
+}
+
+// Session reviews and ratings
+model SessionReview {
+  id          Int      @id @default(autoincrement())
+  sessionId   Int      
+  studentId   Int
+  rating      Int      // 1-5 rating
+  feedback    String?
+  createdAt   DateTime @default(now())
+
+  session     Session  @relation(fields: [sessionId], references: [id])
+  student     User     @relation(fields: [studentId], references: [id])
+
+  @@unique([sessionId, studentId])
+}
+
+// User activities for dashboard
+model Activity {
+  id          Int          @id @default(autoincrement())
+  userId      Int
+  type        ActivityType
+  description String
+  entityType  String?      // 'session', 'message', etc.
+  entityId    Int?
+  metadata    Json?        // Additional data as JSON
+  createdAt   DateTime     @default(now())
+
+  user        User         @relation(fields: [userId], references: [id])
+}
+
+// Student-Tutor relationships
+model StudentTutor {
+  id            Int      @id @default(autoincrement())
+  studentId     Int
+  tutorId       Int
+  firstSessionDate DateTime // Date of first session together
+  lastSessionDate  DateTime // Date of most recent session
+  totalSessions    Int      @default(1)
+  averageRating    Float?   // Average rating given to this tutor by this student
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  student       User     @relation("StudentTutorStudent", fields: [studentId], references: [id])
+  tutor         User     @relation("StudentTutorTutor", fields: [tutorId], references: [id])
+
+  @@unique([studentId, tutorId])
+}
+
+// Dashboard statistics cache
+model DashboardStats {
+  id                    Int      @id @default(autoincrement())
+  userId                Int      @unique
+  activeTutors          Int      @default(0)
+  sessionsThisMonth     Int      @default(0)
+  upcomingSessions      Int      @default(0)
+  averageRating         Float    @default(0)
+  totalSessions         Int      @default(0)
+  completedSessions     Int      @default(0)
+  lastUpdated           DateTime @default(now())
+
+  user                  User     @relation(fields: [userId], references: [id])
 }

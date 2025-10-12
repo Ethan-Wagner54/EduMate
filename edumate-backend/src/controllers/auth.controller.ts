@@ -1,54 +1,111 @@
 import { Request, Response } from "express";
-import { prisma } from "../db";
+import { PrismaClient, Role } from "@prisma/client";
 import { hashPassword, comparePassword } from "../utils/password";
-import { signJwt } from "../utils/jwt";
+import { generateToken, verifyToken } from "../utils/jwt";
 import { logAudit } from "../utils/audit";
+import { logger } from "../utils/logger";
+
+const prisma = new PrismaClient();
 
 export async function register(req: Request, res: Response) {
   try {
-    const { name, email, password, role } = req.body as { name:string; email:string; password:string; role?: "student"|"tutor"|"admin"; };
-    if (!name || !email || !password) 
+    const authHeader = req.headers.authorization;
+    let tokenUser = null;
+    
+    // If a token exists, verify it
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      try {
+        tokenUser = verifyToken(token);
+        logger.info('register_with_token', { userId: tokenUser?.userId });
+      } catch (tokenError) {
+        logger.warn('register_invalid_token', { error: String(tokenError) });
+        return res.status(401).json({ error: "Invalid token provided" });
+      }
+    }
+    else {
+      logger.info('register_without_token');
+    }
+
+    const { name, email, password, role, academicYear } = req.body as {
+      name: string;
+      email: string;
+      password: string;
+      role?: string;
+      academicYear: string;
+    };
+
+    var enumRole: Role;
+
+    if (tokenUser && tokenUser.role === 'admin') {
+      enumRole = 'tutor';
+    }
+    else {
+      enumRole = "student";
+    }
+
+    
+    if (!name || !email || !password) {
       return res.status(400).json({ error: "Missing required fields" });
+    }
 
     const exists = await prisma.user.findUnique({ where: { email } });
-    if (exists) 
+    if (exists) {
       return res.status(409).json({ error: "Email already in use" });
+    }
 
     const passwordHash = await hashPassword(password);
     const user = await prisma.user.create({
-      data: { name, email, passwordHash, role: role ?? "student" }
+      data: { 
+        name, 
+        email, 
+        passwordHash, 
+        role: enumRole,
+        academicYear
+      },
     });
 
-    await logAudit(user.id, "User", user.id, "REGISTER");
-    const token = signJwt({ id: user.id, role: user.role as any });
+    // Use the corrected function name: generateToken
+    const token = generateToken({ userId: user.id, role: user.role });
 
-    return res.status(201).json({ token });
-  } 
-  catch (e) {
-    console.error(e);
+    // We can log the audit after sending the response so the user doesn't have to wait
+    res.status(201).json({ token });
+    await logAudit(user.id, "User", user.id, "REGISTER");
+
+  } catch (e) {
+    logger.error("auth_register_failed", { error: (e as any)?.message || String(e) });
     return res.status(500).json({ error: "Registration failed" });
   }
 }
 
 export async function login(req: Request, res: Response) {
   try {
-    const { email, password } = req.body as { email:string; password:string; };
+    const { email, password } = req.body as { email: string; password: string };
     const user = await prisma.user.findUnique({ where: { email } });
 
-    if (!user) 
+    if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });
+    }
 
-    const ok = await comparePassword(password, user.passwordHash);
+    // Block deactivated accounts
+    if ((user as any).isActive === false) {
+      return res.status(403).json({ error: "Account is deactivated" });
+    }
 
-    if (!ok) 
+    const isPasswordValid = await comparePassword(password, user.passwordHash);
+
+    if (!isPasswordValid) {
       return res.status(401).json({ error: "Invalid credentials" });
+    }
 
-    const token = signJwt({ id: user.id, role: user.role as any });
+    // Use the corrected function name: generateToken
+    const token = generateToken({ userId: user.id, role: user.role });
+
+    res.json({ token });
     await logAudit(user.id, "User", user.id, "LOGIN");
-    return res.json({ token });
-  } 
-  catch (e) {
-    console.error(e);
+    
+  } catch (e) {
+    logger.error("auth_login_failed", { error: (e as any)?.message || String(e) });
     return res.status(500).json({ error: "Login failed" });
   }
 }

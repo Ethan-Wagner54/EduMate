@@ -1,18 +1,21 @@
-import { Request, Response, NextFunction } from "express";
-import { verifyJwt } from "../utils/jwt";
+import { Request, Response, NextFunction } from 'express';
+import { verifyToken } from '../utils/jwt';
 
-export function auth(req: Request, res: Response, next: NextFunction) {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Missing or invalid Authorization header" });
+export const protect = (req: Request, res: Response, next: NextFunction) => {
+  const bearer = req.headers.authorization;
+
+  if (!bearer || !bearer.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Unauthorized: No token provided' });
   }
-  try {
-    const token = header.substring("Bearer ".length);
-    const payload = verifyJwt(token);
-    (req as any).user = payload;
-    return next();
-  } 
-  catch {
-    return res.status(401).json({ error: "Invalid token" });
+
+  const token = bearer.split(' ')[1].trim();
+  const payload = verifyToken(token);
+
+  if (!payload) {
+    return res.status(401).json({ message: 'Unauthorized: Invalid token' });
   }
-}
+
+  // Attach user payload to the request object
+  req.user = payload as any;
+  next();
+};
