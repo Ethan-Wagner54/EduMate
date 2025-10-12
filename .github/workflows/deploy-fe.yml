@@ -17,4 +17,4 @@ jobs:
       with:
         app-name: 'edu-fe-group'
         publish-profile: ${{ secrets.AZURE_FESITE_PROFILE }}
-        package: edumate-frontend/build          # upload only the static folder
+        package: edumate-frontend/.          # upload only the static folder
