@@ -14,6 +14,8 @@ jobs:
       working-directory: edumate-frontend
     - run: npm run build --if-present
       working-directory: edumate-frontend
+      env:
+        VITE_API_BASE_URL: https://edumate-api-group-bsgkdyffhja8dwcb.southafricanorth-01.azurewebsites.net
     - uses: azure/webapps-deploy@v2
       with:
         app-name: 'edu-fe-group'
