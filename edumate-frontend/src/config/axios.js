@@ -1,9 +1,8 @@
 import axios from 'axios';
-import config from './Config';
 
 // Create axios instance with base configuration
 const axiosInstance = axios.create({
-  baseURL: config.apiUrl,
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
