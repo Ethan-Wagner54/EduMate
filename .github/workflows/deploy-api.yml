@@ -6,27 +6,31 @@ on:
 jobs:
   build-deploy-backend:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: edumate-backend
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
-        working-directory: edumate-backend
+        run: npm ci
 
       - name: Generate Prisma client
         run: npx prisma generate
-        working-directory: edumate-backend
 
       - name: Build TypeScript
         run: npm run build
-        working-directory: edumate-backend
 
-      - name: Deploy to Azure
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
         with:
           app-name: 'edumate-api-group'
