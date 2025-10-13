@@ -3,25 +3,27 @@ on:
   push:
     branches: [ main ]
 jobs:
-   build-deploy-backend:
-    name: Build & Deploy Backend
+  build-deploy-backend:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Install backend dependencies
+      - name: Install dependencies
         run: npm install
         working-directory: edumate-backend
 
-      - name: Deploy Backend to Azure
+      - name: Build TypeScript
+        run: npm run build
+        working-directory: edumate-backend
+
+      - name: Deploy to Azure
         uses: azure/webapps-deploy@v2
         with:
           app-name: 'edumate-api-group'
-          publish-profile: ${{ secrets.AZURE_APISITE_PROFILE  }}
-          package: edumate-backend
+          publish-profile: ${{ secrets.AZURE_APISITE_PROFILE }}
+          package: edumate-backend/dist   # ✅ Only deploy compiled output
