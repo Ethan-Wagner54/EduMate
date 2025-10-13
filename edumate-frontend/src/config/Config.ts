@@ -1,28 +1,30 @@
 /**
- * Application Configuration
- * 
- * This module provides centralized configuration values that can be set
- * via environment variables during build or runtime.
+ * Global Application Configuration
+ *
+ * Automatically detects environment (development or production)
+ * and loads values from environment variables or sensible defaults.
  */
 
-interface Config {
+export interface Config {
   apiUrl: string;
-  environment: string;
+  environment: 'development' | 'production';
 }
 
-// Default values for local development
-const defaultConfig: Config = {
-  apiUrl: 'http://localhost:3000',
-  environment: 'development'
-};
+// Detect environment mode from Vite or NODE_ENV
+const environment =
+  import.meta.env.MODE || import.meta.env.VITE_ENVIRONMENT || 'development';
 
-/**
- * Load configuration from environment variables when available
- * For Vite, environment variables must be prefixed with VITE_
- */
+// Default URLs for each environment
+const apiUrl =
+  import.meta.env.VITE_API_URL ||
+  (environment === 'production'
+    ? 'https://edumate-api-group-bsgkdyffhja8dwcb.southafricanorth-01.azurewebsites.net'
+    : 'http://localhost:3000');
+
+// Final config object
 const config: Config = {
-  apiUrl: import.meta.env.VITE_API_URL || defaultConfig.apiUrl,
-  environment: import.meta.env.VITE_ENVIRONMENT || defaultConfig.environment
+  apiUrl,
+  environment: environment as 'development' | 'production',
 };
 
 export default config;
