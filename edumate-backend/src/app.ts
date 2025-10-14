@@ -28,7 +28,7 @@ const allowedOrigins = [
   'http://localhost:3001', // Alternative frontend port
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
-  'edu-fe-group-fgdpfcffhsb9e4a4.southafricanorth-01.azurewebsites.net'
+  'https://edu-fe-group-fgdpfcffhsb9e4a4.southafricanorth-01.azurewebsites.net'
 ];
 
 // Add production frontend URL if specified in environment
