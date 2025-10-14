@@ -1,0 +1,23 @@
+name: Build & Deploy React
+on:
+  push:
+    branches: [ main ]
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with: 
+        node-version: 18
+    - run: npm install
+      working-directory: edumate-frontend
+    - run: npm run build --if-present
+      working-directory: edumate-frontend
+      env:
+        VITE_APP_API_BASE_URL: https://edumate-api-group-bsgkdyffhja8dwcb.southafricanorth-01.azurewebsites.net
+    - uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'edu-fe-group'
+        publish-profile: ${{ secrets.AZURE_FESITE_PROFILE }}
+        package: edumate-frontend/dist         # upload only the static folder

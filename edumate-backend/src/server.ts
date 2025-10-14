@@ -9,6 +9,8 @@ import socketService from './services/socketService';
 const server = createServer(app);
 socketService.initialize(server);
 
-server.listen(env.PORT, () => {
-  logger.info("server_listen", { port: env.PORT, socketIO: true });
+const PORT = process.env.PORT || 3000; // never 5432
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
+
