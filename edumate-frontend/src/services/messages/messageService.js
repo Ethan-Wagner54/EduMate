@@ -12,6 +12,19 @@ class MessageService {
     this.searchCache = new Map();
   }
 
+  getAuthConfig(config = {}) {
+    const token = authService.getToken();
+    const headers = {
+      ...(config.headers || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    };
+
+    return {
+      ...config,
+      headers
+    };
+  }
+
   // Get conversation between current user and a tutor
   async getConversation(tutorId, options = {}) {
     try {
@@ -38,7 +51,10 @@ class MessageService {
       if (before) params.append('before', before);
       if (after) params.append('after', after);
 
-      const response = await axios.get(`${API_URL}/api/messaging/conversation/${tutorId}?${params}`);
+      const response = await axios.get(
+        `${API_URL}/api/messaging/conversation/${tutorId}?${params}`,
+        this.getAuthConfig()
+      );
       
       if (response.data && response.data.success) {
         // Cache the result
@@ -85,7 +101,11 @@ class MessageService {
       }
 
       // Fallback to HTTP API (aligned with backend mock API)
-      const response = await axios.post(`${API_URL}/api/messaging`, payload);
+      const response = await axios.post(
+        `${API_URL}/api/messaging`,
+        payload,
+        this.getAuthConfig()
+      );
       
       if (response.data && response.data.success) {
         // Clear relevant caches
@@ -148,15 +168,17 @@ class MessageService {
       formData.append('file', file);
       if (messageId) formData.append('messageId', messageId);
 
-      const response = await axios.post(`${API_URL}/messages/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          // You can emit progress events here if needed
-        }
-      });
+      const response = await axios.post(
+        `${API_URL}/messages/upload`,
+        formData,
+        this.getAuthConfig({
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            // You can emit progress events here if needed
+          }
+        })
+      );
 
       if (response.data && response.data.success) {
         return response.data;
@@ -214,7 +236,10 @@ class MessageService {
       if (dateTo) params.append('dateTo', dateTo);
       if (messageType) params.append('messageType', messageType);
 
-      const response = await axios.get(`${API_URL}/api/messaging/search?${params}`);
+      const response = await axios.get(
+        `${API_URL}/api/messaging/search?${params}`,
+        this.getAuthConfig()
+      );
       
       if (response.data && response.data.success) {
         // Cache results for 5 minutes
@@ -255,7 +280,10 @@ class MessageService {
         limit: limit.toString()
       });
 
-      const response = await axios.get(`${API_URL}/api/messaging/history?${params}`);
+      const response = await axios.get(
+        `${API_URL}/api/messaging/history?${params}`,
+        this.getAuthConfig()
+      );
       
       if (response.data && response.data.success) {
         return response.data;
@@ -287,7 +315,11 @@ class MessageService {
         if (conversationId) {
           payload.conversationId = conversationId;
         }
-        await axios.post(`${API_URL}/api/messaging/mark-read`, payload);
+        await axios.post(
+          `${API_URL}/api/messaging/mark-read`,
+          payload,
+          this.getAuthConfig()
+        );
       } catch (e) {
         // Ignore if endpoint is not implemented yet
       }
@@ -304,7 +336,10 @@ class MessageService {
     try {
       authService.setAuthHeader();
       
-      const response = await axios.get(`${API_URL}/api/messaging/unread-count`);
+      const response = await axios.get(
+        `${API_URL}/api/messaging/unread-count`,
+        this.getAuthConfig()
+      );
       
       if (response.data && response.data.success) {
         return response.data;
@@ -322,7 +357,10 @@ class MessageService {
     try {
       authService.setAuthHeader();
       
-      const response = await axios.delete(`${API_URL}/api/messaging/${messageId}`);
+      const response = await axios.delete(
+        `${API_URL}/api/messaging/${messageId}`,
+        this.getAuthConfig()
+      );
       
       if (response.data && response.data.success) {
         // Clear caches
