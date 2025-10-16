@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Users, Calendar, TrendingUp, Star, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Register from "./Register";
-
+import homepagePicture from '../assets/homepagePicture.png';
 import logoImage from '../assets/edumateLogo.jpg';
 
 export default function HomePage()
@@ -36,7 +36,7 @@ export default function HomePage()
                         </Button>
                         <Button
                             className = "bg-purple-600 text-white hover:bg-purple-700"
-                           onClick={() => navigate("/register")}
+                            onClick={() => navigate("/register")}
                         >
                             Get Started
                         </Button>
@@ -71,7 +71,7 @@ export default function HomePage()
                     <div className = "flex justify-center">
                         <div className = "relative">
                             <img
-                                src="null"
+                                src={homepagePicture}
                                 alt ="TutoringImage"
                                 className="rounded-2xl shadow-2xl max-w-2xl w-full opacity-90 border border-white/10"
                             /> 
