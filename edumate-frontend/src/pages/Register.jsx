@@ -37,7 +37,17 @@ export default function Registration() {
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: null }));
         }
-    }; 
+        
+        // Real-time email validation
+        if (name === 'email' && value.trim()) {
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailRegex.test(value.trim())) {
+                setErrors(prev => ({ ...prev, email: "Please enter a valid email address (e.g., user@example.com)" }));
+            } else {
+                setErrors(prev => ({ ...prev, email: null }));
+            }
+        }
+    };
 
     //toggle module selection (checkbox logic)
     const handleModuleToggle = (module) => {
@@ -66,9 +76,9 @@ export default function Registration() {
         if (formData.modules.length === 0) newErrors.modules = "Please select at least one module";
         
         // Email validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (formData.email && !emailRegex.test(formData.email)) {
-            newErrors.email = "Please enter a valid email address";
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (formData.email && !emailRegex.test(formData.email.trim())) {
+            newErrors.email = "Please enter a valid email address (e.g., user@example.com)";
         }
         
         // Password validation
@@ -155,11 +165,10 @@ export default function Registration() {
                             <Input style={{ backgroundColor: '#3C1A4F' }} className="bg-edumatePurpleLight text-white placeholder:text-purple-200 border border-grey"
                                 id="email"
                                 name="email"
-                                type="email"
-                                placeholder="Enter your email"
+                                type="text"
+                                placeholder="Enter your email (e.g., john@example.com)"
                                 value={formData.email}
                                 onChange={handleChange}
-                                required
                             />
                             {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                         </div>
