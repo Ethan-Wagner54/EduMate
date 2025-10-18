@@ -103,8 +103,35 @@ export default function SessionManagement() {
       }
 
       // Validate end time is after start time
-      if (new Date(newSession.endTime) <= new Date(newSession.startTime)) {
+      const startDate = new Date(newSession.startTime);
+      const endDate = new Date(newSession.endTime);
+      
+      console.log('Start date parsed:', startDate);
+      console.log('End date parsed:', endDate);
+      console.log('End date is after start date:', endDate > startDate);
+      
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        showNotification('Invalid date format. Please select valid start and end times.', 'error');
+        return;
+      }
+      
+      if (endDate <= startDate) {
         showNotification('End time must be after start time', 'error');
+        return;
+      }
+      
+      // Additional validation: session cannot be longer than 24 hours
+      const maxDurationMs = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+      if (endDate - startDate > maxDurationMs) {
+        showNotification('Session duration cannot exceed 24 hours', 'error');
+        return;
+      }
+      
+      // Validate session is scheduled for the future (with 5 minute buffer)
+      const now = new Date();
+      const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+      if (startDate < fiveMinutesFromNow) {
+        showNotification('Session must be scheduled at least 5 minutes in the future', 'error');
         return;
       }
       
@@ -361,6 +388,7 @@ export default function SessionManagement() {
                     <Input
                       type="datetime-local"
                       value={newSession.startTime}
+                      min={new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)}
                       className="bg-input-background text-foreground border border-border rounded-md px-3 py-2 w-full"
                       onChange={(e) =>
                         setNewSession({ ...newSession, startTime: e.target.value })
@@ -374,6 +402,7 @@ export default function SessionManagement() {
                     <Input
                       type="datetime-local"
                       value={newSession.endTime}
+                      min={newSession.startTime || new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)}
                       className="bg-input-background text-foreground border border-border rounded-md px-3 py-2 w-full"
                       onChange={(e) =>
                         setNewSession({ ...newSession, endTime: e.target.value })
