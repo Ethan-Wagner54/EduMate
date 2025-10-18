@@ -81,7 +81,7 @@ export default function HomePage()
                 </div>
             </section>
             {/* Features Section */}
-            <section className="container mx-auto px-4 py-16">
+            <section id="features" className="container mx-auto px-4 py-16">
                 <div className="text-center mb-16">
                     <h2 className="text-3xl font-bold text-white mb-4">
                         Why Choose EduMate?
@@ -146,6 +146,9 @@ export default function HomePage()
                         <Button
                             size="lg"
                             className="bg-purple-600 text-white hover:bg-purple-700 px-8 py-6"
+                            onClick={() => {
+                                document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
                         >
                             Learn More
                         </Button>
