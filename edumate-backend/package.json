@@ -34,6 +34,7 @@
     "@types/jsonwebtoken": "^9.0.1",
     "@types/multer": "^2.0.0",
     "@types/node": "^18.14.6",
+    "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
     "axios": "^1.12.2",
     "nodemon": "^2.0.22",
