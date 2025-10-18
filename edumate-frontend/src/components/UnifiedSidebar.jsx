@@ -126,11 +126,30 @@ export default function UnifiedSidebar({ userType = 'student' }) {
         
         // Check authentication first
         if (!authService.isAuthenticated()) {
+          console.log('User not authenticated in sidebar, redirecting to login');
+          authService.logout(); // Clear any stale data
           navigate('/login');
           return;
         }
 
         const userId = authService.getUserId();
+        const currentUserRole = authService.getUserRole();
+        
+        // Validate role matches expected userType
+        if (currentUserRole && currentUserRole !== userType) {
+          console.log(`Role mismatch: expected ${userType}, got ${currentUserRole}`);
+          // Redirect to correct dashboard based on role
+          if (currentUserRole === 'admin') {
+            navigate('/admin');
+          } else if (currentUserRole === 'student') {
+            navigate('/student');
+          } else if (currentUserRole === 'tutor') {
+            navigate('/tutor');
+          } else {
+            navigate('/login');
+          }
+          return;
+        }
         
         if (!userId) {
           setError('No user ID found');
@@ -156,10 +175,23 @@ export default function UnifiedSidebar({ userType = 'student' }) {
   }, [navigate, userType]);
 
   const handleLogout = () => {
-    // Use the auth service logout function
-    authService.logout();
-    // Redirect to login
-    navigate('/login');
+    try {
+      // Clear user state immediately
+      setUser(null);
+      setError(null);
+      
+      // Use the auth service logout function
+      authService.logout();
+      
+      // Force a clean navigation without browser cache
+      window.history.replaceState(null, '', '/login');
+      navigate('/login', { replace: true });
+    } catch (err) {
+      console.error('Logout error:', err);
+      // Force logout even if there's an error
+      localStorage.clear();
+      window.location.href = '/login';
+    }
   };
 
   const navigationItems = navigationConfig[userType] || navigationConfig.student;
