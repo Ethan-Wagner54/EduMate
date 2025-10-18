@@ -1,138 +1,5 @@
 /*
  * MESSAGE API ROUTES - ENABLED
- * 
- * This file contains all the API endpoints for messaging functionality.
- */
-
-import express from 'express';
-import { protect } from '../middleware/auth';
-
-const router = express.Router();
-
-// Get conversation between current user and another user
-router.get('/conversation/:userId', protect, (req, res) => {
-  // Return mock data for now
-  const { userId } = req.params;
-  const currentUserId = req.user?.userId;
-  
-  res.json({
-    success: true,
-    data: {
-      messages: [
-        {
-          id: 1,
-          senderId: parseInt(userId),
-          senderName: "Sarah Johnson",
-          recipientId: currentUserId,
-          content: "Hi! I'm ready to help you with your studies. What topics would you like to focus on?",
-          messageType: "text",
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          isRead: true,
-          attachments: []
-        },
-        {
-          id: 2,
-          senderId: currentUserId,
-          senderName: "You",
-          recipientId: parseInt(userId),
-          content: "Hello! I'm struggling with object-oriented programming concepts.",
-          messageType: "text",
-          timestamp: new Date(Date.now() - 1.5 * 60 * 60 * 1000).toISOString(),
-          isRead: true,
-          attachments: []
-        }
-      ],
-      pagination: {
-        page: 1,
-        limit: 50,
-        total: 2,
-        hasMore: false
-      }
-    }
-  });
-});
-
-// Get message history/conversations for current user
-router.get('/history', protect, (req, res) => {
-  const currentUserId = req.user?.userId;
-  
-  res.json({
-    success: true,
-    data: {
-      conversations: [
-        {
-          id: 1,
-          participantId: 1,
-          participantName: "Sarah Johnson",
-          participantRole: "tutor",
-          lastMessage: {
-            content: "Yes, that would be great! When are you available?",
-            timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-            isOwn: true
-          },
-          unreadCount: 0,
-          totalMessages: 4
-        }
-      ],
-      pagination: {
-        page: 1,
-        limit: 20,
-        total: 1,
-        hasMore: false
-      }
-    }
-  });
-});
-
-// Send a message
-router.post('/', protect, (req, res) => {
-  const { recipientId, content, messageType = 'text' } = req.body;
-  const currentUserId = req.user?.userId;
-  
-  res.json({
-    success: true,
-    data: {
-      id: Date.now(),
-      senderId: currentUserId,
-      recipientId: parseInt(recipientId),
-      content,
-      messageType,
-      timestamp: new Date().toISOString(),
-      isRead: false
-    }
-  });
-});
-
-// Search endpoint (placeholder)
-router.get('/search', protect, (req, res) => {
-  res.json({ success: true, data: { messages: [] } });
-});
-
-// Placeholder routes for other endpoints
-router.get('/conversations', protect, (req, res) => {
-  res.json({ success: true, conversations: [] });
-});
-
-router.post('/send', protect, (req, res) => {
-  res.json({ success: true, message: 'Message sent' });
-});
-
-// Mark messages as read
-router.post('/mark-read', protect, async (req, res) => {
-  try {
-    const userId = req.user?.userId;
-    const { conversationId } = req.body;
-    
-    if (!userId) {
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
-    }
-    
-    if (!conversationId) {
-      return res.status(400).json({ success: false, error: 'conversationId is required' });
-    }
-    
-    // For now, just return success since this is a mock endpoints/*
- * MESSAGE API ROUTES - ENABLED
  * * This file contains all the API endpoints for messaging functionality.
  */
 
@@ -147,7 +14,7 @@ const router = express.Router();
 
 /**
  * @openapi
- * /api/messaging/conversation/{userId}:
+ * /messaging/conversation/{userId}:
  * get:
  * summary: Retrieve the message history for a 1-on-1 conversation with a specified user.
  * tags:
@@ -185,7 +52,7 @@ router.get('/conversation/:userId', protect, (req, res) => {
             messages: [
                 {
                     id: 1,
-                    senderId: parseInt(userId as string), // Use as string assertion for TS compatibility
+                    senderId: parseInt(userId as string),
                     senderName: "Sarah Johnson",
                     recipientId: currentUserId,
                     content: "Hi! I'm ready to help you with your studies. What topics would you like to focus on?",
@@ -218,7 +85,7 @@ router.get('/conversation/:userId', protect, (req, res) => {
 
 /**
  * @openapi
- * /api/messaging/history:
+ * /messaging/history:
  * get:
  * summary: Retrieve a summary list of all conversations for the current user.
  * tags:
@@ -271,7 +138,7 @@ router.get('/history', protect, (req, res) => {
 
 /**
  * @openapi
- * /api/messaging:
+ * /messaging:
  * post:
  * summary: Send a new message to a specified user.
  * tags:
@@ -319,7 +186,7 @@ router.post('/', protect, (req, res) => {
 
 /**
  * @openapi
- * /api/messaging/search:
+ * /messaging/search:
  * get:
  * summary: Search message content across all user conversations.
  * tags:
@@ -352,7 +219,7 @@ router.get('/search', protect, (req, res) => {
 
 /**
  * @openapi
- * /api/messaging/conversations:
+ * /messaging/conversations:
  * get:
  * summary: Get a list of all conversations (Placeholder/Alternative history endpoint).
  * tags:
@@ -371,7 +238,7 @@ router.get('/conversations', protect, (req, res) => {
 
 /**
  * @openapi
- * /api/messaging/send:
+ * /messaging/send:
  * post:
  * summary: Send a message (Placeholder/Alternative post endpoint).
  * tags:
@@ -390,7 +257,7 @@ router.post('/send', protect, (req, res) => {
 
 /**
  * @openapi
- * /api/messaging/mark-read:
+ * /messaging/mark-read:
  * post:
  * summary: Marks all unread messages in a conversation as read for the current user.
  * tags:
@@ -437,7 +304,7 @@ router.post('/mark-read', protect, async (req, res) => {
 
 /**
  * @openapi
- * /api/messaging/unread-count:
+ * /messaging/unread-count:
  * get:
  * summary: Get the total count of unread messages for the current user.
  * tags:
@@ -463,7 +330,7 @@ router.get('/unread-count', protect, (req, res) => {
 
 /**
  * @openapi
- * /api/messaging/{id}:
+ * /messaging/{id}:
  * delete:
  * summary: Delete a specific message by ID.
  * tags:
@@ -487,24 +354,6 @@ router.get('/unread-count', protect, (req, res) => {
  */
 router.delete('/:id', protect, (req, res) => {
     res.json({ success: true });
-});
-
-export default router;
-    // In a real implementation, you'd update the database here
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to mark messages as read' });
-  }
-});
-
-// Unread count (placeholder)
-router.get('/unread-count', protect, (req, res) => {
-  res.json({ success: true, data: { count: 0 } });
-});
-
-// Delete message (placeholder)
-router.delete('/:id', protect, (req, res) => {
-  res.json({ success: true });
 });
 
 export default router;
