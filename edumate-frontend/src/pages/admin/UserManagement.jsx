@@ -218,7 +218,7 @@ export default function UserManagement() {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div className="bg-card text-card-foreground rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto border">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">User Details</h2>
             <Button variant="ghost" size="sm" onClick={closeDetailsModal}>
@@ -229,23 +229,23 @@ export default function UserManagement() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">Name</label>
+                <label className="text-sm font-medium text-muted-foreground">Name</label>
                 <p className="text-lg font-semibold">{selectedUser.name}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Email</label>
+                <label className="text-sm font-medium text-muted-foreground">Email</label>
                 <p className="text-lg">{selectedUser.email}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">User ID</label>
+                <label className="text-sm font-medium text-muted-foreground">User ID</label>
                 <p className="text-lg">{selectedUser.id}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">User Type</label>
+                <label className="text-sm font-medium text-muted-foreground">User Type</label>
                 <p className="text-lg capitalize">{selectedUser.userType}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Account Status</label>
+                <label className="text-sm font-medium text-muted-foreground">Account Status</label>
                 <p className={`text-lg font-semibold ${
                   selectedUser.isActive ? 'text-green-600' : 'text-red-600'
                 }`}>
@@ -253,7 +253,7 @@ export default function UserManagement() {
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Joined Date</label>
+                <label className="text-sm font-medium text-muted-foreground">Joined Date</label>
                 <p className="text-lg">
                   {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString() : 'N/A'}
                 </p>
@@ -265,31 +265,31 @@ export default function UserManagement() {
                 <h3 className="text-lg font-semibold mb-2">Tutor Information</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Subjects</label>
+                    <label className="text-sm font-medium text-muted-foreground">Subjects</label>
                     <p className="text-lg">{selectedUser.subjects?.join(', ') || 'N/A'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Rating</label>
+                    <label className="text-sm font-medium text-muted-foreground">Rating</label>
                     <p className="text-lg">{selectedUser.rating || 'N/A'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Campus Location</label>
+                    <label className="text-sm font-medium text-muted-foreground">Campus Location</label>
                     <p className="text-lg">{selectedUser.campusLocation || 'N/A'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Warning Count</label>
+                    <label className="text-sm font-medium text-muted-foreground">Warning Count</label>
                     <p className="text-lg">{selectedUser.warningsCount || 0}</p>
                   </div>
                 </div>
                 
                 {selectedUser.tutorModules && selectedUser.tutorModules.length > 0 && (
                   <div className="mt-4">
-                    <label className="text-sm font-medium text-gray-500">Teaching Modules</label>
+                    <label className="text-sm font-medium text-muted-foreground">Teaching Modules</label>
                     <div className="mt-2 space-y-2">
                       {selectedUser.tutorModules.map((tm, index) => (
-                        <div key={index} className="bg-gray-50 p-2 rounded">
+                        <div key={index} className="bg-muted p-2 rounded">
                           <p className="font-medium">{tm?.module?.name || 'N/A'}</p>
-                          <p className="text-sm text-gray-600">{tm?.module?.code || 'N/A'}</p>
+                          <p className="text-sm text-muted-foreground">{tm?.module?.code || 'N/A'}</p>
                         </div>
                       ))}
                     </div>
@@ -303,11 +303,11 @@ export default function UserManagement() {
                 <h3 className="text-lg font-semibold mb-2">Student Information</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Student ID</label>
+                    <label className="text-sm font-medium text-muted-foreground">Student ID</label>
                     <p className="text-lg">{selectedUser.studentId || 'N/A'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Enrollment Status</label>
+                    <label className="text-sm font-medium text-muted-foreground">Enrollment Status</label>
                     <p className="text-lg">{selectedUser.enrollmentStatus || 'Active'}</p>
                   </div>
                 </div>
