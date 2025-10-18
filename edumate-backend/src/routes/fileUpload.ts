@@ -76,7 +76,7 @@ router.use(protect);
  * items:
  * type: object
  * properties:
- * filename: { type: 'string' }
+ * filename: { type: 'string' },
  * path: { type: 'string' }
  * '401':
  * description: Unauthorized.
@@ -110,7 +110,7 @@ router.post('/upload', uploadMiddleware, uploadFiles);
  * - content
  * - attachments
  * properties:
- * content: { type: 'string', description: 'The text content of the message.' }
+ * content: { type: 'string', description: 'The text content of the message.' },
  * attachments:
  * type: array
  * items:

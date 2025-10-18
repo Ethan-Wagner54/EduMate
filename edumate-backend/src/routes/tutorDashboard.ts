@@ -29,12 +29,12 @@ const router = Router();
  * upcomingSessions:
  * type: array
  * items:
- * type: object
+ * type: object,
  * recentReviews:
  * type: array
  * items:
- * type: object
- * totalSessions: { type: 'integer' }
+ * type: object,
+ * totalSessions: { type: 'integer' },
  * averageRating: { type: 'number', format: 'float' }
  * '401':
  * description: Unauthorized (Token missing or invalid).

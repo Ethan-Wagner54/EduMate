@@ -36,7 +36,7 @@ const router = express.Router();
  * schema:
  * type: object
  * properties:
- * success: { type: 'boolean' }
+ * success: { type: 'boolean' },
  * data: { type: 'object', properties: { messages: { type: 'array' } } }
  * '401':
  * description: Unauthorized.
@@ -100,7 +100,7 @@ router.get('/conversation/:userId', protect, (req, res) => {
  * schema:
  * type: object
  * properties:
- * success: { type: 'boolean' }
+ * success: { type: 'boolean' },
  * data: { type: 'object', properties: { conversations: { type: 'array' } } }
  * '401':
  * description: Unauthorized.
@@ -155,8 +155,8 @@ router.get('/history', protect, (req, res) => {
  * - recipientId
  * - content
  * properties:
- * recipientId: { type: 'string', description: 'ID of the user receiving the message.' }
- * content: { type: 'string', description: 'The message text.' }
+ * recipientId: { type: 'string', description: 'ID of the user receiving the message.' },
+ * content: { type: 'string', description: 'The message text.' },
  * messageType: { type: 'string', enum: ['text', 'file'], default: 'text' }
  * responses:
  * '200':
@@ -208,7 +208,7 @@ router.post('/', protect, (req, res) => {
  * schema:
  * type: object
  * properties:
- * success: { type: 'boolean' }
+ * success: { type: 'boolean' },
  * data: { type: 'object', properties: { messages: { type: 'array' } } }
  * '401':
  * description: Unauthorized.
@@ -319,7 +319,7 @@ router.post('/mark-read', protect, async (req, res) => {
  * schema:
  * type: object
  * properties:
- * success: { type: 'boolean' }
+ * success: { type: 'boolean' },
  * data: { type: 'object', properties: { count: { type: 'integer' } } }
  * '401':
  * description: Unauthorized.

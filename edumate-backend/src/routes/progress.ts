@@ -29,8 +29,8 @@ const router = Router();
  * schema:
  * type: object
  * properties:
- * overallCompletion: { type: 'number', description: 'Percentage of all content completed.' }
- * sessionsAttended: { type: 'integer' }
+ * overallCompletion: { type: 'number', description: 'Percentage of all content completed.' },
+ * sessionsAttended: { type: 'integer' },
  * timeSpentHours: { type: 'number' }
  * '401':
  * description: Unauthorized (Token missing or invalid).
@@ -56,7 +56,7 @@ router.get('/student', protect, getStudentProgress);
  * items:
  * type: object
  * properties:
- * date: { type: 'string', format: 'date' }
+ * date: { type: 'string', format: 'date' },
  * metricValue: { type: 'number' }
  * '401':
  * description: Unauthorized.
@@ -82,9 +82,9 @@ router.get('/performance', protect, getPerformanceData);
  * items:
  * type: object
  * properties:
- * moduleId: { type: 'string' }
- * moduleTitle: { type: 'string' }
- * completion: { type: 'number' }
+ * moduleId: { type: 'string' },
+ * moduleTitle: { type: 'string' },
+ * completion: { type: 'number' },
  * averageQuizScore: { type: 'number' }
  * '401':
  * description: Unauthorized.

@@ -69,7 +69,7 @@ router.get('/users', listUsers);
  * - userId
  * - newRole
  * properties:
- * userId: { type: 'string', description: 'ID of the user to update.' }
+ * userId: { type: 'string', description: 'ID of the user to update.' },
  * newRole: { type: 'string', enum: ['student', 'tutor', 'admin'], description: 'The new role for the user.' }
  * responses:
  * '200':

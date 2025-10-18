@@ -35,9 +35,9 @@ router.use(protect);
  * items:
  * type: object
  * properties:
- * id: { type: 'string' }
- * topic: { type: 'string' }
- * completedAt: { type: 'string', format: 'date-time' }
+ * id: { type: 'string' },
+ * topic: { type: 'string' },
+ * completedAt: { type: 'string', format: 'date-time' },
  * tutorName: { type: 'string' }
  * '401':
  * description: Unauthorized.
@@ -71,7 +71,7 @@ router.get('/', requireRole('student'), getSessionHistory);
  * required:
  * - rating
  * properties:
- * rating: { type: 'integer', minimum: 1, maximum: 5, description: 'Rating out of 5 stars.' }
+ * rating: { type: 'integer', minimum: 1, maximum: 5, description: 'Rating out of 5 stars.' },
  * reviewText: { type: 'string', description: 'Optional text feedback.' }
  * responses:
  * '200':

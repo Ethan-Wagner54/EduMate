@@ -39,8 +39,8 @@ router.use(protect);
  * items:
  * type: object
  * properties:
- * id: { type: 'string' }
- * name: { type: 'string' }
+ * id: { type: 'string' },
+ * name: { type: 'string' },
  * participants: { type: 'array', items: { type: 'object' } }
  * '401':
  * description: Unauthorized (Token missing or invalid).
@@ -92,7 +92,7 @@ router.get('/session/:sessionId', getGroupChatBySession);
  * - sessionOrName
  * - participantIds
  * properties:
- * sessionOrName: { type: 'string', description: 'Session ID or custom group chat name.' }
+ * sessionOrName: { type: 'string', description: 'Session ID or custom group chat name.' },
  * participantIds:
  * type: array
  * items:

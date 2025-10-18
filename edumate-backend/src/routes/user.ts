@@ -25,10 +25,10 @@ const router = Router();
  * schema:
  * type: object
  * properties:
- * id: { type: 'string' }
- * email: { type: 'string' }
- * name: { type: 'string' }
- * role: { type: 'string', enum: ['student', 'tutor', 'admin'] }
+ * id: { type: 'string' },
+ * email: { type: 'string' },
+ * name: { type: 'string' },
+ * role: { type: 'string', enum: ['student', 'tutor', 'admin'] },
  * isActive: { type: 'boolean' }
  * '401':
  * description: Unauthorized (Token missing or invalid).
@@ -51,7 +51,7 @@ router.get('/', protect, getUser);
  * schema:
  * type: object
  * properties:
- * name: { type: 'string', description: 'New name for the user.' }
+ * name: { type: 'string', description: 'New name for the user.' },
  * email: { type: 'string', format: 'email', description: 'New email address (if allowed).' }
  * // Add other updatable fields here (e.g., avatarUrl, timeZone)
  * responses:

@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { login, register } from "../controllers/auth.controller";
-import { 
-    requestPasswordReset, 
-    resetPassword, 
-    verifyResetToken 
+import {
+    requestPasswordReset,
+    resetPassword,
+    verifyResetToken
 } from "../controllers/passwordReset.controller";
 
 const router = Router();
@@ -30,9 +30,9 @@ const router = Router();
  * - password
  * - name
  * properties:
- * email: { type: 'string', format: 'email', description: 'User's email address (must be unique).' }
- * password: { type: 'string', format: 'password', description: 'User's secure password (min 8 chars).' }
- * name: { type: 'string', description: 'User's full name.' }
+ * email: { type: 'string', format: 'email', description: 'User\'s email address (must be unique).' },
+ * password: { type: 'string', format: 'password', description: 'User\'s secure password (min 8 chars).' },
+ * name: { type: 'string', description: 'User\'s full name.' }
  * responses:
  * '201':
  * description: Registration successful. Returns user ID and role.
@@ -58,8 +58,8 @@ router.post("/register", register);
  * - email
  * - password
  * properties:
- * email: { type: 'string', format: 'email', description: 'User's email address.' }
- * password: { type: 'string', format: 'password', description: 'User's password.' }
+ * email: { type: 'string', format: 'email', description: 'User\'s email address.' },
+ * password: { type: 'string', format: 'password', description: 'User\'s password.' }
  * responses:
  * '200':
  * description: Login successful. Returns the JWT access token and user info.
@@ -68,12 +68,12 @@ router.post("/register", register);
  * schema:
  * type: object
  * properties:
- * token: { type: 'string', description: 'JWT access token for protected routes.' }
+ * token: { type: 'string', description: 'JWT access token for protected routes.' },
  * user:
  * type: object
  * properties:
- * id: { type: 'string' }
- * role: { type: 'string', enum: ['student', 'tutor', 'admin'] }
+ * id: { type: 'string' },
+ * role: { type: 'string', enum: ['student', 'tutor', 'admin'] },
  * email: { type: 'string' }
  * '401':
  * description: Invalid credentials.
@@ -124,7 +124,7 @@ router.post("/forgot-password", requestPasswordReset);
  * - token
  * - newPassword
  * properties:
- * token: { type: 'string', description: 'The unique reset token received via email.' }
+ * token: { type: 'string', description: 'The unique reset token received via email.' },
  * newPassword: { type: 'string', format: 'password', description: 'The new password for the account.' }
  * responses:
  * '200':

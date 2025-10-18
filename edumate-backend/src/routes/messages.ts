@@ -33,9 +33,9 @@ router.use(protect);
  * items:
  * type: object
  * properties:
- * id: { type: 'string' }
- * senderId: { type: 'string' }
- * content: { type: 'string' }
+ * id: { type: 'string' },
+ * senderId: { type: 'string' },
+ * content: { type: 'string' },
  * timestamp: { type: 'string', format: 'date-time' }
  * '401':
  * description: Unauthorized (Token missing or invalid).
@@ -61,8 +61,8 @@ router.get('/', listMessages);
  * - recipientId
  * - content
  * properties:
- * recipientId: { type: 'string', description: 'ID of the user or conversation receiving the message.' }
- * content: { type: 'string', description: 'The text content of the message.' }
+ * recipientId: { type: 'string', description: 'ID of the user or conversation receiving the message.' },
+ * content: { type: 'string', description: 'The text content of the message.' },
  * messageType: { type: 'string', enum: ['text', 'file'], default: 'text' }
  * responses:
  * '201':

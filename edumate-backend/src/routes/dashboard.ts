@@ -34,8 +34,8 @@ router.use(protect);
  * schema:
  * type: object
  * properties:
- * sessionsAttended: { type: 'integer' }
- * modulesInProgress: { type: 'integer' }
+ * sessionsAttended: { type: 'integer' },
+ * modulesInProgress: { type: 'integer' },
  * averageScore: { type: 'number' }
  * '401':
  * description: Unauthorized (Token missing or invalid).
@@ -63,8 +63,8 @@ router.get('/stats', requireRole('student'), getDashboardStats);
  * items:
  * type: object
  * properties:
- * type: { type: 'string', description: 'e.g., "Session Complete", "Module Start"' }
- * timestamp: { type: 'string', format: 'date-time' }
+ * type: { type: 'string', description: 'e.g., "Session Complete", "Module Start"' },
+ * timestamp: { type: 'string', format: 'date-time' },
  * details: { type: 'string' }
  * '403':
  * description: Forbidden (User is not a student).
@@ -90,9 +90,9 @@ router.get('/activities', requireRole('student'), getRecentActivities);
  * items:
  * type: object
  * properties:
- * id: { type: 'string' }
- * topic: { type: 'string' }
- * startTime: { type: 'string', format: 'date-time' }
+ * id: { type: 'string' },
+ * topic: { type: 'string' },
+ * startTime: { type: 'string', format: 'date-time' },
  * tutorName: { type: 'string' }
  * '403':
  * description: Forbidden (User is not a student).
@@ -118,9 +118,9 @@ router.get('/upcoming-sessions', requireRole('student'), getUpcomingSessions);
  * items:
  * type: object
  * properties:
- * tutorId: { type: 'string' }
- * tutorName: { type: 'string' }
- * sessionsCount: { type: 'integer' }
+ * tutorId: { type: 'string' },
+ * tutorName: { type: 'string' },
+ * sessionsCount: { type: 'integer' },
  * completionRate: { type: 'number', format: 'float' }
  * '403':
  * description: Forbidden (User is not a student).

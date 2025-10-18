@@ -25,9 +25,9 @@ const router = Router();
  * items:
  * type: object
  * properties:
- * id: { type: 'string' }
- * title: { type: 'string' }
- * description: { type: 'string' }
+ * id: { type: 'string' },
+ * title: { type: 'string' },
+ * description: { type: 'string' },
  * level: { type: 'string' }
  */
 router.get('/', getModules);

@@ -2,12 +2,12 @@ import { Router } from 'express';
 import { protect } from '../middleware/auth';
 import {
     getConversations,
-    getConversation,
+    getConversation, // Renamed from getConversationDetails in previous version
     getMessages,
     sendMessage,
     createConversation,
     markAsRead
-} from '../controllers/conversations.controller';
+} from '../controllers/conversations.controller'; // Renamed controller file?
 
 const router = Router();
 
@@ -37,9 +37,9 @@ router.use(protect);
  * items:
  * type: object
  * properties:
- * id: { type: 'string' }
- * participants: { type: 'array', items: { type: 'object' } }
- * lastMessage: { type: 'string' }
+ * id: { type: 'string' },
+ * participants: { type: 'array', items: { type: 'object' } },
+ * lastMessage: { type: 'string' },
  * unreadCount: { type: 'integer' }
  * '401':
  * description: Unauthorized (Token missing or invalid).
@@ -133,9 +133,9 @@ router.get('/:id', getConversation);
  * items:
  * type: object
  * properties:
- * id: { type: 'string' }
- * senderId: { type: 'string' }
- * content: { type: 'string' }
+ * id: { type: 'string' },
+ * senderId: { type: 'string' },
+ * content: { type: 'string' },
  * timestamp: { type: 'string', format: 'date-time' }
  * '401':
  * description: Unauthorized.

@@ -36,9 +36,9 @@ const router = Router();
  * items:
  * type: object
  * properties:
- * id: { type: 'string' }
- * topic: { type: 'string' }
- * tutorId: { type: 'string' }
+ * id: { type: 'string' },
+ * topic: { type: 'string' },
+ * tutorId: { type: 'string' },
  * status: { type: 'string', enum: ['scheduled', 'active', 'completed', 'cancelled'] }
  * '500':
  * description: Server error.
@@ -64,8 +64,8 @@ router.get('/', listSessions);
  * items:
  * type: object
  * properties:
- * id: { type: 'string' }
- * topic: { type: 'string' }
+ * id: { type: 'string' },
+ * topic: { type: 'string' },
  * tutorId: { type: 'string' }
  * '401':
  * description: Unauthorized (Token missing or invalid).
@@ -117,8 +117,8 @@ router.get('/:id', protect, getSessionDetails);
  * - topic
  * - startTime
  * properties:
- * topic: { type: 'string', description: 'The subject or topic of the session.' }
- * startTime: { type: 'string', format: 'date-time', description: 'Scheduled start time.' }
+ * topic: { type: 'string', description: 'The subject or topic of the session.' },
+ * startTime: { type: 'string', format: 'date-time', description: 'Scheduled start time.' },
  * durationMinutes: { type: 'integer', description: 'Session duration in minutes.' }
  * responses:
  * '201':
@@ -153,7 +153,7 @@ router.post('/', protect, requireRole('tutor', 'admin'), createSession);
  * schema:
  * type: object
  * properties:
- * topic: { type: 'string' }
+ * topic: { type: 'string' },
  * startTime: { type: 'string', format: 'date-time' }
  * // Add other editable fields here (e.g., duration, maxStudents)
  * responses:

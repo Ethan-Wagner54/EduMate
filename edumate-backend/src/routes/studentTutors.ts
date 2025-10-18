@@ -36,8 +36,8 @@ router.use(requireRole('student'));
  * items:
  * type: object
  * properties:
- * id: { type: 'string' }
- * name: { type: 'string' }
+ * id: { type: 'string' },
+ * name: { type: 'string' },
  * averageRating: { type: 'number', format: 'float' }
  * '401':
  * description: Unauthorized (Token missing or invalid).
@@ -97,7 +97,7 @@ router.get('/:tutorId', getTutorProfile);
  * required:
  * - rating
  * properties:
- * rating: { type: 'integer', minimum: 1, maximum: 5, description: 'Rating out of 5 stars.' }
+ * rating: { type: 'integer', minimum: 1, maximum: 5, description: 'Rating out of 5 stars.' },
  * review: { type: 'string', description: 'Optional text review.' }
  * responses:
  * '200':
