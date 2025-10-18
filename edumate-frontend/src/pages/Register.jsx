@@ -41,8 +41,12 @@ export default function Registration() {
         // Real-time email validation
         if (name === 'email' && value.trim()) {
             const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            const domain = value.trim().split('@')[1];
+            
             if (!emailRegex.test(value.trim())) {
                 setErrors(prev => ({ ...prev, email: "Please enter a valid email address (e.g., user@example.com)" }));
+            } else if (domain && domain.split('.').some(part => part.length < 2 || /^[a-z]$/.test(part))) {
+                setErrors(prev => ({ ...prev, email: "Please enter a valid email address with a real domain (e.g., user@gmail.com)" }));
             } else {
                 setErrors(prev => ({ ...prev, email: null }));
             }
@@ -79,6 +83,11 @@ export default function Registration() {
         const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (formData.email && !emailRegex.test(formData.email.trim())) {
             newErrors.email = "Please enter a valid email address (e.g., user@example.com)";
+        } else if (formData.email) {
+            const domain = formData.email.trim().split('@')[1];
+            if (domain && domain.split('.').some(part => part.length < 2 || /^[a-z]$/.test(part))) {
+                newErrors.email = "Please enter a valid email address with a real domain (e.g., user@gmail.com)";
+            }
         }
         
         // Password validation
@@ -108,23 +117,39 @@ export default function Registration() {
     };
 
     //handle form submission
-    const handleSubmit = (e) => {
-
+    const handleSubmit = async (e) => {
         e.preventDefault();
         
         // Validate the form before submission
-        if (validateForm()) {
-           authService.register({
-            name: formData.name,
-            email: formData.email,
-            password: formData.password,
-            role: formData.role,
-            academicLevel: formData.academicLevel,
-            modules: formData.modules
-        });
-
-        window.alert("Registration successful!");
-        navigate("/HomePage");
+        if (!validateForm()) {
+            return;
+        }
+        
+        try {
+            const response = await authService.register({
+                name: formData.name,
+                email: formData.email,
+                password: formData.password,
+                role: formData.role,
+                academicLevel: formData.academicLevel,
+                modules: formData.modules
+            });
+            
+            if (response && response.success) {
+                window.alert("Registration successful! Please check your email to verify your account.");
+                navigate("/login");
+            } else {
+                // Handle backend validation errors
+                const errorMessage = response?.error || "Registration failed. Please try again.";
+                if (errorMessage.toLowerCase().includes('email') && errorMessage.toLowerCase().includes('exist')) {
+                    setErrors(prev => ({ ...prev, email: "This email address is already registered. Please use a different email or try logging in." }));
+                } else {
+                    window.alert("Registration failed: " + errorMessage);
+                }
+            }
+        } catch (error) {
+            console.error('Registration error:', error);
+            window.alert("Registration failed: " + (error.message || "Network error. Please check your connection and try again."));
         }
     };
 

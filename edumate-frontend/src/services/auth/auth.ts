@@ -199,7 +199,7 @@ export const setAuthHeader = (token: string = getToken() || ''): void => {
  * Register function
  */
 export const register = async (user: UserRegisterDetails): Promise<RegisterResponse> => {
- try {
+  try {
     const userData: CreateUserDetails = {
       name: user.name,
       email: user.email,
@@ -207,23 +207,32 @@ export const register = async (user: UserRegisterDetails): Promise<RegisterRespo
       role: user.role,
       academicYear: user.academicLevel
     };
-    const response = await axios.post(`${API_URL}/auth/register`, userData)
-    .then(res  => {
-        console.log('Registration successful:', res.data);
-        debugger;
-       return {
-        ...res.data,
-        success: true
-      };
-    });
-   
-  } catch (error) {
-    console.error('Registration error:', error);
-  }
-  return {
-      success: false,
-      error: 'Registration failed'
+    
+    const response = await axios.post(`${API_URL}/auth/register`, userData);
+    
+    console.log('Registration successful:', response.data);
+    return {
+      ...response.data,
+      success: true
     };
+    
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    
+    // Check if there's a response with error message
+    if (error.response && error.response.data) {
+      return {
+        success: false,
+        error: error.response.data.message || error.response.data.error || 'Server error'
+      };
+    }
+    
+    // Generic error
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'An unknown error occurred'
+    };
+  }
 }
 
 // Initialize auth headers on page load if token exists
