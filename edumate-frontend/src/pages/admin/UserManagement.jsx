@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Button } from '../../components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
 import adminService from '../../services/admin/adminService';
+import { getCurrentUser } from '../../services/auth/auth';
 
 export default function UserManagement() {
   const [students, setStudents] = useState([]);
@@ -14,9 +15,13 @@ export default function UserManagement() {
   const [activeTab, setActiveTab] = useState('students');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     fetchData();
+    // Get current user info to prevent self-deactivation
+    const user = getCurrentUser();
+    setCurrentUser(user);
   }, []);
 
   const fetchData = async () => {
@@ -68,16 +73,33 @@ export default function UserManagement() {
   };
 
   const handleDeactivateUser = async (userId, userType) => {
-    if (window.confirm(`Are you sure you want to deactivate this ${userType}?`)) {
+    // Safety check: Prevent self-deactivation
+    if (currentUser && currentUser.userId === parseInt(userId)) {
+      alert('⚠️ Safety Check: You cannot deactivate your own account while logged in. Please ask another administrator to deactivate your account if needed.');
+      return;
+    }
+
+    if (window.confirm(`Are you sure you want to deactivate this ${userType}?\n\n⚠️ This action will prevent the user from accessing their account.`)) {
       try {
         const response = await adminService.deactivateUser(userId, userType);
         if (response.success) {
+          alert(`✅ User successfully deactivated.`);
           fetchData(); // Refresh data
         } else {
-          alert('Failed to deactivate user: ' + response.error);
+          // Enhanced error handling based on common HTTP status codes
+          let errorMessage = response.error || 'Unknown error occurred';
+          if (errorMessage.includes('405')) {
+            errorMessage = 'This feature is not available on the backend yet. The deactivate user endpoint may not be implemented or may use a different HTTP method.';
+          } else if (errorMessage.includes('403')) {
+            errorMessage = 'You do not have permission to deactivate this user.';
+          } else if (errorMessage.includes('404')) {
+            errorMessage = 'User not found or endpoint does not exist.';
+          }
+          alert('❌ Failed to deactivate user: ' + errorMessage);
         }
       } catch (error) {
-        alert('Error deactivating user');
+        console.error('Deactivation error:', error);
+        alert('❌ Network error occurred while trying to deactivate user. Please check your connection and try again.');
       }
     }
   };
@@ -86,12 +108,23 @@ export default function UserManagement() {
     try {
       const response = await adminService.reactivateUser(userId, userType);
       if (response.success) {
+        alert(`✅ User successfully reactivated.`);
         fetchData(); // Refresh data
       } else {
-        alert('Failed to reactivate user: ' + response.error);
+        // Enhanced error handling based on common HTTP status codes
+        let errorMessage = response.error || 'Unknown error occurred';
+        if (errorMessage.includes('405')) {
+          errorMessage = 'This feature is not available on the backend yet. The reactivate user endpoint may not be implemented or may use a different HTTP method.';
+        } else if (errorMessage.includes('403')) {
+          errorMessage = 'You do not have permission to reactivate this user.';
+        } else if (errorMessage.includes('404')) {
+          errorMessage = 'User not found or endpoint does not exist.';
+        }
+        alert('❌ Failed to reactivate user: ' + errorMessage);
       }
     } catch (error) {
-      alert('Error reactivating user');
+      console.error('Reactivation error:', error);
+      alert('❌ Network error occurred while trying to reactivate user. Please check your connection and try again.');
     }
   };
 
@@ -191,9 +224,11 @@ export default function UserManagement() {
                     size="sm" 
                     variant="destructive"
                     onClick={() => handleDeactivateUser(user.id, userType)}
+                    disabled={currentUser && currentUser.userId === parseInt(user.id)}
+                    title={currentUser && currentUser.userId === parseInt(user.id) ? "You cannot deactivate your own account" : "Deactivate user"}
                   >
                     <AlertTriangle className="w-4 h-4 mr-1" />
-                    Deactivate
+                    {currentUser && currentUser.userId === parseInt(user.id) ? 'You' : 'Deactivate'}
                   </Button>
                 ) : (
                   <Button 
