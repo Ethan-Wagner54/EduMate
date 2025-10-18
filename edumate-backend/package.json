@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "nodemon --watch 'src/**/*.ts' --exec ts-node src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "build:docs": "node generate-docs.js",
+    "ci:build": "npm run build && npm run build:docs"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +23,8 @@
     "jsonwebtoken": "^9.0.0",
     "multer": "^2.0.2",
     "socket.io": "^4.8.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
@@ -30,6 +34,7 @@
     "@types/jsonwebtoken": "^9.0.1",
     "@types/multer": "^2.0.0",
     "@types/node": "^18.14.6",
+    "@types/swagger-ui-express": "^4.1.8",
     "axios": "^1.12.2",
     "nodemon": "^2.0.22",
     "prisma": "^5.22.0",
