@@ -29,13 +29,19 @@ export default function SessionManagement() {
     setError(null);
     
     try {
+      console.log('Fetching sessions...');
       const response = await adminService.getAllSessions();
+      console.log('Fetch sessions response:', response);
+      
       if (response.success) {
+        console.log('Sessions fetched:', response.data?.length || 0, 'sessions');
         setSessions(response.data || []);
       } else {
+        console.error('Failed to fetch sessions:', response.error);
         setError(response.error || 'Failed to fetch sessions');
       }
     } catch (err) {
+      console.error('Error fetching sessions:', err);
       setError('Failed to fetch sessions');
     } finally {
       setLoading(false);
@@ -98,16 +104,27 @@ export default function SessionManagement() {
   };
 
   const handleSaveEdit = async (updates) => {
+    console.log('Saving session updates:', {
+      sessionId: selectedSession.id,
+      updates,
+      originalSession: selectedSession
+    });
+    
     try {
       const response = await adminService.updateSession(selectedSession.id, updates);
+      console.log('Update session response:', response);
+      
       if (response.success) {
+        console.log('Session update successful, refreshing data...');
         setShowEditModal(false);
-        fetchSessions(); // Refresh data
+        await fetchSessions(); // Refresh data
         alert('Session updated successfully!');
       } else {
+        console.error('Failed to update session:', response.error);
         alert('Failed to update session: ' + response.error);
       }
     } catch (error) {
+      console.error('Error updating session:', error);
       alert('Error updating session');
     }
   };

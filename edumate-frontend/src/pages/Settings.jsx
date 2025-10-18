@@ -11,6 +11,7 @@ export default function Settings() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   
   const [profileData, setProfileData] = useState({
@@ -119,9 +120,70 @@ export default function Settings() {
     setPreferences(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSaveProfile = () => {
-    // API call would go here
-    alert('Profile updated successfully!');
+  const handleSaveProfile = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+      
+      // Prepare profile data for API
+      const updateData = {
+        name: profileData.name,
+        phone: profileData.phone,
+        program: profileData.program,
+        department: profileData.department,
+        year: profileData.year
+      };
+      
+      // Remove undefined/null values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined || updateData[key] === null) {
+          delete updateData[key];
+        }
+      });
+      
+      const response = await userService.updateProfile(updateData);
+      
+      if (response.success) {
+        alert('Profile updated successfully!');
+        // Optionally reload user data to reflect changes
+        const userId = authService.getUserId();
+        const userResponse = await userService.getUser({ id: userId });
+        if (userResponse.success && userResponse.data) {
+          const user = userResponse.data;
+          const userRole = authService.getUserRole();
+          
+          const mappedData = {
+            name: user.name || '',
+            email: user.email || '',
+            phone: user.phone || '',
+          };
+          
+          if (userRole === 'student') {
+            mappedData.studentId = user.id ? user.id.toString() : '';
+            mappedData.program = user.program || 'Computer Science';
+            mappedData.year = user.year || '3rd Year';
+          } else if (userRole === 'tutor') {
+            mappedData.tutorId = user.id ? user.id.toString() : '';
+            mappedData.specialties = user.specialties || [];
+            mappedData.department = user.department || 'Computer Science';
+          } else if (userRole === 'admin') {
+            mappedData.adminId = user.id ? user.id.toString() : '';
+            mappedData.department = user.department || 'Administration';
+          }
+          
+          setProfileData(mappedData);
+        }
+      } else {
+        setError(response.error || 'Failed to update profile');
+        alert('Failed to update profile: ' + (response.error || 'Unknown error'));
+      }
+    } catch (error) {
+      const errorMessage = 'Error updating profile: ' + (error.message || 'Network error');
+      setError(errorMessage);
+      alert(errorMessage);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleChangePassword = () => {
@@ -290,11 +352,15 @@ export default function Settings() {
                   <div className="mt-6">
                     <button
                       onClick={handleSaveProfile}
-                      disabled={loading}
+                      disabled={saving || loading}
                       className="flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Save size={16} className="mr-2" />
-                      Save Changes
+                      {saving ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
+                      ) : (
+                        <Save size={16} className="mr-2" />
+                      )}
+                      {saving ? 'Saving...' : 'Save Changes'}
                     </button>
                   </div>
                   </>

@@ -82,6 +82,7 @@ export default function SessionManagement() {
       console.log('moduleId:', newSession.moduleId, 'type:', typeof newSession.moduleId);
       console.log('startTime:', newSession.startTime, 'type:', typeof newSession.startTime);
       console.log('endTime:', newSession.endTime, 'type:', typeof newSession.endTime);
+      console.log('capacity:', newSession.capacity, 'type:', typeof newSession.capacity);
       
       // More specific validation with better error messages
       if (!newSession.moduleId || newSession.moduleId === "") {
@@ -103,8 +104,62 @@ export default function SessionManagement() {
       }
 
       // Validate end time is after start time
-      if (new Date(newSession.endTime) <= new Date(newSession.startTime)) {
+      const startDate = new Date(newSession.startTime);
+      const endDate = new Date(newSession.endTime);
+      
+      console.log('Start date parsed:', startDate);
+      console.log('End date parsed:', endDate);
+      console.log('End date is after start date:', endDate > startDate);
+      
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        showNotification('Invalid date format. Please select valid start and end times.', 'error');
+        return;
+      }
+      
+      if (endDate <= startDate) {
         showNotification('End time must be after start time', 'error');
+        return;
+      }
+      
+      // Additional validation: session cannot be longer than 24 hours
+      const maxDurationMs = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+      if (endDate - startDate > maxDurationMs) {
+        showNotification('Session duration cannot exceed 24 hours', 'error');
+        return;
+      }
+      
+      // Validate session is scheduled for the future (with 5 minute buffer)
+      const now = new Date();
+      const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+      if (startDate < fiveMinutesFromNow) {
+        showNotification('Session must be scheduled at least 5 minutes in the future', 'error');
+        return;
+      }
+      
+      // Validate minimum session duration (at least 15 minutes)
+      const minDurationMs = 15 * 60 * 1000; // 15 minutes in milliseconds
+      const sessionDuration = endDate - startDate;
+      console.log('Session duration (ms):', sessionDuration);
+      console.log('Session duration (minutes):', sessionDuration / (60 * 1000));
+      
+      if (sessionDuration < minDurationMs) {
+        console.log('Validation failed: session too short');
+        showNotification('Session must be at least 15 minutes long', 'error');
+        return;
+      }
+      
+      // Validate capacity
+      const capacity = parseInt(newSession.capacity);
+      console.log('Capacity parsed:', capacity, 'isNaN:', isNaN(capacity));
+      
+      if (isNaN(capacity) || capacity < 1) {
+        console.log('Validation failed: capacity too low');
+        showNotification('Capacity must be at least 1 student', 'error');
+        return;
+      }
+      if (capacity > 100) {
+        console.log('Validation failed: capacity too high');
+        showNotification('Capacity cannot exceed 100 students', 'error');
         return;
       }
       
@@ -119,7 +174,12 @@ export default function SessionManagement() {
         status: 'published' // Make session visible to students immediately
       };
       
+      console.log('Final session data being sent to server:', sessionData);
+      console.log('Session data JSON:', JSON.stringify(sessionData, null, 2));
+      
       const response = await sessionService.createSession(sessionData);
+      console.log('Server response:', response);
+      
       if (response.success) {
         // Refresh sessions list
         await fetchData();
@@ -127,6 +187,7 @@ export default function SessionManagement() {
         setNewSession({ moduleId: "", startTime: "", endTime: "", location: "", capacity: 10 });
         showNotification('Session created successfully!', 'success');
       } else {
+        console.error('Session creation failed:', response.error);
         showNotification(response.error || 'Failed to create session', 'error');
       }
     } catch (error) {
@@ -361,6 +422,7 @@ export default function SessionManagement() {
                     <Input
                       type="datetime-local"
                       value={newSession.startTime}
+                      min={new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)}
                       className="bg-input-background text-foreground border border-border rounded-md px-3 py-2 w-full"
                       onChange={(e) =>
                         setNewSession({ ...newSession, startTime: e.target.value })
@@ -374,6 +436,7 @@ export default function SessionManagement() {
                     <Input
                       type="datetime-local"
                       value={newSession.endTime}
+                      min={newSession.startTime || new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)}
                       className="bg-input-background text-foreground border border-border rounded-md px-3 py-2 w-full"
                       onChange={(e) =>
                         setNewSession({ ...newSession, endTime: e.target.value })
@@ -386,14 +449,18 @@ export default function SessionManagement() {
                     <Label className="text-foreground font-medium">Capacity</Label>
                     <Input
                       type="number"
+                      min="1"
+                      max="100"
                       value={newSession.capacity}
                       className="bg-input-background text-foreground border border-border rounded-md px-3 py-2 w-full"
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value);
                         setNewSession({
                           ...newSession,
-                          capacity: parseInt(e.target.value),
-                        })
-                      }
+                          capacity: isNaN(value) ? 1 : Math.min(Math.max(value, 1), 100),
+                        });
+                      }}
+                      placeholder="Max students (1-100)"
                     />
                   </div>
                 </div>

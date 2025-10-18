@@ -47,6 +47,11 @@ const ThemeToggle = ({
   }
 
   if (variant === 'menu') {
+    // Determine which theme mode is currently active
+    const isSystemMode = !localStorage.getItem('edumate-theme');
+    const isLightMode = localStorage.getItem('edumate-theme') === 'light';
+    const isDarkMode = localStorage.getItem('edumate-theme') === 'dark';
+    
     return (
       <div className={`space-y-1 ${className}`}>
         <div className="text-sm font-medium text-muted-foreground mb-2">
@@ -56,7 +61,7 @@ const ThemeToggle = ({
           <button
             onClick={setLightTheme}
             className={`flex flex-col items-center p-3 rounded-lg border transition-all duration-200 ${
-              theme === 'light'
+              isLightMode
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-card hover:bg-accent border-border'
             }`}
@@ -70,7 +75,7 @@ const ThemeToggle = ({
           <button
             onClick={setDarkTheme}
             className={`flex flex-col items-center p-3 rounded-lg border transition-all duration-200 ${
-              theme === 'dark'
+              isDarkMode
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-card hover:bg-accent border-border'
             }`}
@@ -84,7 +89,7 @@ const ThemeToggle = ({
           <button
             onClick={setSystemTheme}
             className={`flex flex-col items-center p-3 rounded-lg border transition-all duration-200 ${
-              !localStorage.getItem('edumate-theme')
+              isSystemMode
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-card hover:bg-accent border-border'
             }`}

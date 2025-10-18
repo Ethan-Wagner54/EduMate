@@ -17,6 +17,7 @@ import {
 import authService from '../services/auth/auth';
 import userService from '../services/user/user';
 import { AvatarSmall } from './ui/Avatar';
+import ThemeToggle from './ui/ThemeToggle';
 
 // Navigation configuration for different user types
 const navigationConfig = {
@@ -126,11 +127,30 @@ export default function UnifiedSidebar({ userType = 'student' }) {
         
         // Check authentication first
         if (!authService.isAuthenticated()) {
+          console.log('User not authenticated in sidebar, redirecting to login');
+          authService.logout(); // Clear any stale data
           navigate('/login');
           return;
         }
 
         const userId = authService.getUserId();
+        const currentUserRole = authService.getUserRole();
+        
+        // Validate role matches expected userType
+        if (currentUserRole && currentUserRole !== userType) {
+          console.log(`Role mismatch: expected ${userType}, got ${currentUserRole}`);
+          // Redirect to correct dashboard based on role
+          if (currentUserRole === 'admin') {
+            navigate('/admin');
+          } else if (currentUserRole === 'student') {
+            navigate('/student');
+          } else if (currentUserRole === 'tutor') {
+            navigate('/tutor');
+          } else {
+            navigate('/login');
+          }
+          return;
+        }
         
         if (!userId) {
           setError('No user ID found');
@@ -156,10 +176,22 @@ export default function UnifiedSidebar({ userType = 'student' }) {
   }, [navigate, userType]);
 
   const handleLogout = () => {
-    // Use the auth service logout function
-    authService.logout();
-    // Redirect to login
-    navigate('/login');
+    try {
+      // Clear user state immediately
+      setUser(null);
+      setError(null);
+      
+      // Use the auth service logout function
+      authService.logout();
+      
+      // Navigate to login, replacing current entry to prevent back button issues
+      navigate('/login', { replace: true });
+    } catch (err) {
+      console.error('Logout error:', err);
+      // Force logout even if there's an error
+      localStorage.clear();
+      navigate('/login', { replace: true });
+    }
   };
 
   const navigationItems = navigationConfig[userType] || navigationConfig.student;
@@ -205,6 +237,7 @@ export default function UnifiedSidebar({ userType = 'student' }) {
     <aside className="w-64 bg-primary text-primary-foreground flex flex-col p-4 shadow-lg">
       <div className="flex items-center justify-between p-2 mb-6">
         <div className="font-bold text-xl">EduMate</div>
+        <ThemeToggle variant="dropdown" size="sm" />
       </div>
 
       {/* User Info */}

@@ -32,7 +32,8 @@ axiosInstance.interceptors.response.use(
     // Handle 401 errors by redirecting to login
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Let the component handle navigation to preserve history
+      // Components should check authentication state and redirect accordingly
     }
     return Promise.reject(error);
   }

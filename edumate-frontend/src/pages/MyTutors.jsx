@@ -14,31 +14,31 @@ export default function MyTutors() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchMyTutors = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const response = await studentTutorsService.getMyTutors();
-        
-        if (response.success) {
-          const formattedTutors = response.data.tutors.map(tutor => 
-            studentTutorsService.formatTutorForDisplay(tutor)
-          );
-          setTutors(formattedTutors);
-        } else {
-          setError(response.error);
-          toast.error(response.error || 'Failed to load tutors');
-        }
-      } catch (error) {
-        setError('Failed to load tutors');
-        toast.error('Failed to load tutors');
-      } finally {
-        setLoading(false);
+  const fetchMyTutors = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await studentTutorsService.getMyTutors();
+      
+      if (response.success) {
+        const formattedTutors = response.data.tutors.map(tutor => 
+          studentTutorsService.formatTutorForDisplay(tutor)
+        );
+        setTutors(formattedTutors);
+      } else {
+        setError(response.error);
+        toast.error(response.error || 'Failed to load tutors');
       }
-    };
+    } catch (error) {
+      setError('Failed to load tutors');
+      toast.error('Failed to load tutors');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchMyTutors();
   }, []);
 
@@ -100,7 +100,7 @@ export default function MyTutors() {
             <h3 className="text-lg font-medium text-foreground mb-2">Error loading tutors</h3>
             <p className="text-muted-foreground mb-4">{error}</p>
             <button 
-              onClick={() => window.location.reload()}
+              onClick={() => fetchMyTutors()}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
               Try Again

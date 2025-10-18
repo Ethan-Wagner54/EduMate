@@ -64,8 +64,12 @@ export const getSessions = async (params?: SessionQueryParams): Promise<Sessions
  */
 export const createSession = async (params: CreateSessionParams): Promise<CreateSessionResponse> => {
   try {
+    console.log('CreateSession called with params:', params);
+    console.log('Making POST request to /sessions with data:', JSON.stringify(params, null, 2));
     
     const response = await axiosInstance.post<any>(`/sessions`, params);
+    console.log('CreateSession server response:', response);
+    
     if (response.data) {
       return {
         success: true,
@@ -78,12 +82,18 @@ export const createSession = async (params: CreateSessionParams): Promise<Create
       error: 'No data received from the server'
     };
   } catch (error: any) {
+    console.error('CreateSession error caught:', error);
+    console.error('Error response:', error.response);
+    console.error('Error response data:', error.response?.data);
+    console.error('Error status:', error.response?.status);
+    console.error('Error statusText:', error.response?.statusText);
     
     // Check if there's a response with error message
     if (error.response && error.response.data) {
+      const errorMessage = error.response.data.message || error.response.data.error || `Server error (${error.response.status})`;
       return {
         success: false,
-        error: error.response.data.message || error.response.data.error || 'Server error'
+        error: errorMessage
       };
     }
     

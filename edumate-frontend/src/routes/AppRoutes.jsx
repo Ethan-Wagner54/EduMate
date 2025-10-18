@@ -57,6 +57,7 @@ export default function AppRoutes() {
         <Route path="sessions" element={<AdminSessionManagement />} />
         <Route path="chats" element={<ChatModeration />} />
         <Route path="analytics" element={<Analytics />} />
+        <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
       </Route>
 

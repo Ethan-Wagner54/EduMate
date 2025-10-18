@@ -37,7 +37,21 @@ export default function Registration() {
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: null }));
         }
-    }; 
+        
+        // Real-time email validation
+        if (name === 'email' && value.trim()) {
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            const domain = value.trim().split('@')[1];
+            
+            if (!emailRegex.test(value.trim())) {
+                setErrors(prev => ({ ...prev, email: "Please enter a valid email address (e.g., user@example.com)" }));
+            } else if (domain && domain.split('.').some(part => part.length < 2 || /^[a-z]$/.test(part))) {
+                setErrors(prev => ({ ...prev, email: "Please enter a valid email address with a real domain (e.g., user@gmail.com)" }));
+            } else {
+                setErrors(prev => ({ ...prev, email: null }));
+            }
+        }
+    };
 
     //toggle module selection (checkbox logic)
     const handleModuleToggle = (module) => {
@@ -66,9 +80,14 @@ export default function Registration() {
         if (formData.modules.length === 0) newErrors.modules = "Please select at least one module";
         
         // Email validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (formData.email && !emailRegex.test(formData.email)) {
-            newErrors.email = "Please enter a valid email address";
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (formData.email && !emailRegex.test(formData.email.trim())) {
+            newErrors.email = "Please enter a valid email address (e.g., user@example.com)";
+        } else if (formData.email) {
+            const domain = formData.email.trim().split('@')[1];
+            if (domain && domain.split('.').some(part => part.length < 2 || /^[a-z]$/.test(part))) {
+                newErrors.email = "Please enter a valid email address with a real domain (e.g., user@gmail.com)";
+            }
         }
         
         // Password validation
@@ -98,23 +117,39 @@ export default function Registration() {
     };
 
     //handle form submission
-    const handleSubmit = (e) => {
-
+    const handleSubmit = async (e) => {
         e.preventDefault();
         
         // Validate the form before submission
-        if (validateForm()) {
-           authService.register({
-            name: formData.name,
-            email: formData.email,
-            password: formData.password,
-            role: formData.role,
-            academicLevel: formData.academicLevel,
-            modules: formData.modules
-        });
-
-        window.alert("Registration successful!");
-        navigate("/HomePage");
+        if (!validateForm()) {
+            return;
+        }
+        
+        try {
+            const response = await authService.register({
+                name: formData.name,
+                email: formData.email,
+                password: formData.password,
+                role: formData.role,
+                academicLevel: formData.academicLevel,
+                modules: formData.modules
+            });
+            
+            if (response && response.success) {
+                window.alert("Registration successful! Please check your email to verify your account.");
+                navigate("/login");
+            } else {
+                // Handle backend validation errors
+                const errorMessage = response?.error || "Registration failed. Please try again.";
+                if (errorMessage.toLowerCase().includes('email') && errorMessage.toLowerCase().includes('exist')) {
+                    setErrors(prev => ({ ...prev, email: "This email address is already registered. Please use a different email or try logging in." }));
+                } else {
+                    window.alert("Registration failed: " + errorMessage);
+                }
+            }
+        } catch (error) {
+            console.error('Registration error:', error);
+            window.alert("Registration failed: " + (error.message || "Network error. Please check your connection and try again."));
         }
     };
 
@@ -155,11 +190,10 @@ export default function Registration() {
                             <Input style={{ backgroundColor: '#3C1A4F' }} className="bg-edumatePurpleLight text-white placeholder:text-purple-200 border border-grey"
                                 id="email"
                                 name="email"
-                                type="email"
-                                placeholder="Enter your email"
+                                type="text"
+                                placeholder="Enter your email (e.g., john@example.com)"
                                 value={formData.email}
                                 onChange={handleChange}
-                                required
                             />
                             {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                         </div>
@@ -279,9 +313,25 @@ export default function Registration() {
                         </p>
                         <p className="mt-2">
                             By registering, you agree to our{" "}
-                            <button type="button" className="text-primary hover:underline font-bold">Terms of Service</button>{" "}
+                            <button 
+                                type="button" 
+                                className="text-primary hover:underline font-bold"
+                                onClick={() => {
+                                    alert('Terms of Service page is not yet implemented. This would typically open the terms in a modal or new page.');
+                                }}
+                            >
+                                Terms of Service
+                            </button>{" "}
                             and{" "}
-                            <button type="button" className="text-primary hover:underline font-bold">Privacy Policy</button>.
+                            <button 
+                                type="button" 
+                                className="text-primary hover:underline font-bold"
+                                onClick={() => {
+                                    alert('Privacy Policy page is not yet implemented. This would typically open the privacy policy in a modal or new page.');
+                                }}
+                            >
+                                Privacy Policy
+                            </button>.
                         </p>
                     </div>
                 </CardContent>

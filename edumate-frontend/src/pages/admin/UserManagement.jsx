@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Button } from '../../components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
 import adminService from '../../services/admin/adminService';
+import { getCurrentUser } from '../../services/auth/auth';
 
 export default function UserManagement() {
   const [students, setStudents] = useState([]);
@@ -14,9 +15,13 @@ export default function UserManagement() {
   const [activeTab, setActiveTab] = useState('students');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     fetchData();
+    // Get current user info to prevent self-deactivation
+    const user = getCurrentUser();
+    setCurrentUser(user);
   }, []);
 
   const fetchData = async () => {
@@ -68,16 +73,33 @@ export default function UserManagement() {
   };
 
   const handleDeactivateUser = async (userId, userType) => {
-    if (window.confirm(`Are you sure you want to deactivate this ${userType}?`)) {
+    // Safety check: Prevent self-deactivation
+    if (currentUser && currentUser.userId === parseInt(userId)) {
+      alert('⚠️ Safety Check: You cannot deactivate your own account while logged in. Please ask another administrator to deactivate your account if needed.');
+      return;
+    }
+
+    if (window.confirm(`Are you sure you want to deactivate this ${userType}?\n\n⚠️ This action will prevent the user from accessing their account.`)) {
       try {
         const response = await adminService.deactivateUser(userId, userType);
         if (response.success) {
+          alert(`✅ User successfully deactivated.`);
           fetchData(); // Refresh data
         } else {
-          alert('Failed to deactivate user: ' + response.error);
+          // Enhanced error handling based on common HTTP status codes
+          let errorMessage = response.error || 'Unknown error occurred';
+          if (errorMessage.includes('405')) {
+            errorMessage = 'This feature is not available on the backend yet. The deactivate user endpoint may not be implemented or may use a different HTTP method.';
+          } else if (errorMessage.includes('403')) {
+            errorMessage = 'You do not have permission to deactivate this user.';
+          } else if (errorMessage.includes('404')) {
+            errorMessage = 'User not found or endpoint does not exist.';
+          }
+          alert('❌ Failed to deactivate user: ' + errorMessage);
         }
       } catch (error) {
-        alert('Error deactivating user');
+        console.error('Deactivation error:', error);
+        alert('❌ Network error occurred while trying to deactivate user. Please check your connection and try again.');
       }
     }
   };
@@ -86,12 +108,23 @@ export default function UserManagement() {
     try {
       const response = await adminService.reactivateUser(userId, userType);
       if (response.success) {
+        alert(`✅ User successfully reactivated.`);
         fetchData(); // Refresh data
       } else {
-        alert('Failed to reactivate user: ' + response.error);
+        // Enhanced error handling based on common HTTP status codes
+        let errorMessage = response.error || 'Unknown error occurred';
+        if (errorMessage.includes('405')) {
+          errorMessage = 'This feature is not available on the backend yet. The reactivate user endpoint may not be implemented or may use a different HTTP method.';
+        } else if (errorMessage.includes('403')) {
+          errorMessage = 'You do not have permission to reactivate this user.';
+        } else if (errorMessage.includes('404')) {
+          errorMessage = 'User not found or endpoint does not exist.';
+        }
+        alert('❌ Failed to reactivate user: ' + errorMessage);
       }
     } catch (error) {
-      alert('Error reactivating user');
+      console.error('Reactivation error:', error);
+      alert('❌ Network error occurred while trying to reactivate user. Please check your connection and try again.');
     }
   };
 
@@ -191,9 +224,11 @@ export default function UserManagement() {
                     size="sm" 
                     variant="destructive"
                     onClick={() => handleDeactivateUser(user.id, userType)}
+                    disabled={currentUser && currentUser.userId === parseInt(user.id)}
+                    title={currentUser && currentUser.userId === parseInt(user.id) ? "You cannot deactivate your own account" : "Deactivate user"}
                   >
                     <AlertTriangle className="w-4 h-4 mr-1" />
-                    Deactivate
+                    {currentUser && currentUser.userId === parseInt(user.id) ? 'You' : 'Deactivate'}
                   </Button>
                 ) : (
                   <Button 
@@ -218,7 +253,7 @@ export default function UserManagement() {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div className="bg-card text-card-foreground rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto border">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">User Details</h2>
             <Button variant="ghost" size="sm" onClick={closeDetailsModal}>
@@ -229,23 +264,23 @@ export default function UserManagement() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">Name</label>
+                <label className="text-sm font-medium text-muted-foreground">Name</label>
                 <p className="text-lg font-semibold">{selectedUser.name}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Email</label>
+                <label className="text-sm font-medium text-muted-foreground">Email</label>
                 <p className="text-lg">{selectedUser.email}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">User ID</label>
+                <label className="text-sm font-medium text-muted-foreground">User ID</label>
                 <p className="text-lg">{selectedUser.id}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">User Type</label>
+                <label className="text-sm font-medium text-muted-foreground">User Type</label>
                 <p className="text-lg capitalize">{selectedUser.userType}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Account Status</label>
+                <label className="text-sm font-medium text-muted-foreground">Account Status</label>
                 <p className={`text-lg font-semibold ${
                   selectedUser.isActive ? 'text-green-600' : 'text-red-600'
                 }`}>
@@ -253,7 +288,7 @@ export default function UserManagement() {
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Joined Date</label>
+                <label className="text-sm font-medium text-muted-foreground">Joined Date</label>
                 <p className="text-lg">
                   {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString() : 'N/A'}
                 </p>
@@ -265,31 +300,31 @@ export default function UserManagement() {
                 <h3 className="text-lg font-semibold mb-2">Tutor Information</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Subjects</label>
+                    <label className="text-sm font-medium text-muted-foreground">Subjects</label>
                     <p className="text-lg">{selectedUser.subjects?.join(', ') || 'N/A'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Rating</label>
+                    <label className="text-sm font-medium text-muted-foreground">Rating</label>
                     <p className="text-lg">{selectedUser.rating || 'N/A'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Campus Location</label>
+                    <label className="text-sm font-medium text-muted-foreground">Campus Location</label>
                     <p className="text-lg">{selectedUser.campusLocation || 'N/A'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Warning Count</label>
+                    <label className="text-sm font-medium text-muted-foreground">Warning Count</label>
                     <p className="text-lg">{selectedUser.warningsCount || 0}</p>
                   </div>
                 </div>
                 
                 {selectedUser.tutorModules && selectedUser.tutorModules.length > 0 && (
                   <div className="mt-4">
-                    <label className="text-sm font-medium text-gray-500">Teaching Modules</label>
+                    <label className="text-sm font-medium text-muted-foreground">Teaching Modules</label>
                     <div className="mt-2 space-y-2">
                       {selectedUser.tutorModules.map((tm, index) => (
-                        <div key={index} className="bg-gray-50 p-2 rounded">
+                        <div key={index} className="bg-muted p-2 rounded">
                           <p className="font-medium">{tm?.module?.name || 'N/A'}</p>
-                          <p className="text-sm text-gray-600">{tm?.module?.code || 'N/A'}</p>
+                          <p className="text-sm text-muted-foreground">{tm?.module?.code || 'N/A'}</p>
                         </div>
                       ))}
                     </div>
@@ -303,11 +338,11 @@ export default function UserManagement() {
                 <h3 className="text-lg font-semibold mb-2">Student Information</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Student ID</label>
+                    <label className="text-sm font-medium text-muted-foreground">Student ID</label>
                     <p className="text-lg">{selectedUser.studentId || 'N/A'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Enrollment Status</label>
+                    <label className="text-sm font-medium text-muted-foreground">Enrollment Status</label>
                     <p className="text-lg">{selectedUser.enrollmentStatus || 'Active'}</p>
                   </div>
                 </div>
