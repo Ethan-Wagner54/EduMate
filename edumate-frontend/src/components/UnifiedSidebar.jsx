@@ -17,6 +17,7 @@ import {
 import authService from '../services/auth/auth';
 import userService from '../services/user/user';
 import { AvatarSmall } from './ui/Avatar';
+import ThemeToggle from './ui/ThemeToggle';
 
 // Navigation configuration for different user types
 const navigationConfig = {
@@ -237,6 +238,7 @@ export default function UnifiedSidebar({ userType = 'student' }) {
     <aside className="w-64 bg-primary text-primary-foreground flex flex-col p-4 shadow-lg">
       <div className="flex items-center justify-between p-2 mb-6">
         <div className="font-bold text-xl">EduMate</div>
+        <ThemeToggle variant="dropdown" size="sm" />
       </div>
 
       {/* User Info */}
