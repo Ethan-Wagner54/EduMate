@@ -174,7 +174,12 @@ export default function SessionManagement() {
         status: 'published' // Make session visible to students immediately
       };
       
+      console.log('Final session data being sent to server:', sessionData);
+      console.log('Session data JSON:', JSON.stringify(sessionData, null, 2));
+      
       const response = await sessionService.createSession(sessionData);
+      console.log('Server response:', response);
+      
       if (response.success) {
         // Refresh sessions list
         await fetchData();
@@ -182,6 +187,7 @@ export default function SessionManagement() {
         setNewSession({ moduleId: "", startTime: "", endTime: "", location: "", capacity: 10 });
         showNotification('Session created successfully!', 'success');
       } else {
+        console.error('Session creation failed:', response.error);
         showNotification(response.error || 'Failed to create session', 'error');
       }
     } catch (error) {
