@@ -85,8 +85,8 @@ export default function Analytics() {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
-          <p className="font-medium text-gray-900 mb-2">{label}</p>
+        <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+          <p className="font-medium text-foreground mb-2">{label}</p>
           {payload.map((entry, index) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
               {`${entry.name}: ${formatNumber(entry.value)}${entry.name.includes('Rate') || entry.name.includes('Growth') ? '%' : ''}`}
@@ -106,8 +106,8 @@ export default function Analytics() {
         <Icon className={`h-4 w-4 text-${color}-600`} />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{formatNumber(value)}{suffix}</div>
-        <p className="text-xs text-gray-600">
+        <div className="text-2xl font-bold text-foreground">{formatNumber(value)}{suffix}</div>
+        <p className="text-xs text-muted-foreground">
           {change !== undefined && (
             <>
               {change > 0 ? (
@@ -115,7 +115,7 @@ export default function Analytics() {
               ) : change < 0 ? (
                 <TrendingDown className="inline h-3 w-3 text-red-600 mr-1" />
               ) : null}
-              <span className={change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-gray-600'}>
+              <span className={change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-muted-foreground'}>
                 {formatPercentage(change)} from last month
               </span>
             </>
@@ -127,15 +127,15 @@ export default function Analytics() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-64 mb-8"></div>
+            <div className="h-8 bg-muted rounded w-64 mb-8"></div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="bg-white rounded-lg shadow p-6">
-                  <div className="h-4 bg-gray-200 rounded w-24 mb-4"></div>
-                  <div className="h-8 bg-gray-200 rounded w-16"></div>
+                <div key={i} className="bg-card border border-border rounded-lg shadow p-6">
+                  <div className="h-4 bg-muted rounded w-24 mb-4"></div>
+                  <div className="h-8 bg-muted rounded w-16"></div>
                 </div>
               ))}
             </div>
@@ -147,11 +147,11 @@ export default function Analytics() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
             <div className="flex items-center">
-              <div className="text-red-800">
+              <div className="text-destructive">
                 <strong>Error:</strong> {error}
               </div>
             </div>
@@ -162,23 +162,23 @@ export default function Analytics() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header with Controls */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-            <p className="text-gray-600 mt-2">Real-time system performance and usage statistics</p>
+            <h1 className="text-3xl font-bold text-foreground">Analytics Dashboard</h1>
+            <p className="text-muted-foreground mt-2">Real-time system performance and usage statistics</p>
           </div>
           
           <div className="flex items-center gap-3">
             {/* Time Period Filter */}
             <div className="flex items-center gap-2">
-              <Calendar size={16} className="text-gray-500" />
+              <Calendar size={16} className="text-muted-foreground" />
               <select 
                 value={timePeriod} 
                 onChange={(e) => setTimePeriod(e.target.value)}
-                className="px-3 py-1 border border-gray-300 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-1 border border-border rounded-lg text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="3months">Last 3 Months</option>
                 <option value="6months">Last 6 Months</option>
@@ -188,11 +188,11 @@ export default function Analytics() {
             
             {/* Chart Type Filter */}
             <div className="flex items-center gap-2">
-              <Filter size={16} className="text-gray-500" />
+              <Filter size={16} className="text-muted-foreground" />
               <select 
                 value={activeChart} 
                 onChange={(e) => setActiveChart(e.target.value)}
-                className="px-3 py-1 border border-gray-300 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-1 border border-border rounded-lg text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="overview">Overview</option>
                 <option value="users">User Growth</option>
@@ -244,25 +244,25 @@ export default function Analytics() {
             <CardContent className="p-6">
               {activeChart === 'overview' && userGrowthData.length > 0 && sessionTrendData.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">System Overview</h3>
+                  <h3 className="text-lg font-medium text-foreground mb-4">System Overview</h3>
                   <ResponsiveContainer width="100%" height={400}>
                     <ComposedChart data={userGrowthData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-20" />
                       <XAxis 
                         dataKey="monthShort" 
-                        stroke="#64748b"
+                        className="text-muted-foreground"
                         fontSize={12}
                       />
                       <YAxis 
                         yAxisId="users"
                         orientation="left"
-                        stroke="#64748b"
+                        className="text-muted-foreground"
                         fontSize={12}
                       />
                       <YAxis 
                         yAxisId="growth"
                         orientation="right"
-                        stroke="#64748b"
+                        className="text-muted-foreground"
                         fontSize={12}
                         domain={[-10, 50]}
                       />
@@ -291,17 +291,17 @@ export default function Analytics() {
 
               {activeChart === 'users' && userGrowthData.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">User Growth Trends</h3>
+                  <h3 className="text-lg font-medium text-foreground mb-4">User Growth Trends</h3>
                   <ResponsiveContainer width="100%" height={400}>
                     <AreaChart data={userGrowthData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-20" />
                       <XAxis 
                         dataKey="monthShort" 
-                        stroke="#64748b"
+                        className="text-muted-foreground"
                         fontSize={12}
                       />
                       <YAxis 
-                        stroke="#64748b"
+                        className="text-muted-foreground"
                         fontSize={12}
                       />
                       <Tooltip content={<CustomTooltip />} />
@@ -331,25 +331,25 @@ export default function Analytics() {
 
               {activeChart === 'sessions' && sessionTrendData.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Session Activity Trends</h3>
+                  <h3 className="text-lg font-medium text-foreground mb-4">Session Activity Trends</h3>
                   <ResponsiveContainer width="100%" height={400}>
                     <ComposedChart data={sessionTrendData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-20" />
                       <XAxis 
                         dataKey="monthShort" 
-                        stroke="#64748b"
+                        className="text-muted-foreground"
                         fontSize={12}
                       />
                       <YAxis 
                         yAxisId="sessions"
                         orientation="left"
-                        stroke="#64748b"
+                        className="text-muted-foreground"
                         fontSize={12}
                       />
                       <YAxis 
                         yAxisId="rate"
                         orientation="right"
-                        stroke="#64748b"
+                        className="text-muted-foreground"
                         fontSize={12}
                         domain={[0, 100]}
                       />
@@ -385,7 +385,7 @@ export default function Analytics() {
 
               {activeChart === 'distribution' && pieChartData.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Session Status Distribution</h3>
+                  <h3 className="text-lg font-medium text-foreground mb-4">Session Status Distribution</h3>
                   <div className="flex flex-col lg:flex-row items-center">
                     <div className="w-full lg:w-1/2">
                       <ResponsiveContainer width="100%" height={400}>
@@ -409,7 +409,7 @@ export default function Analytics() {
                               if (active && payload && payload.length) {
                                 const data = payload[0].payload;
                                 return (
-                                  <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
+                                  <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
                                     <p className="font-medium" style={{ color: data.color }}>
                                       {data.name}: {data.value} ({data.percentage}%)
                                     </p>
@@ -425,17 +425,17 @@ export default function Analytics() {
                     <div className="w-full lg:w-1/2 mt-4 lg:mt-0 lg:pl-8">
                       <div className="space-y-4">
                         {pieChartData.map((item, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                             <div className="flex items-center">
                               <div 
                                 className="w-4 h-4 rounded-full mr-3" 
                                 style={{ backgroundColor: item.color }}
                               />
-                              <span className="font-medium">{item.name}</span>
+                              <span className="font-medium text-foreground">{item.name}</span>
                             </div>
                             <div className="text-right">
-                              <div className="font-bold">{item.value}</div>
-                              <div className="text-sm text-gray-600">{item.percentage}%</div>
+                              <div className="font-bold text-foreground">{item.value}</div>
+                              <div className="text-sm text-muted-foreground">{item.percentage}%</div>
                             </div>
                           </div>
                         ))}
@@ -458,15 +458,15 @@ export default function Analytics() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Total Users</span>
-                    <span className="font-semibold">{analyticsData.totalUsers}</span>
+                    <span className="text-sm text-muted-foreground">Total Users</span>
+                    <span className="font-semibold text-foreground">{analyticsData.totalUsers}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Active Users</span>
-                    <span className="font-semibold">{analyticsData.activeUsers}</span>
+                    <span className="text-sm text-muted-foreground">Active Users</span>
+                    <span className="font-semibold text-foreground">{analyticsData.activeUsers}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Engagement Rate</span>
+                    <span className="text-sm text-muted-foreground">Engagement Rate</span>
                     <span className="font-semibold text-green-600">
                       {analyticsData.engagementMetrics?.engagementRate || 0}%
                     </span>
@@ -482,15 +482,15 @@ export default function Analytics() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Total Sessions</span>
-                    <span className="font-semibold">{analyticsData.totalSessions}</span>
+                    <span className="text-sm text-muted-foreground">Total Sessions</span>
+                    <span className="font-semibold text-foreground">{analyticsData.totalSessions}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Completed</span>
-                    <span className="font-semibold">{analyticsData.engagementMetrics?.completedSessions || 0}</span>
+                    <span className="text-sm text-muted-foreground">Completed</span>
+                    <span className="font-semibold text-foreground">{analyticsData.engagementMetrics?.completedSessions || 0}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Completion Rate</span>
+                    <span className="text-sm text-muted-foreground">Completion Rate</span>
                     <span className="font-semibold text-green-600">
                       {analyticsData.engagementMetrics?.completionRate || 0}%
                     </span>
@@ -506,16 +506,16 @@ export default function Analytics() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">System Status</span>
+                    <span className="text-sm text-muted-foreground">System Status</span>
                     <span className="font-semibold text-green-600">Operational</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Total Tutors</span>
-                    <span className="font-semibold">{analyticsData.totalTutors}</span>
+                    <span className="text-sm text-muted-foreground">Total Tutors</span>
+                    <span className="font-semibold text-foreground">{analyticsData.totalTutors}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Total Students</span>
-                    <span className="font-semibold">{analyticsData.totalStudents}</span>
+                    <span className="text-sm text-muted-foreground">Total Students</span>
+                    <span className="font-semibold text-foreground">{analyticsData.totalStudents}</span>
                   </div>
                 </div>
               </CardContent>
