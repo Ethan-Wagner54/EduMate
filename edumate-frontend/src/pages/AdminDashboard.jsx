@@ -48,75 +48,75 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white shadow">
+      <header className="bg-card shadow border-b">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white shadow rounded-lg p-6">
-            <dt className="text-sm font-medium text-gray-500 truncate">Total Tutors</dt>
-            <dd className="mt-1 text-3xl font-semibold text-gray-900">{stats.totalTutors}</dd>
+          <div className="bg-card shadow rounded-lg p-6 border">
+            <dt className="text-sm font-medium text-muted-foreground truncate">Total Tutors</dt>
+            <dd className="mt-1 text-3xl font-semibold text-foreground">{stats.totalTutors}</dd>
           </div>
-          <div className="bg-white shadow rounded-lg p-6">
-            <dt className="text-sm font-medium text-gray-500 truncate">Active Sessions</dt>
-            <dd className="mt-1 text-3xl font-semibold text-gray-900">{stats.totalSessions}</dd>
+          <div className="bg-card shadow rounded-lg p-6 border">
+            <dt className="text-sm font-medium text-muted-foreground truncate">Active Sessions</dt>
+            <dd className="mt-1 text-3xl font-semibold text-foreground">{stats.totalSessions}</dd>
           </div>
-          <div className="bg-white shadow rounded-lg p-6">
-            <dt className="text-sm font-medium text-gray-500 truncate">Active Students</dt>
-            <dd className="mt-1 text-3xl font-semibold text-gray-900">{stats.activeStudents}</dd>
+          <div className="bg-card shadow rounded-lg p-6 border">
+            <dt className="text-sm font-medium text-muted-foreground truncate">Active Students</dt>
+            <dd className="mt-1 text-3xl font-semibold text-foreground">{stats.activeStudents}</dd>
           </div>
-          <div className="bg-white shadow rounded-lg p-6">
-            <dt className="text-sm font-medium text-gray-500 truncate">System Status</dt>
+          <div className="bg-card shadow rounded-lg p-6 border">
+            <dt className="text-sm font-medium text-muted-foreground truncate">System Status</dt>
             <dd className="mt-1 text-3xl font-semibold text-green-600">{stats.systemStatus}</dd>
           </div>
         </div>
 
         {/* Tutors Table */}
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-          <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex items-center justify-between">
+        <div className="bg-card shadow overflow-hidden sm:rounded-lg border">
+          <div className="px-4 py-5 sm:px-6 border-b flex items-center justify-between">
             <div>
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Tutors</h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">All active tutors in the system</p>
+              <h3 className="text-lg leading-6 font-medium text-foreground">Tutors</h3>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">All active tutors in the system</p>
             </div>
-            <span className="text-sm text-gray-500">Total: {tutors.length}</span>
+            <span className="text-sm text-muted-foreground">Total: {tutors.length}</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Warnings</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modules</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Active</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Warnings</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Location</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Modules</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-card divide-y divide-border">
                 {tutors.map((tutor) => {
                   const modules = Array.isArray(tutor.tutorModules)
                     ? tutor.tutorModules.map((tm) => tm?.module?.code || tm?.module?.name).filter(Boolean)
                     : [];
                   return (
                     <tr key={tutor.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{tutor.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tutor.email}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{tutor.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{tutor.email}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         {tutor.isActive !== false ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Active</span>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Active</span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Inactive</span>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">Inactive</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tutor.warningsCount ?? 0}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tutor.campusLocation || 'N/A'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{modules.length > 0 ? modules.join(', ') : '—'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{tutor.warningsCount ?? 0}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{tutor.campusLocation || 'N/A'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{modules.length > 0 ? modules.join(', ') : '—'}</td>
                     </tr>
                   );
                 })}
@@ -135,8 +135,8 @@ export default function AdminDashboard() {
               <div className="flex items-center">
                 <Users className="h-8 w-8 text-blue-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">User Management</p>
-                  <p className="text-lg font-semibold text-gray-900">Manage accounts</p>
+                  <p className="text-sm font-medium text-muted-foreground">User Management</p>
+                  <p className="text-lg font-semibold text-foreground">Manage accounts</p>
                 </div>
               </div>
             </CardContent>
@@ -149,8 +149,8 @@ export default function AdminDashboard() {
               <div className="flex items-center">
                 <Calendar className="h-8 w-8 text-green-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Session Management</p>
-                  <p className="text-lg font-semibold text-gray-900">Monitor sessions</p>
+                  <p className="text-sm font-medium text-muted-foreground">Session Management</p>
+                  <p className="text-lg font-semibold text-foreground">Monitor sessions</p>
                 </div>
               </div>
             </CardContent>
@@ -163,8 +163,8 @@ export default function AdminDashboard() {
               <div className="flex items-center">
                 <MessageSquare className="h-8 w-8 text-purple-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Chat Moderation</p>
-                  <p className="text-lg font-semibold text-gray-900">Review messages</p>
+                  <p className="text-sm font-medium text-muted-foreground">Chat Moderation</p>
+                  <p className="text-lg font-semibold text-foreground">Review messages</p>
                 </div>
               </div>
             </CardContent>
