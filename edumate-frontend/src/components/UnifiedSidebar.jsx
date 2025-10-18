@@ -184,14 +184,13 @@ export default function UnifiedSidebar({ userType = 'student' }) {
       // Use the auth service logout function
       authService.logout();
       
-      // Force a clean navigation without browser cache
-      window.history.replaceState(null, '', '/login');
+      // Navigate to login, replacing current entry to prevent back button issues
       navigate('/login', { replace: true });
     } catch (err) {
       console.error('Logout error:', err);
       // Force logout even if there's an error
       localStorage.clear();
-      window.location.href = '/login';
+      navigate('/login', { replace: true });
     }
   };
 
