@@ -1,17 +1,17 @@
 import { Router } from 'express';
 import { protect } from '../middleware/auth';
 import {
-    getConversations,
-    getConversation, // Renamed from getConversationDetails in previous version
-    getMessages,
-    sendMessage,
+    listConversations,
     createConversation,
-    markAsRead
-} from '../controllers/conversations.controller'; // Renamed controller file?
+    getConversationDetails,
+    getConversationMessages,
+    sendMessageInConversation,
+    markConversationAsRead,
+} from '../controllers/conversations.controller';
 
 const router = Router();
 
-// All conversation routes require authentication
+// All routes are protected
 router.use(protect);
 
 // =========================================================================
@@ -22,9 +22,9 @@ router.use(protect);
  * @openapi
  * /conversations:
  * get:
- * summary: Retrieve a list of all conversations for the authenticated user.
+ * summary: Retrieve a list of the authenticated user's conversations.
  * tags:
- * - Messaging
+ * - Messaging - Conversations
  * security:
  * - bearerAuth: []
  * responses:
@@ -40,19 +40,19 @@ router.use(protect);
  * id: { type: 'string' },
  * participants: { type: 'array', items: { type: 'object' } },
  * lastMessage: { type: 'string' },
- * unreadCount: { type: 'integer' }
+ * updatedAt: { type: 'string', format: 'date-time' }
  * '401':
- * description: Unauthorized (Token missing or invalid).
+ * description: Unauthorized.
  */
-router.get('/', getConversations);
+router.get('/', listConversations);
 
 /**
  * @openapi
  * /conversations:
  * post:
- * summary: Create a new conversation between the current user and one or more other users.
+ * summary: Create a new one-on-one conversation.
  * tags:
- * - Messaging
+ * - Messaging - Conversations
  * security:
  * - bearerAuth: []
  * requestBody:
@@ -62,20 +62,14 @@ router.get('/', getConversations);
  * schema:
  * type: object
  * required:
- * - participantIds
+ * - recipientId
  * properties:
- * participantIds:
- * type: array
- * items:
- * type: string
- * description: Array of user IDs to include in the conversation (excluding the current user).
+ * recipientId: { type: 'string', description: 'ID of the other user in the conversation.' }
  * responses:
  * '201':
- * description: Conversation created successfully. Returns the new conversation object.
+ * description: Conversation created successfully.
  * '400':
- * description: Invalid input or attempting to create a duplicate conversation.
- * '401':
- * description: Unauthorized.
+ * description: Invalid input or conversation already exists.
  */
 router.post('/', createConversation);
 
@@ -83,9 +77,9 @@ router.post('/', createConversation);
  * @openapi
  * /conversations/{id}:
  * get:
- * summary: Get detailed information for a specific conversation.
+ * summary: Get detailed information about a specific conversation.
  * tags:
- * - Messaging
+ * - Messaging - Conversations
  * security:
  * - bearerAuth: []
  * parameters:
@@ -97,15 +91,13 @@ router.post('/', createConversation);
  * description: The ID of the conversation.
  * responses:
  * '200':
- * description: Conversation details retrieved successfully.
+ * description: Conversation details retrieved.
  * '401':
  * description: Unauthorized.
- * '403':
- * description: Forbidden (User is not a participant).
  * '404':
  * description: Conversation not found.
  */
-router.get('/:id', getConversation);
+router.get('/:id', getConversationDetails);
 
 /**
  * @openapi
@@ -113,7 +105,7 @@ router.get('/:id', getConversation);
  * get:
  * summary: Retrieve the messages within a specific conversation.
  * tags:
- * - Messaging
+ * - Messaging - Conversations
  * security:
  * - bearerAuth: []
  * parameters:
@@ -125,7 +117,7 @@ router.get('/:id', getConversation);
  * description: The ID of the conversation.
  * responses:
  * '200':
- * description: A list of messages in the conversation.
+ * description: List of messages retrieved successfully.
  * content:
  * application/json:
  * schema:
@@ -139,18 +131,18 @@ router.get('/:id', getConversation);
  * timestamp: { type: 'string', format: 'date-time' }
  * '401':
  * description: Unauthorized.
- * '403':
- * description: Forbidden (User is not a participant).
+ * '404':
+ * description: Conversation not found.
  */
-router.get('/:id/messages', getMessages);
+router.get('/:id/messages', getConversationMessages);
 
 /**
  * @openapi
  * /conversations/{id}/messages:
  * post:
- * summary: Send a new message to a specific conversation.
+ * summary: Send a new message within a conversation.
  * tags:
- * - Messaging
+ * - Messaging - Conversations
  * security:
  * - bearerAuth: []
  * parameters:
@@ -159,7 +151,7 @@ router.get('/:id/messages', getMessages);
  * schema:
  * type: string
  * required: true
- * description: The ID of the conversation.
+ * description: The ID of the conversation to send the message in.
  * requestBody:
  * required: true
  * content:
@@ -169,24 +161,24 @@ router.get('/:id/messages', getMessages);
  * required:
  * - content
  * properties:
- * content: { type: 'string', description: 'The message text to send.' }
+ * content: { type: 'string', description: 'The text content of the message.' }
  * responses:
  * '201':
- * description: Message sent successfully. Returns the new message object.
- * '401':
- * description: Unauthorized.
- * '403':
- * description: Forbidden (User is not a participant).
+ * description: Message sent successfully.
+ * '400':
+ * description: Invalid input.
+ * '404':
+ * description: Conversation not found.
  */
-router.post('/:id/messages', sendMessage);
+router.post('/:id/messages', sendMessageInConversation);
 
 /**
  * @openapi
  * /conversations/{id}/mark-read:
  * post:
- * summary: Marks all unread messages in a conversation as read for the current user.
+ * summary: Mark a conversation as read.
  * tags:
- * - Messaging
+ * - Messaging - Conversations
  * security:
  * - bearerAuth: []
  * parameters:
@@ -195,15 +187,13 @@ router.post('/:id/messages', sendMessage);
  * schema:
  * type: string
  * required: true
- * description: The ID of the conversation.
+ * description: The ID of the conversation to mark as read.
  * responses:
  * '200':
  * description: Conversation marked as read.
- * '401':
- * description: Unauthorized.
- * '403':
- * description: Forbidden (User is not a participant).
+ * '404':
+ * description: Conversation not found.
  */
-router.post('/:id/mark-read', markAsRead);
+router.post('/:id/mark-read', markConversationAsRead);
 
 export default router;

@@ -2,30 +2,33 @@ import { Router } from 'express';
 import { protect } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
 import {
-    listUsers,
+    listAllUsers,
     updateUserRole,
+    deactivateUser,
+    reactivateUser,
+    sendWarning,
     listTutorRequests,
     approveTutorRequest,
     rejectTutorRequest,
-    listAuditLogs,
-    listSessions,
-    getSessionDetails,
-    updateSession,
-    deleteSession,
-    deactivateUser,
-    reactivateUser,
-    warnUser,
-    listChats,
-    listFlaggedMessages,
-    deleteChatMessage,
+    getAuditLog,
+    listAllSessions,
+    getSessionAdmin,
+    updateSessionAdmin,
+    deleteSessionAdmin,
+    cancelSessionAdmin,
+    listAllChats,
+    listFlaggedChats,
+    getMessageAdmin,
+    deleteMessageAdmin,
     flagMessage,
     unflagMessage,
 } from '../controllers/admin.controller';
 
 const router = Router();
 
-// All admin routes must be protected and require the 'admin' role
-router.use(protect, requireRole('admin'));
+// All admin routes must be protected and require admin role
+router.use(protect);
+router.use(requireRole('admin'));
 
 // =========================================================================
 // Swagger Documentation Blocks
@@ -35,28 +38,24 @@ router.use(protect, requireRole('admin'));
  * @openapi
  * /admin/users:
  * get:
- * summary: Retrieve a list of all users in the system.
+ * summary: Retrieve a list of all users.
  * tags:
- * - Admin - User Management
+ * - Admin - Users
  * security:
  * - bearerAuth: []
  * responses:
  * '200':
- * description: A list of user profiles.
- * '401':
- * description: Unauthorized (Token missing or invalid).
- * '403':
- * description: Forbidden (User is not an Admin).
+ * description: A list of user objects.
  */
-router.get('/users', listUsers);
+router.get('/users', listAllUsers);
 
 /**
  * @openapi
  * /admin/users/role:
- * post:
- * summary: Update the role of a specified user.
+ * put:
+ * summary: Update a user's role.
  * tags:
- * - Admin - User Management
+ * - Admin - Users
  * security:
  * - bearerAuth: []
  * requestBody:
@@ -67,27 +66,23 @@ router.get('/users', listUsers);
  * type: object
  * required:
  * - userId
- * - newRole
+ * - role
  * properties:
  * userId: { type: 'string', description: 'ID of the user to update.' },
- * newRole: { type: 'string', enum: ['student', 'tutor', 'admin'], description: 'The new role for the user.' }
+ * role: { type: 'string', enum: ['student', 'tutor', 'admin'], description: 'The new role.' }
  * responses:
  * '200':
  * description: User role updated successfully.
- * '403':
- * description: Forbidden (Not Admin or attempting invalid role change).
- * '404':
- * description: User not found.
  */
-router.post('/users/role', updateUserRole);
+router.put('/users/role', updateUserRole);
 
 /**
  * @openapi
  * /admin/users/{id}/deactivate:
- * put:
- * summary: Deactivate a user account, preventing login.
+ * post:
+ * summary: Deactivate a user account.
  * tags:
- * - Admin - User Management
+ * - Admin - Users
  * security:
  * - bearerAuth: []
  * parameters:
@@ -100,20 +95,16 @@ router.post('/users/role', updateUserRole);
  * responses:
  * '200':
  * description: User deactivated successfully.
- * '403':
- * description: Forbidden (Not Admin).
- * '404':
- * description: User not found.
  */
-router.put('/users/:id/deactivate', deactivateUser);
+router.post('/users/:id/deactivate', deactivateUser);
 
 /**
  * @openapi
  * /admin/users/{id}/reactivate:
- * put:
- * summary: Reactivate a previously deactivated user account.
+ * post:
+ * summary: Reactivate a user account.
  * tags:
- * - Admin - User Management
+ * - Admin - Users
  * security:
  * - bearerAuth: []
  * parameters:
@@ -126,12 +117,8 @@ router.put('/users/:id/deactivate', deactivateUser);
  * responses:
  * '200':
  * description: User reactivated successfully.
- * '403':
- * description: Forbidden (Not Admin).
- * '404':
- * description: User not found.
  */
-router.put('/users/:id/reactivate', reactivateUser);
+router.post('/users/:id/reactivate', reactivateUser);
 
 /**
  * @openapi
@@ -139,7 +126,7 @@ router.put('/users/:id/reactivate', reactivateUser);
  * post:
  * summary: Send a formal warning to a user.
  * tags:
- * - Admin - User Management
+ * - Admin - Users
  * security:
  * - bearerAuth: []
  * parameters:
@@ -156,31 +143,29 @@ router.put('/users/:id/reactivate', reactivateUser);
  * schema:
  * type: object
  * required:
- * - reason
+ * - message
  * properties:
- * reason: { type: 'string', description: 'The reason for the warning.' }
+ * message: { type: 'string', description: 'The warning message content.' }
  * responses:
  * '200':
- * description: Warning logged and user notified.
- * '403':
- * description: Forbidden (Not Admin).
+ * description: Warning sent successfully.
  */
-router.post('/users/:id/warn', warnUser);
+router.post('/users/:id/warn', sendWarning);
+
+// ---
 
 /**
  * @openapi
  * /admin/tutor-requests:
  * get:
- * summary: Retrieve a list of all pending tutor applications.
+ * summary: List pending tutor application requests.
  * tags:
- * - Admin - Approvals
+ * - Admin - Tutor Management
  * security:
  * - bearerAuth: []
  * responses:
  * '200':
- * description: A list of pending tutor requests.
- * '403':
- * description: Forbidden (Not Admin).
+ * description: A list of tutor requests.
  */
 router.get('/tutor-requests', listTutorRequests);
 
@@ -188,9 +173,9 @@ router.get('/tutor-requests', listTutorRequests);
  * @openapi
  * /admin/tutor-requests/{id}/approve:
  * post:
- * summary: Approve a tutor request and elevate the user role.
+ * summary: Approve a tutor application request.
  * tags:
- * - Admin - Approvals
+ * - Admin - Tutor Management
  * security:
  * - bearerAuth: []
  * parameters:
@@ -199,14 +184,10 @@ router.get('/tutor-requests', listTutorRequests);
  * schema:
  * type: string
  * required: true
- * description: The ID of the tutor request to approve.
+ * description: The ID of the request to approve.
  * responses:
  * '200':
- * description: Request approved and user updated to 'tutor'.
- * '403':
- * description: Forbidden (Not Admin).
- * '404':
- * description: Request not found.
+ * description: Request approved and user promoted to tutor.
  */
 router.post('/tutor-requests/:id/approve', approveTutorRequest);
 
@@ -214,9 +195,9 @@ router.post('/tutor-requests/:id/approve', approveTutorRequest);
  * @openapi
  * /admin/tutor-requests/{id}/reject:
  * post:
- * summary: Reject a tutor request.
+ * summary: Reject a tutor application request.
  * tags:
- * - Admin - Approvals
+ * - Admin - Tutor Management
  * security:
  * - bearerAuth: []
  * parameters:
@@ -225,16 +206,14 @@ router.post('/tutor-requests/:id/approve', approveTutorRequest);
  * schema:
  * type: string
  * required: true
- * description: The ID of the tutor request to reject.
+ * description: The ID of the request to reject.
  * responses:
  * '200':
  * description: Request rejected.
- * '403':
- * description: Forbidden (Not Admin).
- * '404':
- * description: Request not found.
  */
 router.post('/tutor-requests/:id/reject', rejectTutorRequest);
+
+// ---
 
 /**
  * @openapi
@@ -247,17 +226,17 @@ router.post('/tutor-requests/:id/reject', rejectTutorRequest);
  * - bearerAuth: []
  * responses:
  * '200':
- * description: A list of system audit logs.
- * '403':
- * description: Forbidden (Not Admin).
+ * description: List of recent audit events.
  */
-router.get('/audit', listAuditLogs);
+router.get('/audit', getAuditLog);
+
+// ---
 
 /**
  * @openapi
  * /admin/sessions:
  * get:
- * summary: Retrieve all sessions in the system (including cancelled/deleted).
+ * summary: Retrieve all tutoring sessions (past, present, and future).
  * tags:
  * - Admin - Sessions
  * security:
@@ -265,16 +244,14 @@ router.get('/audit', listAuditLogs);
  * responses:
  * '200':
  * description: A comprehensive list of all sessions.
- * '403':
- * description: Forbidden (Not Admin).
  */
-router.get('/sessions', listSessions);
+router.get('/sessions', listAllSessions);
 
 /**
  * @openapi
  * /admin/sessions/{id}:
  * get:
- * summary: Get full details for any session by ID.
+ * summary: Get detailed information about a specific session.
  * tags:
  * - Admin - Sessions
  * security:
@@ -288,19 +265,15 @@ router.get('/sessions', listSessions);
  * description: The ID of the session.
  * responses:
  * '200':
- * description: Session details retrieved successfully.
- * '403':
- * description: Forbidden (Not Admin).
- * '404':
- * description: Session not found.
+ * description: Session details retrieved.
  */
-router.get('/sessions/:id', getSessionDetails);
+router.get('/sessions/:id', getSessionAdmin);
 
 /**
  * @openapi
  * /admin/sessions/{id}:
  * put:
- * summary: Update any session details.
+ * summary: Modify a session's details.
  * tags:
  * - Admin - Sessions
  * security:
@@ -315,16 +288,14 @@ router.get('/sessions/:id', getSessionDetails);
  * responses:
  * '200':
  * description: Session updated successfully.
- * '403':
- * description: Forbidden (Not Admin).
  */
-router.put('/sessions/:id', updateSession);
+router.put('/sessions/:id', updateSessionAdmin);
 
 /**
  * @openapi
  * /admin/sessions/{id}:
  * delete:
- * summary: Forcefully delete any session.
+ * summary: Delete a session entirely.
  * tags:
  * - Admin - Sessions
  * security:
@@ -339,52 +310,92 @@ router.put('/sessions/:id', updateSession);
  * responses:
  * '204':
  * description: Session deleted successfully.
- * '403':
- * description: Forbidden (Not Admin).
  */
-router.delete('/sessions/:id', deleteSession);
+router.delete('/sessions/:id', deleteSessionAdmin);
+
+/**
+ * @openapi
+ * /admin/sessions/{id}/cancel:
+ * post:
+ * summary: Cancel a scheduled session.
+ * tags:
+ * - Admin - Sessions
+ * security:
+ * - bearerAuth: []
+ * parameters:
+ * - in: path
+ * name: id
+ * schema:
+ * type: string
+ * required: true
+ * description: The ID of the session to cancel.
+ * responses:
+ * '200':
+ * description: Session cancelled successfully.
+ */
+router.post('/sessions/:id/cancel', cancelSessionAdmin);
+
+// ---
 
 /**
  * @openapi
  * /admin/chats:
  * get:
- * summary: Retrieve a list of all active chats/conversations in the system.
+ * summary: List all active conversations.
  * tags:
- * - Admin - Chat Moderation
+ * - Admin - Messaging
  * security:
  * - bearerAuth: []
  * responses:
  * '200':
- * description: A list of chat entities.
- * '403':
- * description: Forbidden (Not Admin).
+ * description: A list of conversation summaries.
  */
-router.get('/chats', listChats);
+router.get('/chats', listAllChats);
 
 /**
  * @openapi
  * /admin/chats/flagged:
  * get:
- * summary: Retrieve a list of all messages flagged for moderation.
+ * summary: List all conversations containing flagged messages.
  * tags:
- * - Admin - Chat Moderation
+ * - Admin - Messaging
  * security:
  * - bearerAuth: []
  * responses:
  * '200':
- * description: A list of flagged messages.
- * '403':
- * description: Forbidden (Not Admin).
+ * description: A list of flagged conversation summaries.
  */
-router.get('/chats/flagged', listFlaggedMessages);
+router.get('/chats/flagged', listFlaggedChats);
+
+/**
+ * @openapi
+ * /admin/messages/{id}:
+ * get:
+ * summary: Retrieve a specific message.
+ * tags:
+ * - Admin - Messaging
+ * security:
+ * - bearerAuth: []
+ * parameters:
+ * - in: path
+ * name: id
+ * schema:
+ * type: string
+ * required: true
+ * description: The ID of the message.
+ * responses:
+ * '200':
+ * description: Message details retrieved.
+ */
+router.get('/messages/:id', getMessageAdmin);
 
 /**
  * @openapi
  * /admin/messages/{id}:
  * delete:
- * summary: Forcefully delete a specific chat message.
+ * summary: Delete a specific message.
  * tags:
- * - Admin - Chat Moderation
+ * - Admin - Messaging
  * security:
  * - bearerAuth: []
  * parameters:
@@ -397,18 +408,16 @@ router.get('/chats/flagged', listFlaggedMessages);
  * responses:
  * '204':
  * description: Message deleted successfully.
- * '403':
- * description: Forbidden (Not Admin).
  */
-router.delete('/messages/:id', deleteChatMessage);
+router.delete('/messages/:id', deleteMessageAdmin);
 
 /**
  * @openapi
  * /admin/messages/{id}/flag:
- * put:
- * summary: Manually flag a message for review.
+ * post:
+ * summary: Flag a message as inappropriate.
  * tags:
- * - Admin - Chat Moderation
+ * - Admin - Messaging
  * security:
  * - bearerAuth: []
  * parameters:
@@ -421,18 +430,16 @@ router.delete('/messages/:id', deleteChatMessage);
  * responses:
  * '200':
  * description: Message flagged successfully.
- * '403':
- * description: Forbidden (Not Admin).
  */
-router.put('/messages/:id/flag', flagMessage);
+router.post('/messages/:id/flag', flagMessage);
 
 /**
  * @openapi
  * /admin/messages/{id}/unflag:
- * put:
- * summary: Unflag a message after review.
+ * post:
+ * summary: Remove a flag from a message.
  * tags:
- * - Admin - Chat Moderation
+ * - Admin - Messaging
  * security:
  * - bearerAuth: []
  * parameters:
@@ -444,11 +451,8 @@ router.put('/messages/:id/flag', flagMessage);
  * description: The ID of the message to unflag.
  * responses:
  * '200':
- * description: Message unflagged successfully.
- * '403':
- * description: Forbidden (Not Admin).
+ * description: Flag removed successfully.
  */
-router.put('/messages/:id/unflag', unflagMessage);
-
+router.post('/messages/:id/unflag', unflagMessage);
 
 export default router;

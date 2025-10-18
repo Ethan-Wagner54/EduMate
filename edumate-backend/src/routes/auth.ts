@@ -1,10 +1,11 @@
-import { Router } from "express";
-import { login, register } from "../controllers/auth.controller";
+import { Router } from 'express';
 import {
-    requestPasswordReset,
+    register,
+    login,
+    forgotPassword,
     resetPassword,
-    verifyResetToken
-} from "../controllers/passwordReset.controller";
+    verifyResetToken,
+} from '../controllers/auth.controller';
 
 const router = Router();
 
@@ -16,7 +17,7 @@ const router = Router();
  * @openapi
  * /auth/register:
  * post:
- * summary: Registers a new user with default 'student' role.
+ * summary: Register a new user account.
  * tags:
  * - Authentication
  * requestBody:
@@ -35,17 +36,17 @@ const router = Router();
  * name: { type: 'string', description: 'User\'s full name.' }
  * responses:
  * '201':
- * description: Registration successful. Returns user ID and role.
+ * description: User registered successfully.
  * '400':
- * description: Invalid input or email already exists.
+ * description: Invalid input or email already in use.
  */
-router.post("/register", register);
+router.post('/register', register);
 
 /**
  * @openapi
  * /auth/login:
  * post:
- * summary: Authenticates a user and returns an access token.
+ * summary: Authenticate user and return JWT token.
  * tags:
  * - Authentication
  * requestBody:
@@ -62,7 +63,7 @@ router.post("/register", register);
  * password: { type: 'string', format: 'password', description: 'User\'s password.' }
  * responses:
  * '200':
- * description: Login successful. Returns the JWT access token and user info.
+ * description: Login successful.
  * content:
  * application/json:
  * schema:
@@ -73,20 +74,18 @@ router.post("/register", register);
  * type: object
  * properties:
  * id: { type: 'string' },
- * role: { type: 'string', enum: ['student', 'tutor', 'admin'] },
- * email: { type: 'string' }
+ * name: { type: 'string' },
+ * role: { type: 'string', enum: ['student', 'tutor', 'admin'] }
  * '401':
  * description: Invalid credentials.
- * '403':
- * description: Account deactivated.
  */
-router.post("/login", login);
+router.post('/login', login);
 
 /**
  * @openapi
  * /auth/forgot-password:
  * post:
- * summary: Requests a password reset token to be sent to the user's email.
+ * summary: Request a password reset link.
  * tags:
  * - Authentication
  * requestBody:
@@ -98,20 +97,18 @@ router.post("/login", login);
  * required:
  * - email
  * properties:
- * email: { type: 'string', format: 'email', description: 'The email address associated with the account.' }
+ * email: { type: 'string', format: 'email', description: 'Email address to send the reset link to.' }
  * responses:
  * '200':
- * description: Password reset link sent if the email is registered.
- * '404':
- * description: User not found.
+ * description: Password reset email sent (if email exists).
  */
-router.post("/forgot-password", requestPasswordReset);
+router.post('/forgot-password', forgotPassword);
 
 /**
  * @openapi
  * /auth/reset-password:
  * post:
- * summary: Resets the password using a valid token and sets a new password.
+ * summary: Reset user's password using a token.
  * tags:
  * - Authentication
  * requestBody:
@@ -125,20 +122,20 @@ router.post("/forgot-password", requestPasswordReset);
  * - newPassword
  * properties:
  * token: { type: 'string', description: 'The unique reset token received via email.' },
- * newPassword: { type: 'string', format: 'password', description: 'The new password for the account.' }
+ * newPassword: { type: 'string', format: 'password', description: 'The new secure password.' }
  * responses:
  * '200':
  * description: Password successfully reset.
  * '400':
- * description: Invalid or expired token, or password format invalid.
+ * description: Invalid or expired token.
  */
-router.post("/reset-password", resetPassword);
+router.post('/reset-password', resetPassword);
 
 /**
  * @openapi
  * /auth/verify-reset-token/{token}:
  * get:
- * summary: Verifies the validity and expiration of a password reset token.
+ * summary: Verify if a password reset token is valid.
  * tags:
  * - Authentication
  * parameters:
@@ -147,13 +144,13 @@ router.post("/reset-password", resetPassword);
  * schema:
  * type: string
  * required: true
- * description: The password reset token to verify.
+ * description: The password reset token.
  * responses:
  * '200':
  * description: Token is valid.
  * '400':
  * description: Invalid or expired token.
  */
-router.get("/verify-reset-token/:token", verifyResetToken);
+router.get('/verify-reset-token/:token', verifyResetToken);
 
 export default router;
