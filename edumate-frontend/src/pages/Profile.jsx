@@ -11,19 +11,23 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({});
   const [profilePicture, setProfilePicture] = useState(null);
+  const [userType, setUserType] = useState('student');
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const userId = authService.getUserId();
+        const currentUserType = authService.getUserRole() || 'student';
+        setUserType(currentUserType);
+        
         const response = await userService.getUser({ id: userId });
 
         if (response.success && response.data) {
           setUser(response.data);
           setEditData(response.data);
           
-          // Load existing profile picture
-          const savedImage = loadProfilePicture(userId || 1, 'student');
+          // Load existing profile picture with correct user type
+          const savedImage = loadProfilePicture(userId || 1, currentUserType);
           setProfilePicture(savedImage);
         } else {
         }
@@ -82,7 +86,7 @@ export default function Profile() {
     if (!imageUrl) {
       // Remove from storage
       const userId = authService.getUserId();
-      removeProfilePicture(userId || 1, 'student');
+      removeProfilePicture(userId || 1, userType);
     }
   };
 
@@ -124,7 +128,7 @@ export default function Profile() {
                       currentImage={profilePicture}
                       onImageChange={handleProfilePictureChange}
                       userId={authService.getUserId() || 1}
-                      userType="student"
+                      userType={userType}
                       userName={user.name}
                       size={120}
                     />
@@ -148,8 +152,24 @@ export default function Profile() {
                 {/* Name and Info */}
                 <div className="text-center lg:text-left">
                   <h1 className="text-2xl lg:text-3xl font-bold">{user.name}</h1>
-                  <p className="text-primary-foreground/80 text-lg">{user.program || 'Program not set'} • {user.academicYear || 'Year not set'}</p>
-                  <p className="text-primary-foreground/60 text-sm">Student ID: {user.studentId || 'Not set'}</p>
+                  {userType === 'student' && (
+                    <>
+                      <p className="text-primary-foreground/80 text-lg">{user.program || 'Program not set'} • {user.academicYear || 'Year not set'}</p>
+                      <p className="text-primary-foreground/60 text-sm">Student ID: {user.studentId || 'Not set'}</p>
+                    </>
+                  )}
+                  {userType === 'tutor' && (
+                    <>
+                      <p className="text-primary-foreground/80 text-lg">{user.department || 'Department not set'} • {user.specialization || 'Specialization not set'}</p>
+                      <p className="text-primary-foreground/60 text-sm">Tutor ID: {user.tutorId || 'Not set'}</p>
+                    </>
+                  )}
+                  {userType === 'admin' && (
+                    <>
+                      <p className="text-primary-foreground/80 text-lg">System Administrator</p>
+                      <p className="text-primary-foreground/60 text-sm">Admin ID: {user.adminId || user.id || 'Not set'}</p>
+                    </>
+                  )}
                 </div>
               </div>
               <button
@@ -218,34 +238,37 @@ export default function Profile() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Student ID</label>
-                    <p className="text-muted-foreground">{user.studentId}</p>
-                    <small className="text-xs text-muted-foreground">This cannot be changed</small>
-                  </div>
+                  {/* User Type Specific Fields */}
+                  {userType === 'student' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">Student ID</label>
+                        <p className="text-muted-foreground">{user.studentId}</p>
+                        <small className="text-xs text-muted-foreground">This cannot be changed</small>
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Program</label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editData.program || ''}
-                        onChange={(e) => handleInputChange('program', e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    ) : (
-                      <p className="text-foreground">{user.program}</p>
-                    )}
-                  </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">Program</label>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editData.program || ''}
+                            onChange={(e) => handleInputChange('program', e.target.value)}
+                            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        ) : (
+                          <p className="text-foreground">{user.program}</p>
+                        )}
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Academic Year</label>
-                    {isEditing ? (
-                      <select
-                        value={editData.academicYear || ''}
-                        onChange={(e) => handleInputChange('academicYear', e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      >
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">Academic Year</label>
+                        {isEditing ? (
+                          <select
+                            value={editData.academicYear || ''}
+                            onChange={(e) => handleInputChange('academicYear', e.target.value)}
+                            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          >
                         <option value="1st Year">1st Year</option>
                         <option value="2nd Year">2nd Year</option>
                         <option value="3rd Year">3rd Year</option>
@@ -255,21 +278,76 @@ export default function Profile() {
                     ) : (
                       <p className="text-foreground">{user.academicYear || 'Not set'}</p>
                     )}
-                  </div>
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Faculty</label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editData.faculty || ''}
-                        onChange={(e) => handleInputChange('faculty', e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    ) : (
-                      <p className="text-foreground">{user.faculty || 'Not set'}</p>
-                    )}
-                  </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">Faculty</label>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editData.faculty || ''}
+                            onChange={(e) => handleInputChange('faculty', e.target.value)}
+                            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        ) : (
+                          <p className="text-foreground">{user.faculty || 'Not set'}</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {userType === 'tutor' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">Tutor ID</label>
+                        <p className="text-muted-foreground">{user.tutorId || 'Not set'}</p>
+                        <small className="text-xs text-muted-foreground">This cannot be changed</small>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">Department</label>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editData.department || ''}
+                            onChange={(e) => handleInputChange('department', e.target.value)}
+                            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        ) : (
+                          <p className="text-foreground">{user.department || 'Not set'}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">Specialization</label>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editData.specialization || ''}
+                            onChange={(e) => handleInputChange('specialization', e.target.value)}
+                            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        ) : (
+                          <p className="text-foreground">{user.specialization || 'Not set'}</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {userType === 'admin' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">Admin ID</label>
+                        <p className="text-muted-foreground">{user.adminId || user.id || 'Not set'}</p>
+                        <small className="text-xs text-muted-foreground">This cannot be changed</small>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">Role</label>
+                        <p className="text-foreground">System Administrator</p>
+                      </div>
+                    </>
+                  )}
 
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Member Since</label>
