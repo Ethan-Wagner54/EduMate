@@ -123,15 +123,24 @@ class AdminService {
   }
 
   async updateSession(sessionId: string, updates: any) {
+    console.log('AdminService.updateSession called:', { sessionId, updates });
+    
     try {
+      console.log('Attempting admin endpoint: /admin/sessions/' + sessionId);
       const response = await axiosInstance.put(`/admin/sessions/${sessionId}`, updates);
+      console.log('Admin endpoint response:', response.data);
       return { success: true, data: response.data };
     } catch (error: any) {
+      console.log('Admin endpoint failed:', error?.response?.status, error?.response?.data);
+      
       if (error?.response?.status === 404) {
         try {
+          console.log('Trying fallback endpoint: /sessions/' + sessionId);
           const resp = await axiosInstance.put(`/sessions/${sessionId}`, updates);
+          console.log('Fallback endpoint response:', resp.data);
           return { success: true, data: resp.data };
         } catch (fallbackErr: any) {
+          console.log('Fallback endpoint failed:', fallbackErr?.response?.status, fallbackErr?.response?.data);
           return { success: false, error: fallbackErr?.response?.data?.message || fallbackErr?.message || 'Request failed' };
         }
       }
