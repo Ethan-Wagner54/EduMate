@@ -313,9 +313,25 @@ export default function Registration() {
                         </p>
                         <p className="mt-2">
                             By registering, you agree to our{" "}
-                            <button type="button" className="text-primary hover:underline font-bold">Terms of Service</button>{" "}
+                            <button 
+                                type="button" 
+                                className="text-primary hover:underline font-bold"
+                                onClick={() => {
+                                    alert('Terms of Service page is not yet implemented. This would typically open the terms in a modal or new page.');
+                                }}
+                            >
+                                Terms of Service
+                            </button>{" "}
                             and{" "}
-                            <button type="button" className="text-primary hover:underline font-bold">Privacy Policy</button>.
+                            <button 
+                                type="button" 
+                                className="text-primary hover:underline font-bold"
+                                onClick={() => {
+                                    alert('Privacy Policy page is not yet implemented. This would typically open the privacy policy in a modal or new page.');
+                                }}
+                            >
+                                Privacy Policy
+                            </button>.
                         </p>
                     </div>
                 </CardContent>
